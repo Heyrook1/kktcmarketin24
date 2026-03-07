@@ -3,13 +3,14 @@ import Link from "next/link"
 import Image from "next/image"
 import { vendors } from "@/lib/data/vendors"
 import { products } from "@/lib/data/products"
+import { categories } from "@/lib/data/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Star, MapPin, CheckCircle } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: "Our Vendors",
-  description: "Meet our verified vendors on Marketin24. Quality sellers offering competitive prices across all categories.",
+  title: "Satıcılarımız",
+  description: "Marketin24'te onaylı satıcılarımızla tanışın. Tüm kategorilerde rekabetçi fiyatlar sunan kaliteli satıcılar.",
 }
 
 export default function VendorsPage() {
@@ -17,16 +18,19 @@ export default function VendorsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-          Our Vendors
+          Satıcılarımız
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Shop from verified sellers on Marketin24
+          Marketin24'te onaylı satıcılardan alışveriş yapın
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {vendors.map((vendor) => {
           const vendorProducts = products.filter(p => p.vendorId === vendor.id)
+          const vendorCategories = vendor.categories
+            .map(catId => categories.find(c => c.id === catId))
+            .filter(Boolean)
           
           return (
             <Link key={vendor.id} href={`/vendor/${vendor.slug}`}>
@@ -62,7 +66,7 @@ export default function VendorsPage() {
                       <h3 className="font-semibold text-foreground">
                         {vendor.name}
                       </h3>
-                      {vendor.isVerified && (
+                      {vendor.verified && (
                         <CheckCircle className="h-4 w-4 text-primary" />
                       )}
                     </div>
@@ -76,7 +80,7 @@ export default function VendorsPage() {
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       <span className="font-medium">{vendor.rating}</span>
                       <span className="text-sm text-muted-foreground">
-                        ({vendor.reviewCount} reviews)
+                        ({vendor.reviewCount} değerlendirme)
                       </span>
                     </div>
 
@@ -86,11 +90,11 @@ export default function VendorsPage() {
 
                     <div className="mt-4 flex flex-wrap justify-center gap-1">
                       <Badge variant="secondary" className="text-xs">
-                        {vendorProducts.length} products
+                        {vendorProducts.length} ürün
                       </Badge>
-                      {vendor.specialties.slice(0, 2).map((specialty) => (
-                        <Badge key={specialty} variant="outline" className="text-xs">
-                          {specialty}
+                      {vendorCategories.slice(0, 2).map((category) => (
+                        <Badge key={category?.id} variant="outline" className="text-xs">
+                          {category?.name}
                         </Badge>
                       ))}
                     </div>
