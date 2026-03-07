@@ -1,13 +1,16 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { Star, MapPin, BadgeCheck, Package, Calendar } from "lucide-react"
+import { Star, MapPin, BadgeCheck, Package, Calendar, MessageSquare } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProductGrid } from "@/components/product/product-grid"
+import { ReviewsSection } from "@/components/shared/reviews-section"
 import { ShareButtons } from "@/components/shared/share-buttons"
 import { getVendorBySlug, vendors } from "@/lib/data/vendors"
 import { getProductsByVendor } from "@/lib/data/products"
+import { getVendorReviews, getVendorAverageRating } from "@/lib/data/vendor-reviews"
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>
@@ -180,11 +183,33 @@ export default async function VendorPage({ params }: VendorPageProps) {
 
         <Separator className="mb-8" />
 
-        {/* Products */}
-        <section className="pb-12">
-          <h2 className="text-2xl font-bold mb-6">All Products ({products.length})</h2>
-          <ProductGrid products={products} />
-        </section>
+        {/* Tabs for Products and Reviews */}
+        <Tabs defaultValue="products" className="pb-12">
+          <TabsList className="mb-6">
+            <TabsTrigger value="products" className="gap-2">
+              <Package className="h-4 w-4" />
+              Ürünler ({products.length})
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Değerlendirmeler ({getVendorReviews(vendor.id).length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="products">
+            <ProductGrid products={products} />
+          </TabsContent>
+          
+          <TabsContent value="reviews">
+            <div className="max-w-3xl">
+              <ReviewsSection
+                reviews={getVendorReviews(vendor.id)}
+                averageRating={getVendorAverageRating(vendor.id) || vendor.rating}
+                totalReviews={getVendorReviews(vendor.id).length || vendor.reviewCount}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

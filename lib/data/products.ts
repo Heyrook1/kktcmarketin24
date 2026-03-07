@@ -1,3 +1,15 @@
+export interface ProductSize {
+  size: string
+  stock: number
+  available: boolean
+}
+
+export interface ProductColor {
+  name: string
+  hex: string
+  stock: number
+}
+
 export interface Product {
   id: string
   name: string
@@ -15,6 +27,15 @@ export interface Product {
   tags: string[]
   featured: boolean
   createdAt: string
+  // New dynamic properties
+  sizes?: ProductSize[]
+  colors?: ProductColor[]
+  specifications?: Record<string, string>
+  material?: string
+  weight?: string
+  dimensions?: string
+  warranty?: string
+  lastUpdated?: string
 }
 
 export const products: Product[] = [
@@ -35,7 +56,20 @@ export const products: Product[] = [
     stockCount: 150,
     tags: ["wireless", "bluetooth", "earbuds", "noise-cancelling"],
     featured: true,
-    createdAt: "2024-01-15"
+    createdAt: "2024-01-15",
+    colors: [
+      { name: "Siyah", hex: "#1a1a1a", stock: 80 },
+      { name: "Beyaz", hex: "#ffffff", stock: 45 },
+      { name: "Mavi", hex: "#3b82f6", stock: 25 }
+    ],
+    specifications: {
+      "Batarya Ömrü": "30 saat",
+      "Bluetooth": "5.2",
+      "Su Geçirmezlik": "IPX5",
+      "Şarj Süresi": "2 saat"
+    },
+    warranty: "2 yıl",
+    lastUpdated: new Date().toISOString()
   },
   {
     id: "tz-002",
@@ -125,7 +159,25 @@ export const products: Product[] = [
     stockCount: 25,
     tags: ["leather", "jacket", "classic", "premium"],
     featured: true,
-    createdAt: "2024-01-12"
+    createdAt: "2024-01-12",
+    sizes: [
+      { size: "S", stock: 3, available: true },
+      { size: "M", stock: 8, available: true },
+      { size: "L", stock: 10, available: true },
+      { size: "XL", stock: 4, available: true },
+      { size: "XXL", stock: 0, available: false }
+    ],
+    colors: [
+      { name: "Siyah", hex: "#1a1a1a", stock: 15 },
+      { name: "Kahverengi", hex: "#8B4513", stock: 10 }
+    ],
+    material: "100% Hakiki Deri",
+    specifications: {
+      "Kumaş": "Hakiki Deri",
+      "Astar": "Polyester",
+      "Fermuar": "YKK Metal"
+    },
+    lastUpdated: new Date().toISOString()
   },
   {
     id: "ms-002",
@@ -142,7 +194,22 @@ export const products: Product[] = [
     stockCount: 500,
     tags: ["cotton", "t-shirt", "casual"],
     featured: false,
-    createdAt: "2024-02-01"
+    createdAt: "2024-02-01",
+    sizes: [
+      { size: "XS", stock: 50, available: true },
+      { size: "S", stock: 120, available: true },
+      { size: "M", stock: 180, available: true },
+      { size: "L", stock: 100, available: true },
+      { size: "XL", stock: 40, available: true },
+      { size: "XXL", stock: 10, available: true }
+    ],
+    colors: [
+      { name: "Beyaz", hex: "#ffffff", stock: 200 },
+      { name: "Siyah", hex: "#1a1a1a", stock: 150 },
+      { name: "Gri", hex: "#6b7280", stock: 100 },
+      { name: "Lacivert", hex: "#1e3a5f", stock: 50 }
+    ],
+    material: "100% Organik Pamuk"
   },
   {
     id: "ms-003",
@@ -185,6 +252,22 @@ export const products: Product[] = [
     slug: "running-sneakers-ultra",
     description: "Lightweight running shoes with responsive cushioning and breathable mesh upper.",
     price: 1499,
+    sizes: [
+      { size: "38", stock: 5, available: true },
+      { size: "39", stock: 12, available: true },
+      { size: "40", stock: 18, available: true },
+      { size: "41", stock: 22, available: true },
+      { size: "42", stock: 20, available: true },
+      { size: "43", stock: 15, available: true },
+      { size: "44", stock: 8, available: true },
+      { size: "45", stock: 3, available: true },
+      { size: "46", stock: 0, available: false }
+    ],
+    colors: [
+      { name: "Siyah/Beyaz", hex: "#1a1a1a", stock: 50 },
+      { name: "Mavi/Gri", hex: "#3b82f6", stock: 30 },
+      { name: "Kırmızı/Siyah", hex: "#ef4444", stock: 23 }
+    ],
     originalPrice: 1799,
     images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop"],
     categoryId: "fashion",
