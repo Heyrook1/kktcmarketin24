@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/layout/header'
@@ -49,8 +50,28 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="notranslate" translate="no">
+      <head>
+        <meta name="google" content="notranslate" />
+        <Script
+          src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          strategy="afterInteractive"
+        />
+        <Script id="google-translate-init" strategy="afterInteractive">
+          {`
+            function googleTranslateElementInit() {
+              new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'en,tr,ar,de,fr,es,it,ru,zh-CN,ja,ko,pt,nl,pl,hi',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+              }, 'google_translate_element');
+            }
+          `}
+        </Script>
+      </head>
       <body className={`${inter.className} antialiased`}>
+        <div id="google_translate_element" className="hidden" />
         <div className="flex min-h-screen flex-col">
           <Header />
           <main className="flex-1 pb-16 md:pb-0">
