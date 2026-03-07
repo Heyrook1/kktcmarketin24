@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowRight, Truck, ShieldCheck, CreditCard } from "lucide-react"
+import { ArrowRight, Truck, ShieldCheck, CreditCard, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SearchBar } from "@/components/shared/search-bar"
 
@@ -14,14 +14,15 @@ export function HeroSection() {
           {/* Content */}
           <div className="flex flex-col gap-6 text-center lg:text-left">
             <div>
-              <span className="inline-block text-sm font-medium text-primary mb-2">
-                Trusted Multi-Vendor Marketplace
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary mb-2">
+                <MapPin className="h-4 w-4" />
+                KKTC'nin Güvenilir Pazaryeri
               </span>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-balance">
-                Shop from Verified Sellers, All in One Place
+                Tüm Satıcılar, Tek Adres
               </h1>
               <p className="mt-4 text-lg text-muted-foreground leading-relaxed text-pretty max-w-xl mx-auto lg:mx-0">
-                Discover quality products from trusted vendors. One cart, one checkout, countless choices. Shop with confidence at Marketin24.
+                Kuzey Kıbrıs'ın en güvenilir satıcılarından kaliteli ürünler. Tek sepet, tek ödeme, sınırsız seçenek. Marketin24 ile güvenle alışveriş yapın.
               </p>
             </div>
 
@@ -34,12 +35,12 @@ export function HeroSection() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <Button size="lg" asChild>
                 <Link href="/products">
-                  Browse Products
+                  Ürünleri İncele
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/products?featured=true">View Featured</Link>
+                <Link href="/compare">Platformları Karşılaştır</Link>
               </Button>
             </div>
 
@@ -47,15 +48,15 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 mt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Truck className="h-5 w-5 text-primary" />
-                <span>Fast Delivery</span>
+                <span>Hızlı Teslimat</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                <span>Verified Sellers</span>
+                <span>Onaylı Satıcılar</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CreditCard className="h-5 w-5 text-primary" />
-                <span>Secure Payment</span>
+                <span>Güvenli Ödeme</span>
               </div>
             </div>
           </div>
@@ -67,7 +68,7 @@ export function HeroSection() {
               <div className="absolute inset-0 bg-card rounded-3xl shadow-xl overflow-hidden">
                 <Image
                   src="https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&h=600&fit=crop"
-                  alt="Shopping experience"
+                  alt="Alışveriş deneyimi"
                   fill
                   className="object-cover"
                   priority
@@ -80,8 +81,8 @@ export function HeroSection() {
                     <ShieldCheck className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium">Verified Vendors</p>
-                    <p className="text-xs text-muted-foreground">8+ trusted sellers</p>
+                    <p className="text-xs font-medium">Onaylı Satıcılar</p>
+                    <p className="text-xs text-muted-foreground">8+ güvenilir satıcı</p>
                   </div>
                 </div>
               </div>
@@ -92,8 +93,8 @@ export function HeroSection() {
                     <CreditCard className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium">Unified Checkout</p>
-                    <p className="text-xs text-muted-foreground">Pay once, any vendor</p>
+                    <p className="text-xs font-medium">Tek Ödeme</p>
+                    <p className="text-xs text-muted-foreground">Tüm satıcılar, tek sepet</p>
                   </div>
                 </div>
               </div>

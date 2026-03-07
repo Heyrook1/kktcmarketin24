@@ -30,13 +30,13 @@ export function CartContent() {
         <div className="rounded-full bg-secondary p-8 mb-6">
           <ShoppingBag className="h-12 w-12 text-muted-foreground" />
         </div>
-        <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
+        <h2 className="text-xl font-semibold mb-2">Sepetiniz boş</h2>
         <p className="text-muted-foreground mb-6">
-          Looks like you haven&apos;t added any products yet
+          Henüz sepetinize ürün eklemediniz
         </p>
         <Button asChild size="lg">
           <Link href="/products">
-            Start Shopping
+            Alışverişe Başla
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
@@ -94,7 +94,7 @@ export function CartContent() {
                         {product.name}
                       </Link>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {formatPrice(product.price)} each
+                        {formatPrice(product.price)} / adet
                       </p>
 
                       <div className="flex items-center justify-between mt-3">
@@ -147,7 +147,7 @@ export function CartContent() {
         {/* Clear Cart */}
         <div className="flex justify-end">
           <Button variant="outline" onClick={clearCart}>
-            Clear Cart
+            Sepeti Temizle
           </Button>
         </div>
       </div>
@@ -156,32 +156,32 @@ export function CartContent() {
       <div className="lg:col-span-1">
         <Card className="sticky top-24">
           <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
+            <CardTitle>Sipariş Özeti</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
-                Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"})
+                Ara Toplam ({totalItems} ürün)
               </span>
               <span>{formatPrice(totalPrice)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Shipping</span>
-              <span className="text-green-600">Free</span>
+              <span className="text-muted-foreground">Kargo</span>
+              <span className="text-green-600">Ücretsiz</span>
             </div>
             <Separator />
             <div className="flex justify-between font-semibold text-lg">
-              <span>Total</span>
+              <span>Toplam</span>
               <span>{formatPrice(totalPrice)}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Taxes calculated at checkout
+              Vergiler ödeme sayfasında hesaplanacaktır
             </p>
           </CardContent>
           <CardFooter>
             <Button className="w-full" size="lg" asChild>
               <Link href="/checkout">
-                Proceed to Checkout
+                Ödemeye Geç
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

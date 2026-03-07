@@ -31,7 +31,7 @@ export function CartDrawer() {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
-            Shopping Cart ({items.length} {items.length === 1 ? "item" : "items"})
+            Alışveriş Sepeti ({items.length} ürün)
           </SheetTitle>
         </SheetHeader>
 
@@ -41,13 +41,13 @@ export function CartDrawer() {
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <h3 className="font-semibold">Your cart is empty</h3>
+              <h3 className="font-semibold">Sepetiniz boş</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Add items to get started
+                Henüz ürün eklemediniz
               </p>
             </div>
             <Button onClick={closeCart} asChild>
-              <Link href="/products">Browse Products</Link>
+              <Link href="/products">Ürünleri İncele</Link>
             </Button>
           </div>
         ) : (
@@ -156,18 +156,18 @@ export function CartDrawer() {
             {/* Footer */}
             <div className="flex flex-col gap-4 pt-4">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-muted-foreground">Ara Toplam</span>
                 <span className="font-semibold">{formatPrice(totalPrice)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Shipping and taxes calculated at checkout
+                Kargo ücreti ödeme sayfasında hesaplanacaktır
               </p>
               <div className="flex flex-col gap-2">
                 <Button size="lg" asChild onClick={closeCart}>
-                  <Link href="/checkout">Proceed to Checkout</Link>
+                  <Link href="/checkout">Ödemeye Geç</Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild onClick={closeCart}>
-                  <Link href="/cart">View Cart</Link>
+                  <Link href="/cart">Sepeti Görüntüle</Link>
                 </Button>
               </div>
             </div>

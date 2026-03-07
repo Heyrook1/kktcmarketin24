@@ -1,0 +1,217 @@
+export const tr = {
+  // Navigation
+  nav: {
+    home: "Ana Sayfa",
+    products: "Ürünler",
+    allProducts: "Tüm Ürünler",
+    categories: "Kategoriler",
+    vendors: "Satıcılar",
+    cart: "Sepet",
+    search: "Ara",
+    compare: "Karşılaştır",
+    account: "Hesabım",
+  },
+  
+  // Hero Section
+  hero: {
+    badge: "KKTC'nin Güvenilir Pazaryeri",
+    title: "Tüm Satıcılar, Tek Adres",
+    subtitle: "Kuzey Kıbrıs'ın en güvenilir satıcılarından kaliteli ürünler. Tek sepet, tek ödeme, sınırsız seçenek. Marketin24 ile güvenle alışveriş yapın.",
+    searchPlaceholder: "Ürün veya marka ara...",
+    browseProducts: "Ürünleri İncele",
+    viewFeatured: "Öne Çıkanlar",
+    fastDelivery: "Hızlı Teslimat",
+    verifiedSellers: "Onaylı Satıcılar",
+    securePayment: "Güvenli Ödeme",
+  },
+  
+  // Categories
+  categories: {
+    title: "Kategorilere Göz At",
+    subtitle: "İhtiyacınız olan her şey kategorilerimizde",
+    viewAll: "Tümünü Gör",
+    products: "ürün",
+    electronics: "Elektronik",
+    fashion: "Moda",
+    homeGarden: "Ev & Bahçe",
+    beauty: "Güzellik & Kişisel Bakım",
+    sports: "Spor & Outdoor",
+    kidsBaby: "Çocuk & Bebek",
+    jewelry: "Takı & Aksesuar",
+    groceries: "Market & Gıda",
+    health: "Sağlık & Wellness",
+    books: "Kitap & Kırtasiye",
+  },
+  
+  // Products
+  products: {
+    featured: "Öne Çıkan Ürünler",
+    featuredDesc: "En iyi satıcılarımızdan seçilmiş ürünler",
+    newArrivals: "Yeni Gelenler",
+    newArrivalsDesc: "Pazaryerimize yeni eklenen ürünler",
+    bestSellers: "Çok Satanlar",
+    bestSellersDesc: "Müşterilerimizin en çok tercih ettikleri",
+    addToCart: "Sepete Ekle",
+    addedToCart: "Sepete Eklendi",
+    outOfStock: "Stokta Yok",
+    inStock: "Stokta Var",
+    stockLeft: "adet kaldı",
+    reviews: "değerlendirme",
+    description: "Ürün Açıklaması",
+    specifications: "Özellikler",
+    vendorInfo: "Satıcı Bilgisi",
+    relatedProducts: "Benzer Ürünler",
+    sortBy: "Sırala",
+    filterBy: "Filtrele",
+    priceRange: "Fiyat Aralığı",
+    newest: "En Yeniler",
+    priceLowHigh: "Fiyat: Düşükten Yükseğe",
+    priceHighLow: "Fiyat: Yüksekten Düşüğe",
+    topRated: "En Yüksek Puan",
+    mostPopular: "En Popüler",
+  },
+  
+  // Cart
+  cart: {
+    title: "Alışveriş Sepeti",
+    empty: "Sepetiniz boş",
+    emptyDesc: "Henüz sepetinize ürün eklemediniz.",
+    continueShopping: "Alışverişe Devam Et",
+    subtotal: "Ara Toplam",
+    shipping: "Kargo",
+    shippingCalc: "Checkout'ta hesaplanacak",
+    total: "Toplam",
+    checkout: "Ödemeye Geç",
+    remove: "Kaldır",
+    quantity: "Adet",
+    updateCart: "Sepeti Güncelle",
+    freeShipping: "Ücretsiz Kargo",
+    freeShippingThreshold: "500₺ üzeri siparişlerde ücretsiz kargo!",
+  },
+  
+  // Checkout
+  checkout: {
+    title: "Ödeme",
+    shipping: "Teslimat Bilgileri",
+    payment: "Ödeme Bilgileri",
+    review: "Sipariş Özeti",
+    placeOrder: "Siparişi Tamamla",
+    orderSuccess: "Siparişiniz Alındı!",
+    orderSuccessDesc: "Siparişiniz başarıyla oluşturuldu. Sipariş detayları e-posta adresinize gönderildi.",
+    backToHome: "Ana Sayfaya Dön",
+    firstName: "Ad",
+    lastName: "Soyad",
+    email: "E-posta",
+    phone: "Telefon",
+    address: "Adres",
+    city: "Şehir",
+    district: "İlçe",
+    postalCode: "Posta Kodu",
+    cardNumber: "Kart Numarası",
+    expiryDate: "Son Kullanma",
+    cvv: "CVV",
+    cardHolder: "Kart Üzerindeki İsim",
+  },
+  
+  // Vendor
+  vendor: {
+    verified: "Onaylı Satıcı",
+    products: "Ürün",
+    reviews: "Değerlendirme",
+    rating: "Puan",
+    since: "tarihinden beri üye",
+    location: "Konum",
+    contact: "İletişim",
+    visitShop: "Mağazaya Git",
+    allVendors: "Tüm Satıcılar",
+    vendorsDesc: "KKTC'nin güvenilir satıcıları",
+    shareShop: "Mağazayı Paylaş",
+  },
+  
+  // Compare
+  compare: {
+    title: "Platform Karşılaştırması",
+    subtitle: "KKTC pazaryerlerini karşılaştırın ve en doğru seçimi yapın",
+    feature: "Özellik",
+    pricing: "Fiyatlandırma",
+    features: "Özellikler",
+    userRating: "Kullanıcı Puanı",
+    deliveryTime: "Teslimat Süresi",
+    paymentMethods: "Ödeme Yöntemleri",
+    vendorCount: "Satıcı Sayısı",
+    productRange: "Ürün Çeşitliliği",
+    customerSupport: "Müşteri Desteği",
+    mobileApp: "Mobil Uygulama",
+    returnPolicy: "İade Politikası",
+    loyaltyProgram: "Sadakat Programı",
+    recommended: "Önerilen",
+    whyChooseUs: "Neden Marketin24?",
+  },
+  
+  // Promo
+  promo: {
+    specialOffer: "Özel Teklif",
+    firstOrder: "İlk Siparişinize %20 İndirim",
+    firstOrderDesc: "Herhangi bir satıcıdan alışveriş yapın ve ilk siparişinizde özel indirimlerden yararlanın. Sınırlı süre!",
+    shopNow: "Hemen Alışveriş Yap",
+  },
+  
+  // Footer
+  footer: {
+    description: "KKTC'nin güvenilir çoklu satıcı pazaryeri. Onaylı satıcılardan güvenle alışveriş yapın. Kaliteli ürünler, rekabetçi fiyatlar, tek ödeme.",
+    categories: "Kategoriler",
+    quickLinks: "Hızlı Erişim",
+    contact: "İletişim",
+    allProducts: "Tüm Ürünler",
+    featuredProducts: "Öne Çıkan Ürünler",
+    shoppingCart: "Alışveriş Sepeti",
+    becomeVendor: "Satıcı Ol",
+    helpCenter: "Yardım Merkezi",
+    privacyPolicy: "Gizlilik Politikası",
+    termsOfService: "Kullanım Koşulları",
+    allRightsReserved: "Tüm hakları saklıdır.",
+  },
+  
+  // Search
+  search: {
+    title: "Arama Sonuçları",
+    placeholder: "Ürün, marka veya kategori ara...",
+    noResults: "Sonuç Bulunamadı",
+    noResultsDesc: "Aramanızla eşleşen ürün bulunamadı. Farklı anahtar kelimeler deneyin.",
+    resultsFor: "için sonuçlar",
+    found: "ürün bulundu",
+  },
+  
+  // Common
+  common: {
+    loading: "Yükleniyor...",
+    error: "Bir hata oluştu",
+    retry: "Tekrar Dene",
+    close: "Kapat",
+    save: "Kaydet",
+    cancel: "İptal",
+    confirm: "Onayla",
+    delete: "Sil",
+    edit: "Düzenle",
+    view: "Görüntüle",
+    share: "Paylaş",
+    copy: "Kopyala",
+    copied: "Kopyalandı!",
+    viewAll: "Tümünü Gör",
+    seeMore: "Daha Fazla",
+    currency: "TRY",
+    currencySymbol: "₺",
+  },
+  
+  // Social Share
+  share: {
+    shareOn: "Paylaş",
+    facebook: "Facebook",
+    twitter: "Twitter",
+    whatsapp: "WhatsApp",
+    telegram: "Telegram",
+    copyLink: "Bağlantıyı Kopyala",
+  },
+}
+
+export type Translations = typeof tr

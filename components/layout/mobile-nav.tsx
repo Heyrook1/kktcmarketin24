@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", icon: Home, label: "Home" },
-  { href: "/search", icon: Search, label: "Search" },
-  { href: "/products", icon: Grid3X3, label: "Products" },
-  { href: "/cart", icon: ShoppingCart, label: "Cart", showBadge: true },
+  { href: "/", icon: Home, label: "Ana Sayfa" },
+  { href: "/search", icon: Search, label: "Ara" },
+  { href: "/products", icon: Grid3X3, label: "Ürünler" },
+  { href: "/cart", icon: ShoppingCart, label: "Sepet", showBadge: true },
 ]
 
 export function MobileNav() {

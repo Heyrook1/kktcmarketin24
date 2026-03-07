@@ -41,12 +41,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
           />
           {hasDiscount && (
             <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-medium px-2 py-1 rounded">
-              Sale
+              İndirim
             </div>
           )}
           {!product.inStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <span className="text-sm font-medium text-muted-foreground">Out of Stock</span>
+              <span className="text-sm font-medium text-muted-foreground">Stokta Yok</span>
             </div>
           )}
         </div>
@@ -86,7 +86,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
             disabled={!product.inStock}
           >
             <ShoppingCart className="h-4 w-4" />
-            <span className="sr-only">Add to cart</span>
+            <span className="sr-only">Sepete ekle</span>
           </Button>
         </div>
       </CardContent>

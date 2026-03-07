@@ -11,11 +11,11 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'Marketin24 - Multi-Vendor Marketplace',
+    default: 'Marketin24 - KKTC Pazaryeri',
     template: '%s | Marketin24'
   },
-  description: 'Shop from verified vendors on Marketin24. Quality products, competitive prices, unified checkout. Your trusted multi-vendor marketplace.',
-  keywords: ['marketplace', 'e-commerce', 'multi-vendor', 'online shopping', 'Turkey'],
+  description: 'KKTC\'nin güvenilir çoklu satıcı pazaryeri. Onaylı satıcılardan kaliteli ürünler, rekabetçi fiyatlar, tek ödeme. Kuzey Kıbrıs\'ta güvenle alışveriş yapın.',
+  keywords: ['pazaryeri', 'e-ticaret', 'KKTC', 'Kuzey Kıbrıs', 'online alışveriş', 'Lefkoşa', 'Girne', 'marketplace'],
   authors: [{ name: 'Marketin24' }],
   creator: 'Marketin24',
   icons: {
@@ -24,16 +24,16 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'tr_TR',
     url: 'https://marketin24.com',
     siteName: 'Marketin24',
-    title: 'Marketin24 - Multi-Vendor Marketplace',
-    description: 'Shop from verified vendors on Marketin24. Quality products, competitive prices, unified checkout.',
+    title: 'Marketin24 - KKTC Pazaryeri',
+    description: 'KKTC\'nin güvenilir çoklu satıcı pazaryeri. Onaylı satıcılardan kaliteli ürünler, rekabetçi fiyatlar.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Marketin24 - Multi-Vendor Marketplace',
-    description: 'Shop from verified vendors on Marketin24. Quality products, competitive prices, unified checkout.',
+    title: 'Marketin24 - KKTC Pazaryeri',
+    description: 'KKTC\'nin güvenilir çoklu satıcı pazaryeri. Onaylı satıcılardan kaliteli ürünler, rekabetçi fiyatlar.',
   },
 }
 
@@ -50,9 +50,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="notranslate" translate="no">
+    <html lang="tr">
       <head>
-        <meta name="google" content="notranslate" />
         <Script
           src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
           strategy="afterInteractive"
@@ -61,8 +60,8 @@ export default function RootLayout({
           {`
             function googleTranslateElementInit() {
               new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                includedLanguages: 'en,tr,ar,de,fr,es,it,ru,zh-CN,ja,ko,pt,nl,pl,hi',
+                pageLanguage: 'tr',
+                includedLanguages: 'tr,en,ar,de,fr,es,it,ru,zh-CN,el,bg',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false
               }, 'google_translate_element');

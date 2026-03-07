@@ -20,7 +20,7 @@ export function Footer() {
               />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Your trusted multi-vendor marketplace. Shop from verified sellers with confidence. Quality products, competitive prices, unified checkout.
+              KKTC'nin güvenilir çoklu satıcı pazaryeri. Onaylı satıcılardan güvenle alışveriş yapın. Kaliteli ürünler, rekabetçi fiyatlar, tek ödeme.
             </p>
             <div className="flex gap-4">
               <a
@@ -55,7 +55,7 @@ export function Footer() {
 
           {/* Categories */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold">Categories</h3>
+            <h3 className="mb-4 text-sm font-semibold">Kategoriler</h3>
             <ul className="flex flex-col gap-2">
               {categories.slice(0, 6).map((category) => (
                 <li key={category.id}>
@@ -72,22 +72,22 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold">Quick Links</h3>
+            <h3 className="mb-4 text-sm font-semibold">Hızlı Erişim</h3>
             <ul className="flex flex-col gap-2">
               <li>
                 <Link
                   href="/products"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  All Products
+                  Tüm Ürünler
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/products?featured=true"
+                  href="/compare"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  Featured Products
+                  Platform Karşılaştırması
                 </Link>
               </li>
               <li>
@@ -95,7 +95,7 @@ export function Footer() {
                   href="/cart"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  Shopping Cart
+                  Alışveriş Sepeti
                 </Link>
               </li>
               <li>
@@ -103,7 +103,7 @@ export function Footer() {
                   href="#"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  Become a Vendor
+                  Satıcı Ol
                 </a>
               </li>
               <li>
@@ -111,7 +111,7 @@ export function Footer() {
                   href="#"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  Help Center
+                  Yardım Merkezi
                 </a>
               </li>
             </ul>
@@ -119,21 +119,21 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold">Contact Us</h3>
+            <h3 className="mb-4 text-sm font-semibold">İletişim</h3>
             <ul className="flex flex-col gap-3">
               <li className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  Istanbul, Turkey
+                  Lefkoşa, KKTC
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <a
-                  href="tel:+902121234567"
+                  href="tel:+903922281234"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  +90 212 123 4567
+                  +90 392 228 1234
                 </a>
               </li>
               <li className="flex items-center gap-3">
@@ -152,20 +152,20 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Marketin24. All rights reserved.
+            &copy; {new Date().getFullYear()} Marketin24. Tüm hakları saklıdır.
           </p>
           <div className="flex gap-6">
             <a
               href="#"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              Privacy Policy
+              Gizlilik Politikası
             </a>
             <a
               href="#"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              Terms of Service
+              Kullanım Koşulları
             </a>
           </div>
         </div>

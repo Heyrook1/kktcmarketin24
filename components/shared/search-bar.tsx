@@ -42,7 +42,7 @@ export function SearchBar({ autoFocus, className }: SearchBarProps) {
         <Input
           ref={inputRef}
           type="search"
-          placeholder="Search products..."
+          placeholder="Ürün veya marka ara..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full pl-10 pr-10"

@@ -23,11 +23,11 @@ function SearchResults() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-          Search Results
+          Arama Sonuçları
         </h1>
         {query && (
           <p className="mt-2 text-muted-foreground">
-            {filteredProducts.length} results for &quot;{query}&quot;
+            &quot;{query}&quot; için {filteredProducts.length} sonuç bulundu
           </p>
         )}
       </div>
@@ -39,16 +39,16 @@ function SearchResults() {
       {!query ? (
         <div className="py-12 text-center">
           <p className="text-lg text-muted-foreground">
-            Enter a search term to find products
+            Ürün aramak için anahtar kelime girin
           </p>
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-lg text-muted-foreground">
-            No products found for &quot;{query}&quot;
+            &quot;{query}&quot; ile eşleşen ürün bulunamadı
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Try searching with different keywords
+            Farklı anahtar kelimeler ile aramayı deneyin
           </p>
         </div>
       ) : (

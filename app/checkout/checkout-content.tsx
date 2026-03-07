@@ -31,12 +31,12 @@ export function CheckoutContent() {
         <div className="rounded-full bg-secondary p-8 mb-6">
           <ShoppingBag className="h-12 w-12 text-muted-foreground" />
         </div>
-        <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
+        <h2 className="text-xl font-semibold mb-2">Sepetiniz boş</h2>
         <p className="text-muted-foreground mb-6">
-          Add some products before checking out
+          Ödeme yapmadan önce ürün ekleyin
         </p>
         <Button asChild size="lg">
-          <Link href="/products">Browse Products</Link>
+          <Link href="/products">Ürünleri İncele</Link>
         </Button>
       </div>
     )
@@ -62,26 +62,26 @@ export function CheckoutContent() {
           {/* Contact Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Contact Information</CardTitle>
+              <CardTitle className="text-lg">İletişim Bilgileri</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="John" required />
+                  <Label htmlFor="firstName">Ad</Label>
+                  <Input id="firstName" placeholder="Ahmet" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Doe" required />
+                  <Label htmlFor="lastName">Soyad</Label>
+                  <Input id="lastName" placeholder="Yılmaz" required />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" required />
+                <Label htmlFor="email">E-posta</Label>
+                <Input id="email" type="email" placeholder="ahmet@ornek.com" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" type="tel" placeholder="+90 555 123 4567" required />
+                <Label htmlFor="phone">Telefon Numarası</Label>
+                <Input id="phone" type="tel" placeholder="+90 533 123 4567" required />
               </div>
             </CardContent>
           </Card>
@@ -89,26 +89,26 @@ export function CheckoutContent() {
           {/* Shipping Address */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Shipping Address</CardTitle>
+              <CardTitle className="text-lg">Teslimat Adresi</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="space-y-2">
-                <Label htmlFor="address">Street Address</Label>
-                <Input id="address" placeholder="123 Main Street" required />
+                <Label htmlFor="address">Adres</Label>
+                <Input id="address" placeholder="Atatürk Caddesi No: 123" required />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" placeholder="Istanbul" required />
+                  <Label htmlFor="city">Şehir</Label>
+                  <Input id="city" placeholder="Lefkoşa" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="postalCode">Postal Code</Label>
-                  <Input id="postalCode" placeholder="34000" required />
+                  <Label htmlFor="postalCode">Posta Kodu</Label>
+                  <Input id="postalCode" placeholder="99010" required />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input id="country" placeholder="Turkey" defaultValue="Turkey" required />
+                <Label htmlFor="country">Ülke</Label>
+                <Input id="country" placeholder="KKTC" defaultValue="KKTC" required />
               </div>
             </CardContent>
           </Card>
@@ -116,7 +116,7 @@ export function CheckoutContent() {
           {/* Payment Method */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Payment Method</CardTitle>
+              <CardTitle className="text-lg">Ödeme Yöntemi</CardTitle>
             </CardHeader>
             <CardContent>
               <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -125,9 +125,9 @@ export function CheckoutContent() {
                   <Label htmlFor="card" className="flex-1 cursor-pointer flex items-center gap-3">
                     <CreditCard className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">Credit / Debit Card</p>
+                      <p className="font-medium">Kredi / Banka Kartı</p>
                       <p className="text-sm text-muted-foreground">
-                        Pay securely with your card
+                        Kartınızla güvenli ödeme yapın
                       </p>
                     </div>
                   </Label>
@@ -137,9 +137,9 @@ export function CheckoutContent() {
                   <Label htmlFor="cod" className="flex-1 cursor-pointer flex items-center gap-3">
                     <Truck className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">Cash on Delivery</p>
+                      <p className="font-medium">Kapıda Ödeme</p>
                       <p className="text-sm text-muted-foreground">
-                        Pay when you receive your order
+                        Siparişinizi teslim alırken ödeyin
                       </p>
                     </div>
                   </Label>
@@ -149,13 +149,13 @@ export function CheckoutContent() {
               {paymentMethod === "card" && (
                 <div className="mt-6 grid gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Label htmlFor="cardNumber">Kart Numarası</Label>
                     <Input id="cardNumber" placeholder="1234 5678 9012 3456" required />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="expiry">Expiry Date</Label>
-                      <Input id="expiry" placeholder="MM/YY" required />
+                      <Label htmlFor="expiry">Son Kullanma</Label>
+                      <Input id="expiry" placeholder="AA/YY" required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="cvv">CVV</Label>
@@ -172,7 +172,7 @@ export function CheckoutContent() {
         <div className="lg:col-span-1">
           <Card className="sticky top-24">
             <CardHeader>
-              <CardTitle className="text-lg">Order Summary</CardTitle>
+              <CardTitle className="text-lg">Sipariş Özeti</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Items by Vendor */}
@@ -211,26 +211,26 @@ export function CheckoutContent() {
 
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Subtotal ({totalItems} items)
+                  Ara Toplam ({totalItems} ürün)
                 </span>
                 <span>{formatPrice(totalPrice)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Shipping</span>
-                <span className="text-green-600">Free</span>
+                <span className="text-muted-foreground">Kargo</span>
+                <span className="text-green-600">Ücretsiz</span>
               </div>
 
               <Separator />
 
               <div className="flex justify-between font-semibold text-lg">
-                <span>Total</span>
+                <span>Toplam</span>
                 <span>{formatPrice(totalPrice)}</span>
               </div>
 
               {/* Trust Badges */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
-                <span>Secure checkout - Your data is protected</span>
+                <span>Güvenli ödeme - Verileriniz korunmaktadır</span>
               </div>
 
               <Button
@@ -240,11 +240,11 @@ export function CheckoutContent() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  "Processing..."
+                  "İşleniyor..."
                 ) : (
                   <>
                     <Check className="mr-2 h-4 w-4" />
-                    Place Order
+                    Siparişi Tamamla
                   </>
                 )}
               </Button>

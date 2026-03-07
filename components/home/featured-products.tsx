@@ -25,7 +25,7 @@ function ProductSection({ title, description, viewAllHref, children }: ProductSe
           {viewAllHref && (
             <Button variant="ghost" asChild className="hidden sm:flex">
               <Link href={viewAllHref}>
-                View All
+                Tümünü Gör
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -36,7 +36,7 @@ function ProductSection({ title, description, viewAllHref, children }: ProductSe
           <div className="mt-6 sm:hidden">
             <Button variant="outline" className="w-full" asChild>
               <Link href={viewAllHref}>
-                View All
+                Tümünü Gör
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -52,8 +52,8 @@ export function FeaturedProducts() {
 
   return (
     <ProductSection
-      title="Featured Products"
-      description="Handpicked products from our top vendors"
+      title="Öne Çıkan Ürünler"
+      description="En iyi satıcılarımızdan seçilmiş ürünler"
       viewAllHref="/products?featured=true"
     >
       <ProductGrid products={products} />
@@ -66,8 +66,8 @@ export function NewArrivals() {
 
   return (
     <ProductSection
-      title="New Arrivals"
-      description="The latest additions to our marketplace"
+      title="Yeni Gelenler"
+      description="Pazaryerimize yeni eklenen ürünler"
       viewAllHref="/products?sort=newest"
     >
       <ProductGrid products={products} />
@@ -80,8 +80,8 @@ export function BestSellers() {
 
   return (
     <ProductSection
-      title="Best Sellers"
-      description="Most loved by our customers"
+      title="Çok Satanlar"
+      description="Müşterilerimizin en çok tercih ettikleri"
       viewAllHref="/products?sort=popular"
     >
       <ProductGrid products={products} />
@@ -96,13 +96,13 @@ export function PromoBanner() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-accent p-8 md:p-12">
           <div className="relative z-10 max-w-lg">
             <span className="inline-block text-sm font-medium text-primary-foreground/80 mb-2">
-              Special Offer
+              Özel Teklif
             </span>
             <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground">
-              Get 20% Off Your First Order
+              İlk Siparişinize %20 İndirim
             </h2>
             <p className="mt-2 text-primary-foreground/80">
-              Shop from any vendor and enjoy exclusive discounts on your first purchase. Limited time only!
+              Herhangi bir satıcıdan alışveriş yapın ve ilk siparişinizde özel indirimlerden yararlanın. Sınırlı süre!
             </p>
             <Button
               size="lg"
@@ -110,7 +110,7 @@ export function PromoBanner() {
               className="mt-6"
               asChild
             >
-              <Link href="/products">Shop Now</Link>
+              <Link href="/products">Hemen Alışveriş Yap</Link>
             </Button>
           </div>
           {/* Decorative elements */}

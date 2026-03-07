@@ -48,7 +48,14 @@ export function Header() {
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    All Products
+                    Tüm Ürünler
+                  </Link>
+                  <Link
+                    href="/compare"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Karşılaştır
                   </Link>
                   {categories.slice(0, 8).map((category) => (
                     <Link
@@ -86,9 +93,15 @@ export function Header() {
               href="/products"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
-              All Products
+              Tüm Ürünler
             </Link>
-            {categories.slice(0, 5).map((category) => (
+            <Link
+              href="/compare"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Karşılaştır
+            </Link>
+            {categories.slice(0, 4).map((category) => (
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}

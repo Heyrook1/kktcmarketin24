@@ -10,14 +10,14 @@ export function CategoryGrid() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold">Shop by Category</h2>
+            <h2 className="text-2xl font-bold">Kategorilere Göz At</h2>
             <p className="text-muted-foreground mt-1">
-              Find what you need in our curated categories
+              İhtiyacınız olan her şey kategorilerimizde
             </p>
           </div>
           <Button variant="ghost" asChild className="hidden sm:flex">
             <Link href="/products">
-              View All
+              Tümünü Gör
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -43,7 +43,7 @@ export function CategoryGrid() {
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <h3 className="font-medium text-white text-sm">{category.name}</h3>
                   <p className="text-white/70 text-xs mt-0.5">
-                    {category.productCount} products
+                    {category.productCount} ürün
                   </p>
                 </div>
               </div>
@@ -54,7 +54,7 @@ export function CategoryGrid() {
         <div className="mt-4 sm:hidden">
           <Button variant="outline" className="w-full" asChild>
             <Link href="/products">
-              View All Categories
+              Tüm Kategoriler
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

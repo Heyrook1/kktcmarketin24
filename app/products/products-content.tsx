@@ -105,7 +105,7 @@ export function ProductsContent() {
           onCheckedChange={(checked) => setShowFeaturedOnly(checked === true)}
         />
         <Label htmlFor="featured" className="cursor-pointer">
-          Featured products only
+          Sadece öne çıkan ürünler
         </Label>
       </div>
 
@@ -113,7 +113,7 @@ export function ProductsContent() {
 
       {/* Categories */}
       <div>
-        <h3 className="font-medium mb-3">Categories</h3>
+        <h3 className="font-medium mb-3">Kategoriler</h3>
         <div className="flex flex-col gap-2">
           {categories.map((category) => (
             <div key={category.id} className="flex items-center gap-2">
@@ -134,7 +134,7 @@ export function ProductsContent() {
 
       {/* Vendors */}
       <div>
-        <h3 className="font-medium mb-3">Vendors</h3>
+        <h3 className="font-medium mb-3">Satıcılar</h3>
         <div className="flex flex-col gap-2">
           {vendors.map((vendor) => (
             <div key={vendor.id} className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export function ProductsContent() {
         <>
           <Separator />
           <Button variant="outline" onClick={clearFilters}>
-            Clear All Filters
+            Filtreleri Temizle
           </Button>
         </>
       )}
@@ -167,7 +167,7 @@ export function ProductsContent() {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:block w-64 flex-shrink-0">
         <div className="sticky top-24">
-          <h2 className="font-semibold mb-4">Filters</h2>
+          <h2 className="font-semibold mb-4">Filtreler</h2>
           <FilterContent />
         </div>
       </aside>
@@ -182,7 +182,7 @@ export function ProductsContent() {
               <SheetTrigger asChild className="lg:hidden">
                 <Button variant="outline" size="sm">
                   <SlidersHorizontal className="h-4 w-4 mr-2" />
-                  Filters
+                  Filtreler
                   {activeFilterCount > 0 && (
                     <Badge variant="secondary" className="ml-2">
                       {activeFilterCount}
@@ -192,7 +192,7 @@ export function ProductsContent() {
               </SheetTrigger>
               <SheetContent side="left">
                 <SheetHeader>
-                  <SheetTitle>Filters</SheetTitle>
+                  <SheetTitle>Filtreler</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6">
                   <FilterContent />
@@ -201,7 +201,7 @@ export function ProductsContent() {
             </Sheet>
 
             <span className="text-sm text-muted-foreground">
-              {filteredProducts.length} products
+              {filteredProducts.length} ürün
             </span>
           </div>
 
@@ -244,14 +244,14 @@ export function ProductsContent() {
           {/* Sort */}
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder="Sırala" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="newest">Newest First</SelectItem>
-              <SelectItem value="popular">Most Popular</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
-              <SelectItem value="rating">Highest Rated</SelectItem>
+              <SelectItem value="newest">En Yeniler</SelectItem>
+              <SelectItem value="popular">En Popüler</SelectItem>
+              <SelectItem value="price-low">Fiyat: Düşükten Yükseğe</SelectItem>
+              <SelectItem value="price-high">Fiyat: Yüksekten Düşüğe</SelectItem>
+              <SelectItem value="rating">En Yüksek Puan</SelectItem>
             </SelectContent>
           </Select>
         </div>
