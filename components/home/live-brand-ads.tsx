@@ -11,7 +11,7 @@ import { brandAds, getFeaturedAds } from "@/lib/data/brand-ads"
 export function LiveBrandAds() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const ads = getFeaturedAds()
 
@@ -24,11 +24,12 @@ export function LiveBrandAds() {
     return () => clearInterval(interval)
   }, [isAutoPlaying, ads.length])
 
-  // Simulate live updates
+  // Simulate live updates — initialised on client only to avoid hydration mismatch
   useEffect(() => {
+    setLastUpdate(new Date())
     const updateInterval = setInterval(() => {
       setLastUpdate(new Date())
-    }, 30000) // Update timestamp every 30 seconds
+    }, 30000)
     return () => clearInterval(updateInterval)
   }, [])
 
@@ -58,7 +59,7 @@ export function LiveBrandAds() {
             </Badge>
           </div>
           <p className="text-xs text-white/50 hidden md:block">
-            Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')}
+            Son güncelleme: {lastUpdate ? lastUpdate.toLocaleTimeString('tr-TR') : '--:--:--'}
           </p>
         </div>
 
