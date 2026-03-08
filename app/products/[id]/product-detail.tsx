@@ -259,20 +259,37 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
 
           {/* Quantity & Add to cart */}
           {liveStock > 0 ? (
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-              <div className="flex items-center border rounded-xl overflow-hidden">
-                <Button variant="ghost" size="icon" onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={quantity <= 1} className="rounded-none h-11 w-11">
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-12 text-center font-semibold text-sm">{quantity}</span>
-                <Button variant="ghost" size="icon" onClick={() => setQuantity((q) => Math.min(activeStock, q + 1))} disabled={quantity >= activeStock} className="rounded-none h-11 w-11">
-                  <Plus className="h-4 w-4" />
+            <div className="flex flex-col gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex items-center border rounded-xl overflow-hidden">
+                  <Button variant="ghost" size="icon" onClick={() => setQuantity((q) => Math.max(1, q - 1))} disabled={quantity <= 1} className="rounded-none h-11 w-11">
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-12 text-center font-semibold text-sm">{quantity}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setQuantity((q) => Math.min(activeStock, q + 1))} disabled={quantity >= activeStock} className="rounded-none h-11 w-11">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button size="lg" className="flex-1 gap-2 h-11 rounded-xl font-semibold" onClick={handleAddToCart}>
+                  <ShoppingCart className="h-5 w-5" />
+                  Sepete Ekle
                 </Button>
               </div>
-              <Button size="lg" className="flex-1 gap-2 h-11 rounded-xl font-semibold" onClick={handleAddToCart}>
-                <ShoppingCart className="h-5 w-5" />
-                Sepete Ekle
-              </Button>
+              {/* Urgency signals */}
+              <div className="flex flex-col gap-1.5">
+                {activeStock > 0 && activeStock <= 5 && (
+                  <p className="text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                    Son {activeStock} adet kaldı — kaçırmayın!
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                  <span>
+                    <span className="font-semibold text-foreground">Bugün sipariş ver,</span> yarın kargoda!
+                  </span>
+                </p>
+              </div>
             </div>
           ) : (
             <div className="mt-6 flex items-center gap-2 p-4 rounded-xl bg-red-50 border border-red-200">
