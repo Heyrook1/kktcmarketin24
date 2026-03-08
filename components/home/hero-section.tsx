@@ -65,7 +65,7 @@ export function HeroSection() {
           <div className="relative hidden lg:block">
             <div className="relative aspect-square max-w-lg mx-auto">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-3xl transform rotate-3" />
-              <div className="absolute inset-0 bg-card rounded-3xl shadow-xl overflow-hidden" style={{ position: "absolute" }}>
+              <div className="absolute inset-0 bg-card rounded-3xl shadow-xl overflow-hidden">
                 <Image
                   src="https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&h=600&fit=crop"
                   alt="Alışveriş deneyimi"

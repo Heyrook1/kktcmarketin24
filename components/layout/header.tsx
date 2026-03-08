@@ -40,25 +40,27 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
               const Icon = ICON_MAP[cat.icon] || Smartphone
               const isActive = activeCategory.id === cat.id
               return (
-                <Link
+                <button
                   key={cat.id}
-                  href={`/category/${cat.slug}`}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-all duration-150 group",
+                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-all duration-150 group text-left",
                     isActive
                       ? "bg-primary text-primary-foreground font-medium"
                       : "text-foreground hover:bg-secondary"
                   )}
                   onMouseEnter={() => setActiveCategory(cat)}
                   onClick={() => onClose()}
+                  asChild
                 >
-                  <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
-                  <span className="flex-1 truncate">{cat.name}</span>
-                  <span className={cn("text-xs", isActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                    {cat.productCount}
-                  </span>
-                  <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0", isActive ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
-                </Link>
+                  <Link href={`/category/${cat.slug}`} className="flex items-center gap-3 w-full">
+                    <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
+                    <span className="flex-1 truncate">{cat.name}</span>
+                    <span className={cn("text-xs", isActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                      {cat.productCount}
+                    </span>
+                    <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0", isActive ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
+                  </Link>
+                </button>
               )
             })}
             <Separator className="my-2" />
@@ -111,7 +113,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
                 <div className="w-44 flex-shrink-0">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
                   <Link href={activeCategory.featured.href} onClick={onClose} className="block group">
-                    <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary" style={{ position: "relative" }}>
+                    <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary">
                       <Image
                         src={activeCategory.featured.image}
                         alt={activeCategory.featured.label}

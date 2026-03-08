@@ -43,19 +43,16 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
     return { rating: r, count, percentage: vendorReviews.length > 0 ? (count / vendorReviews.length) * 100 : 0 }
   })
 
-  const formatDate = (d: string) => {
-    const [year, month, day] = d.split("T")[0].split("-")
-    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
-    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
-  }
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString("tr-TR", { year: "numeric", month: "short", day: "numeric" })
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
-        <ScrollArea className="flex-1 relative">
+        <ScrollArea className="flex-1">
           {/* Cover */}
-          <div className="relative h-36 w-full overflow-hidden">
-            <Image src={vendor.coverImage} alt={vendor.name} fill className="object-cover" sizes="100vw" />
+          <div className="relative h-36 w-full">
+            <Image src={vendor.coverImage} alt={vendor.name} fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
           </div>
 
@@ -63,7 +60,7 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
             {/* Logo + name row */}
             <div className="flex items-end gap-4 -mt-10 relative z-10 mb-4">
               <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg">
-                <Image src={vendor.logo} alt={vendor.name} fill className="object-cover" sizes="80px" />
+                <Image src={vendor.logo} alt={vendor.name} fill className="object-cover" />
               </div>
               <div className="flex-1 min-w-0 pb-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -226,7 +223,7 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
                         <div className="flex items-start gap-3">
                           <div className="relative h-9 w-9 rounded-full overflow-hidden bg-secondary flex-shrink-0 ring-2 ring-border">
                             {rev.userAvatar ? (
-                              <Image src={rev.userAvatar} alt={rev.userName} fill className="object-cover" sizes="36px" />
+                              <Image src={rev.userAvatar} alt={rev.userName} fill className="object-cover" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
                                 {rev.userName[0]}

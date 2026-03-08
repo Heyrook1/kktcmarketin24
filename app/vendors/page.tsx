@@ -36,7 +36,7 @@ export default function VendorsPage() {
             <Link key={vendor.id} href={`/vendor/${vendor.slug}`}>
               <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:border-primary hover:shadow-lg">
                 {/* Cover Image */}
-                <div className="relative h-24 bg-gradient-to-r from-primary/20 to-accent/20" style={{ position: "relative" }}>
+                <div className="relative h-24 bg-gradient-to-r from-primary/20 to-accent/20">
                   {vendor.coverImage && (
                     <Image
                       src={vendor.coverImage}
@@ -50,7 +50,7 @@ export default function VendorsPage() {
                 <CardContent className="relative pt-0">
                   {/* Logo */}
                   <div className="relative -mt-10 mb-3 flex justify-center">
-                    <div className="relative h-20 w-20 overflow-hidden rounded-full border-4 border-background bg-background shadow-md" style={{ position: "relative" }}>
+                    <div className="relative h-20 w-20 overflow-hidden rounded-full border-4 border-background bg-background shadow-md">
                       <Image
                         src={vendor.logo}
                         alt={vendor.name}

@@ -68,12 +68,8 @@ export function ReviewsSection({
     })
   }
 
-  // Use a locale-neutral format to avoid Node.js ICU / browser locale mismatch
-  const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.split("T")[0].split("-")
-    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
-    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
-  }
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" })
 
   return (
     <div className={cn("space-y-6", compact && "space-y-4")}>
@@ -124,7 +120,7 @@ export function ReviewsSection({
               {/* Review body */}
               <div className={cn("p-4", compact && "p-3")}>
                 <div className="flex items-start gap-3">
-                  <div className="relative h-10 w-10 rounded-full overflow-hidden bg-secondary flex-shrink-0 ring-2 ring-border" style={{ position: "relative" }}>
+                  <div className="relative h-10 w-10 rounded-full overflow-hidden bg-secondary flex-shrink-0 ring-2 ring-border">
                     {review.userAvatar ? (
                       <Image src={review.userAvatar} alt={review.userName} fill className="object-cover" />
                     ) : (
@@ -187,7 +183,7 @@ export function ReviewsSection({
                   <Separator />
                   <div className="px-4 py-3 bg-primary/5">
                     <div className="flex items-start gap-3">
-                      <div className="relative h-8 w-8 rounded-lg overflow-hidden bg-background border flex-shrink-0" style={{ position: "relative" }}>
+                      <div className="relative h-8 w-8 rounded-lg overflow-hidden bg-background border flex-shrink-0">
                         <Image
                           src={review.vendorReply.vendorLogo}
                           alt={review.vendorReply.vendorName}

@@ -62,7 +62,7 @@ export function CartDrawer() {
                       <div className="flex items-center gap-2 mb-3">
                         {vendor && (
                           <>
-                            <div className="relative h-6 w-6 rounded-full overflow-hidden bg-secondary" style={{ position: "relative" }}>
+                            <div className="relative h-6 w-6 rounded-full overflow-hidden bg-secondary">
                               <Image
                                 src={vendor.logo}
                                 alt={vendor.name}
@@ -83,7 +83,7 @@ export function CartDrawer() {
                             className="flex gap-3 p-3 rounded-lg border bg-card"
                           >
                             {/* Image */}
-                            <div className="relative h-20 w-20 flex-shrink-0 rounded-md overflow-hidden bg-secondary" style={{ position: "relative" }}>
+                            <div className="relative h-20 w-20 flex-shrink-0 rounded-md overflow-hidden bg-secondary">
                               <Image
                                 src={product.images[0]}
                                 alt={product.name}

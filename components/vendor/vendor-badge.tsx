@@ -43,17 +43,15 @@ export function VendorBadge({
         {showLogo && (
           <div
             className={cn(
-              "relative overflow-hidden rounded-full bg-secondary flex-shrink-0",
+              "relative rounded-full overflow-hidden bg-secondary flex-shrink-0",
               size === "sm" ? "h-5 w-5" : "h-6 w-6"
             )}
-            style={{ position: "relative" }}
           >
             <Image
               src={vendor.logo}
               alt={vendor.name}
               fill
               className="object-cover"
-              sizes={size === "sm" ? "20px" : "24px"}
             />
           </div>
         )}

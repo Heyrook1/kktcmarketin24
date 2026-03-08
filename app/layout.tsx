@@ -1,21 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import './globals.css'
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-inter",
-})
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["700", "800", "900"],
-  variable: "--font-playfair",
-})
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
@@ -77,7 +69,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-        <body className={`${inter.variable} ${playfair.variable} font-sans antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         <div id="google_translate_element" className="hidden" />
         <div className="flex min-h-screen flex-col">
           <Header />
@@ -87,6 +79,7 @@ export default function RootLayout({
           <Footer />
           <MobileNav />
         </div>
+        <Analytics />
       </body>
     </html>
   )

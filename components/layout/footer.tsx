@@ -151,7 +151,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row">
-          <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+          <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} Marketin24. Tüm hakları saklıdır.
           </p>
           <div className="flex gap-6">
