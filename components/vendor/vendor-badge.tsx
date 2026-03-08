@@ -46,6 +46,7 @@ export function VendorBadge({
               "relative overflow-hidden rounded-full bg-secondary flex-shrink-0",
               size === "sm" ? "h-5 w-5" : "h-6 w-6"
             )}
+            style={{ position: "relative" }}
           >
             <Image
               src={vendor.logo}

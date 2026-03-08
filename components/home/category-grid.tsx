@@ -31,7 +31,7 @@ export function CategoryGrid() {
               href={`/category/${category.slug}`}
               className="group flex-shrink-0 w-36 sm:w-auto block"
             >
-              <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
+              <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary" style={{ position: "relative" }}>
                 <Image
                   src={category.image}
                   alt={category.name}

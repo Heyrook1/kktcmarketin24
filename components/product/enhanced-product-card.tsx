@@ -96,7 +96,7 @@ export function EnhancedProductCard({
       >
         <Link href={`/products/${product.id}`} className="block">
           {/* Image */}
-          <div className="relative aspect-square overflow-hidden bg-secondary/40">
+          <div className="relative aspect-square overflow-hidden bg-secondary/40" style={{ position: "relative" }}>
             <Image
               src={product.images[0]}
               alt={product.name}
