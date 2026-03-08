@@ -145,20 +145,24 @@
   100% { background-position: 200% 0; }
 }
 
+/* Mega menu slide-down */
+@keyframes mega-menu-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-mega-menu-in {
+  animation: mega-menu-in 0.18s ease-out forwards;
+}
+
+/* Smooth scale for product card image */
+.scale-108 { transform: scale(1.08); }
+
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
-
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out;
 }
-
 .animate-slide-in-up {
   animation: slide-in-up 0.3s ease-out;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
 }

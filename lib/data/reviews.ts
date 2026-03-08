@@ -1,3 +1,11 @@
+export interface VendorReply {
+  vendorId: string
+  vendorName: string
+  vendorLogo: string
+  reply: string
+  date: string
+}
+
 export interface Review {
   id: string
   productId: string
@@ -10,6 +18,8 @@ export interface Review {
   date: string
   verified: boolean
   helpful: number
+  images?: string[]
+  vendorReply?: VendorReply
 }
 
 export const reviews: Review[] = [
@@ -25,7 +35,14 @@ export const reviews: Review[] = [
     comment: "Gürültü engelleme özelliği gerçekten harika. Uzun süre rahat kullanabiliyorum.",
     date: "2024-02-15",
     verified: true,
-    helpful: 24
+    helpful: 24,
+    vendorReply: {
+      vendorId: "techzone",
+      vendorName: "TechZone KKTC",
+      vendorLogo: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=40&h=40&fit=crop",
+      reply: "Memnuniyetiniz bizim için çok önemli! Ürünümüzü tercih ettiğiniz için teşekkür ederiz. Sorun yaşarsanız her zaman buradayız.",
+      date: "2024-02-16"
+    }
   },
   {
     id: "r-002",
@@ -64,7 +81,14 @@ export const reviews: Review[] = [
     comment: "42 numara tam oturdu. Kumaşı çok yumuşak ve rahat.",
     date: "2024-02-12",
     verified: true,
-    helpful: 31
+    helpful: 31,
+    vendorReply: {
+      vendorId: "modastyle",
+      vendorName: "Kıbrıs Moda",
+      vendorLogo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=40&h=40&fit=crop",
+      reply: "Değerli yorumunuz için teşekkür ederiz! Ürünlerimizin beğenilmesi bizi çok mutlu ediyor. Yeni koleksiyonlarımızı da takip etmeyi unutmayın.",
+      date: "2024-02-13"
+    }
   },
   {
     id: "r-005",
@@ -102,7 +126,14 @@ export const reviews: Review[] = [
     comment: "2 haftadır kullanıyorum, sivilcelerim azaldı. Kesinlikle tavsiye ederim.",
     date: "2024-02-20",
     verified: true,
-    helpful: 56
+    helpful: 56,
+    vendorReply: {
+      vendorId: "glowbeauty",
+      vendorName: "Güzellik Evi",
+      vendorLogo: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=40&h=40&fit=crop",
+      reply: "Sonuçlardan memnun olduğunuzu duymak harika! Ürünlerimiz dermatolog onaylı ve doğal içerikler kullanılarak üretilmektedir. Sağlıklı güzelliğiniz için buradayız.",
+      date: "2024-02-21"
+    }
   },
   {
     id: "r-008",
