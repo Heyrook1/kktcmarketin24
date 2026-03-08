@@ -43,8 +43,11 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
     return { rating: r, count, percentage: vendorReviews.length > 0 ? (count / vendorReviews.length) * 100 : 0 }
   })
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("tr-TR", { year: "numeric", month: "short", day: "numeric" })
+  const formatDate = (d: string) => {
+    const [year, month, day] = d.split("T")[0].split("-")
+    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

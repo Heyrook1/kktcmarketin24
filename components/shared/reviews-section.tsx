@@ -68,8 +68,12 @@ export function ReviewsSection({
     })
   }
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString("tr-TR", { year: "numeric", month: "long", day: "numeric" })
+  // Use a locale-neutral format to avoid Node.js ICU / browser locale mismatch
+  const formatDate = (dateString: string) => {
+    const [year, month, day] = dateString.split("T")[0].split("-")
+    const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
+  }
 
   return (
     <div className={cn("space-y-6", compact && "space-y-4")}>
