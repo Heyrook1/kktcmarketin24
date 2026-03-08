@@ -118,12 +118,12 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
                   key={i}
                   onClick={() => setSelectedImage(i)}
                   className={cn(
-                    "relative h-18 w-18 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all",
+                    "relative flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all",
                     selectedImage === i ? "border-primary shadow-md" : "border-transparent hover:border-border"
                   )}
                   style={{ height: 72, width: 72 }}
                 >
-                  <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" />
+                  <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" sizes="72px" />
                 </button>
               ))}
             </div>
