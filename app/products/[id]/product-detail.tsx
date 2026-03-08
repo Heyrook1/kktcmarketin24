@@ -96,7 +96,7 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
       <div className="grid lg:grid-cols-2 gap-8 lg:gap-14">
         {/* ── Left: Image gallery ── */}
         <div className="flex flex-col gap-3">
-          <div className="relative aspect-square rounded-2xl overflow-hidden bg-secondary">
+          <div className="relative aspect-square rounded-2xl overflow-hidden bg-secondary" style={{ position: "relative" }}>
             <Image
               src={product.images[selectedImage]}
               alt={product.name}
@@ -387,7 +387,7 @@ function VendorProfileCard({ vendor }: { vendor: NonNullable<ProductDetailProps[
   return (
     <div className="rounded-2xl border overflow-hidden">
       {/* Cover */}
-      <div className="relative h-32 w-full">
+      <div className="relative h-32 w-full overflow-hidden" style={{ position: "relative" }}>
         <Image src={vendor.coverImage} alt={vendor.name} fill className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       </div>
@@ -395,7 +395,7 @@ function VendorProfileCard({ vendor }: { vendor: NonNullable<ProductDetailProps[
       <div className="px-6 pb-6">
         {/* Logo + name */}
         <div className="flex items-end gap-4 -mt-10 relative z-10 mb-4">
-          <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg">
+          <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg" style={{ position: "relative" }}>
             <Image src={vendor.logo} alt={vendor.name} fill className="object-cover" />
           </div>
           <div className="pb-1">

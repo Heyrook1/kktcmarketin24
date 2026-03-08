@@ -106,7 +106,7 @@ export function LiveBrandAds() {
                     
                     <div className="relative flex items-center gap-4 h-full">
                       {/* Brand logo */}
-                      <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-white/20 flex-shrink-0">
+                      <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-white/20 flex-shrink-0" style={{ position: "relative" }}>
                         <Image
                           src={ad.logo}
                           alt={ad.brandName}

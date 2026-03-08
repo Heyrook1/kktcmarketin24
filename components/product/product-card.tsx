@@ -31,7 +31,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   return (
     <Card className={cn("group overflow-hidden transition-shadow hover:shadow-md", className)}>
       <Link href={`/products/${product.id}`}>
-        <div className="relative aspect-square overflow-hidden bg-secondary">
+        <div className="relative aspect-square overflow-hidden bg-secondary" style={{ position: "relative" }}>
           <Image
             src={product.images[0]}
             alt={product.name}

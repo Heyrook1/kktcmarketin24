@@ -56,7 +56,7 @@ export function CartContent() {
                 <div className="flex items-center gap-3">
                   {vendor && (
                     <>
-                      <div className="relative h-8 w-8 rounded-full overflow-hidden bg-secondary">
+                      <div className="relative h-8 w-8 rounded-full overflow-hidden bg-secondary" style={{ position: "relative" }}>
                         <Image
                           src={vendor.logo}
                           alt={vendor.name}
@@ -75,7 +75,8 @@ export function CartContent() {
                     {/* Product Image */}
                     <Link
                       href={`/products/${product.id}`}
-                      className="relative h-24 w-24 flex-shrink-0 rounded-lg overflow-hidden bg-secondary"
+                      className="relative h-24 w-24 flex-shrink-0 rounded-lg overflow-hidden bg-secondary block"
+                      style={{ position: "relative" }}
                     >
                       <Image
                         src={product.images[0]}

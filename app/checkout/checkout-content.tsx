@@ -183,7 +183,7 @@ export function CheckoutContent() {
                     <div className="flex items-center gap-2 text-sm font-medium">
                       {vendor && (
                         <>
-                          <div className="relative h-5 w-5 rounded-full overflow-hidden bg-secondary">
+                          <div className="relative h-5 w-5 rounded-full overflow-hidden bg-secondary" style={{ position: "relative" }}>
                             <Image
                               src={vendor.logo}
                               alt={vendor.name}

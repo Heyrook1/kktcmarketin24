@@ -113,7 +113,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
                 <div className="w-44 flex-shrink-0">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
                   <Link href={activeCategory.featured.href} onClick={onClose} className="block group">
-                    <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary">
+                    <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary" style={{ position: "relative" }}>
                       <Image
                         src={activeCategory.featured.image}
                         alt={activeCategory.featured.label}

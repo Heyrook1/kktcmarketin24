@@ -54,7 +54,7 @@ export default async function VendorPage({ params }: VendorPageProps) {
   return (
     <div>
       {/* Cover Image */}
-      <div className="relative h-48 md:h-64 w-full">
+      <div className="relative h-48 md:h-64 w-full" style={{ position: "relative" }}>
         <Image
           src={vendor.coverImage}
           alt={vendor.name}
@@ -70,7 +70,7 @@ export default async function VendorPage({ params }: VendorPageProps) {
         <div className="relative -mt-16 md:-mt-20 pb-8">
           <div className="flex flex-col md:flex-row gap-6 items-start">
             {/* Logo */}
-            <div className="relative h-28 w-28 md:h-36 md:w-36 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg">
+            <div className="relative h-28 w-28 md:h-36 md:w-36 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg" style={{ position: "relative" }}>
               <Image
                 src={vendor.logo}
                 alt={vendor.name}

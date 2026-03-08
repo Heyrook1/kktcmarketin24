@@ -49,7 +49,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   return (
     <div>
       {/* Hero Banner */}
-      <div className="relative h-48 md:h-64 w-full overflow-hidden">
+      <div className="relative h-48 md:h-64 w-full overflow-hidden" style={{ position: "relative" }}>
         <Image
           src={category.image}
           alt={category.name}
