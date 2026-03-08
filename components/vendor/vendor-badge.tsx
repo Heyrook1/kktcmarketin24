@@ -43,7 +43,7 @@ export function VendorBadge({
         {showLogo && (
           <div
             className={cn(
-              "relative rounded-full overflow-hidden bg-secondary flex-shrink-0",
+              "relative overflow-hidden rounded-full bg-secondary flex-shrink-0",
               size === "sm" ? "h-5 w-5" : "h-6 w-6"
             )}
           >
@@ -52,6 +52,7 @@ export function VendorBadge({
               alt={vendor.name}
               fill
               className="object-cover"
+              sizes={size === "sm" ? "20px" : "24px"}
             />
           </div>
         )}

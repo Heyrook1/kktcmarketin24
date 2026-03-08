@@ -29,7 +29,7 @@ export function CategoryGrid() {
             <Link
               key={category.id}
               href={`/category/${category.slug}`}
-              className="group flex-shrink-0 w-36 sm:w-auto relative block"
+              className="group flex-shrink-0 w-36 sm:w-auto block"
             >
               <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
                 <Image
