@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { Inter } from 'next/font/google'
+import { Header } from '@/components/layout/header'
+import { Footer } from '@/components/layout/footer'
+import { MobileNav } from '@/components/layout/mobile-nav'
 
 const inter = Inter({
   subsets: ["latin"],
@@ -78,7 +81,6 @@ export default function RootLayout({
           <Footer />
           <MobileNav />
         </div>
-        <Analytics />
       </body>
     </html>
   )
