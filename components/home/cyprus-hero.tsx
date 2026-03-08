@@ -117,7 +117,7 @@ export function CyprusHero() {
   return (
     <section
       className="relative w-full overflow-hidden"
-      style={{ background: "#1E120A" }}
+      style={{ background: "#1E120A", minHeight: "clamp(520px, 65vh, 760px)" }}
     >
       {/* ── Animated gradient overlay ─────────────────────────────────── */}
       <div
@@ -141,7 +141,7 @@ export function CyprusHero() {
         className="absolute inset-0 flex items-center justify-end pr-4 pointer-events-none select-none"
         aria-hidden="true"
       >
-        <CyprusSilhouette className="animate-float-slow w-[min(640px,90vw)] opacity-[0.07] text-[#E8D5B7]" />
+        <CyprusSilhouette className="animate-float-slow w-[min(520px,72vw)] max-h-[70%] opacity-[0.13] text-[#C0562A]" />
       </div>
 
       {/* ── Warm light blobs ──────────────────────────────────────────── */}
@@ -157,7 +157,7 @@ export function CyprusHero() {
       />
 
       {/* ── Main content ──────────────────────────────────────────────── */}
-      <div className="relative container mx-auto px-4 py-20 md:py-28 lg:py-36">
+      <div className="relative container mx-auto px-4 py-14 md:py-20 flex items-center justify-center" style={{ minHeight: "inherit" }}>
         <div className="flex flex-col items-center text-center gap-8 max-w-4xl mx-auto">
 
           {/* Origin badge */}

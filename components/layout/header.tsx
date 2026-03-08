@@ -40,27 +40,25 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
               const Icon = ICON_MAP[cat.icon] || Smartphone
               const isActive = activeCategory.id === cat.id
               return (
-                <button
+                <Link
                   key={cat.id}
+                  href={`/category/${cat.slug}`}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-all duration-150 group text-left",
+                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-all duration-150 group",
                     isActive
                       ? "bg-primary text-primary-foreground font-medium"
                       : "text-foreground hover:bg-secondary"
                   )}
                   onMouseEnter={() => setActiveCategory(cat)}
                   onClick={() => onClose()}
-                  asChild
                 >
-                  <Link href={`/category/${cat.slug}`} className="flex items-center gap-3 w-full">
-                    <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
-                    <span className="flex-1 truncate">{cat.name}</span>
-                    <span className={cn("text-xs", isActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                      {cat.productCount}
-                    </span>
-                    <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0", isActive ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
-                  </Link>
-                </button>
+                  <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
+                  <span className="flex-1 truncate">{cat.name}</span>
+                  <span className={cn("text-xs", isActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                    {cat.productCount}
+                  </span>
+                  <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0", isActive ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
+                </Link>
               )
             })}
             <Separator className="my-2" />
