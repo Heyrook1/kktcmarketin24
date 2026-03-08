@@ -81,6 +81,7 @@
 
 @theme inline {
   --font-sans: 'Inter', 'Inter Fallback', sans-serif;
+  --font-serif: 'Playfair Display', 'Georgia', serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -176,6 +177,15 @@
 }
 .animate-badge-in {
   animation: badge-in 0.5s ease-out forwards;
+}
+
+/* Marquee for brand ads */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 36s linear infinite;
 }
 
 /* Mega menu slide-down */

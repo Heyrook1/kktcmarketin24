@@ -27,7 +27,7 @@ function ProductSection({ title, description, viewAllHref, children, icon, badge
             )}
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-bold">{title}</h2>
+                <h2 className="text-xl md:text-2xl font-serif font-bold tracking-tight">{title}</h2>
                 {badge && (
                   <Badge variant="secondary" className="animate-pulse">
                     {badge}
