@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { Inter } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import { Header } from '@/components/layout/header'
-import { Footer } from '@/components/layout/footer'
-import { MobileNav } from '@/components/layout/mobile-nav'
-import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-inter",
+})
 
 export const metadata: Metadata = {
   title: {
@@ -69,7 +68,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.className} antialiased`}>
+        <body className={`${inter.variable} font-sans antialiased`}>
         <div id="google_translate_element" className="hidden" />
         <div className="flex min-h-screen flex-col">
           <Header />
