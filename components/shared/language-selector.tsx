@@ -33,6 +33,8 @@ declare global {
   }
 }
 
+import { cn } from "@/lib/utils"
+
 export function LanguageSelector() {
   const [currentLang, setCurrentLang] = useState("en")
 
@@ -87,24 +89,26 @@ export function LanguageSelector() {
 
   return (
     <>
-      {/* Hidden Google Translate Element */}
       <div id="google_translate_element" className="hidden" />
-
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-2">
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">{currentLanguage?.name}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 px-2 font-semibold text-xs tracking-wide rounded-md border border-border hover:border-primary/40"
+          >
+            <Globe className="h-3.5 w-3.5 flex-shrink-0" />
+            {currentLanguage?.code.toUpperCase()}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-[140px]">
           {languages.map((lang) => (
             <DropdownMenuItem
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
-              className="gap-2"
+              className={cn("gap-2 text-sm", lang.code === currentLang && "font-semibold text-primary")}
             >
-              <span>{lang.flag}</span>
+              <span aria-hidden>{lang.flag}</span>
               <span>{lang.name}</span>
             </DropdownMenuItem>
           ))}
