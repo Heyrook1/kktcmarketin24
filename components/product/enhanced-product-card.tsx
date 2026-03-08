@@ -348,17 +348,6 @@ export function EnhancedProductCard({
   )
 }
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { VendorBadge } from "@/components/vendor/vendor-badge"
-import { PriceDisplay } from "@/components/shared/price-display"
-import { useCartStore } from "@/lib/store/cart-store"
-import { Product } from "@/lib/data/products"
-import { getProductReviews } from "@/lib/data/reviews"
-import { cn } from "@/lib/utils"
-
 interface EnhancedProductCardProps {
   product: Product
   showReviews?: boolean
