@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import {
   ShoppingCart, Star, Heart, Ruler,
-  AlertTriangle, Check, Info,
+  AlertTriangle, Check, Info, ChevronLeft, ChevronRight,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,12 +31,14 @@ export function EnhancedProductCard({
   showSizes = true,
   showStock = true,
 }: EnhancedProductCardProps) {
-  const [isHovered, setIsHovered]     = useState(false)
+  const [isHovered, setIsHovered]         = useState(false)
+  const [activeImg, setActiveImg]         = useState(0)
+  const [imgVisible, setImgVisible]       = useState(true)
   const [selectedSize, setSelectedSize]   = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
-  const [isFavorite, setIsFavorite]   = useState(false)
-  const [isAdded, setIsAdded]         = useState(false)
-  const [liveStock, setLiveStock]     = useState(product.stockCount)
+  const [isFavorite, setIsFavorite]       = useState(false)
+  const [isAdded, setIsAdded]             = useState(false)
+  const [liveStock, setLiveStock]         = useState(product.stockCount)
   const { addItem, openCart } = useCartStore()
   const reviews = getProductReviews(product.id)
 
@@ -71,6 +73,27 @@ export function EnhancedProductCard({
     if (activeStock <= 10) return { label: `${activeStock} kaldı`, color: "text-amber-600", dot: "bg-amber-500 animate-pulse" }
     return                        { label: "Stokta var",           color: "text-green-600",  dot: "bg-green-500" }
   })()
+
+  const images = product.images?.length ? product.images : ["/placeholder.jpg"]
+  const hasMultiple = images.length > 1
+
+  function switchImage(idx: number, e?: React.MouseEvent) {
+    e?.preventDefault()
+    e?.stopPropagation()
+    if (idx === activeImg) return
+    setImgVisible(false)
+    setTimeout(() => { setActiveImg(idx); setImgVisible(true) }, 150)
+  }
+
+  function prevImage(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation()
+    switchImage((activeImg - 1 + images.length) % images.length)
+  }
+
+  function nextImage(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation()
+    switchImage((activeImg + 1) % images.length)
+  }
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -110,18 +133,25 @@ export function EnhancedProductCard({
         </button>
 
         <Link href={`/products/${product.id}`} className="block">
-          {/* Image */}
+          {/* Image gallery */}
           <div className="relative aspect-square overflow-hidden bg-secondary/40">
+            {/* Main image with crossfade */}
             <Image
-              src={product.images[0]}
-              alt={product.name}
+              src={images[activeImg]}
+              alt={`${product.name} — görsel ${activeImg + 1}`}
               fill
-              className="object-cover transition-transform duration-500"
-              style={{ transform: isHovered ? "scale(1.07)" : "scale(1)" }}
+              className="object-cover transition-all duration-500"
+              style={{
+                transform: isHovered ? "scale(1.05)" : "scale(1)",
+                opacity: imgVisible ? 1 : 0,
+                transition: "opacity 150ms ease, transform 500ms ease",
+              }}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
+
+            {/* Scrim */}
             <div className={cn(
-              "absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent transition-opacity duration-300",
+              "absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent transition-opacity duration-300",
               isHovered ? "opacity-100" : "opacity-0"
             )} />
 
@@ -140,9 +170,78 @@ export function EnhancedProductCard({
               )}
             </div>
 
+            {/* Prev / Next arrows — only when multiple images */}
+            {hasMultiple && isHovered && (
+              <>
+                <button
+                  onClick={prevImage}
+                  aria-label="Önceki görsel"
+                  className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur border border-border shadow-sm hover:bg-background transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  aria-label="Sonraki görsel"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur border border-border shadow-sm hover:bg-background transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+
+            {/* Thumbnail strip — visible on hover */}
+            {hasMultiple && (
+              <div className={cn(
+                "absolute bottom-11 left-0 right-0 flex items-center justify-center gap-1 px-2 transition-all duration-300",
+                isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+              )}>
+                {images.map((src, i) => (
+                  <button
+                    key={i}
+                    onMouseEnter={(e) => switchImage(i, e)}
+                    onClick={(e) => switchImage(i, e)}
+                    aria-label={`Görsel ${i + 1}`}
+                    className={cn(
+                      "relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-md border-2 transition-all duration-200",
+                      i === activeImg
+                        ? "border-white scale-110 shadow-md"
+                        : "border-white/40 opacity-70 hover:opacity-100 hover:border-white/80"
+                    )}
+                  >
+                    <Image
+                      src={src}
+                      alt={`Küçük görsel ${i + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="36px"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Dot indicators (always visible when multiple) */}
+            {hasMultiple && (
+              <div className={cn(
+                "absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1 transition-opacity duration-300",
+                isHovered ? "opacity-0" : "opacity-100"
+              )}>
+                {images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "rounded-full transition-all duration-300",
+                      i === activeImg ? "w-3 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Hover quick-add strip */}
             <div className={cn(
-              "absolute bottom-0 left-0 right-0 p-2.5 transition-all duration-300",
+              "absolute bottom-0 left-0 right-0 p-2 transition-all duration-300",
               isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
             )}>
               <Button
