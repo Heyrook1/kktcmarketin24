@@ -402,6 +402,8 @@ interface AccountState {
 
   // Coupons
   addCoupon: (code: string) => { success: boolean; message: string }
+  setCoupons: (coupons: Coupon[]) => void
+  addOrUpdateCoupon: (coupon: Coupon) => void
 }
 
 export const useAccountStore = create<AccountState>()(
@@ -523,6 +525,18 @@ export const useAccountStore = create<AccountState>()(
         set((s) => ({ coupons: [newCoupon, ...s.coupons] }))
         return { success: true, message: "Kupon başarıyla eklendi." }
       },
+
+      setCoupons: (coupons) => set({ coupons }),
+
+      addOrUpdateCoupon: (coupon) =>
+        set((s) => {
+          const exists = s.coupons.some((c) => c.id === coupon.id)
+          return {
+            coupons: exists
+              ? s.coupons.map((c) => (c.id === coupon.id ? coupon : c))
+              : [coupon, ...s.coupons],
+          }
+        }),
     }),
     { name: "account-store" }
   )

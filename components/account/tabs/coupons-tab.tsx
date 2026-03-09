@@ -1,13 +1,17 @@
 "use client"
 
-import { useState } from "react"
-import { Tag, Gift, Copy, Check, Plus, Clock, CheckCircle, XCircle, Percent, Truck, BadgeDollarSign } from "lucide-react"
+import { useState, useEffect, useTransition } from "react"
+import {
+  Tag, Gift, Copy, Check, Plus, Clock, CheckCircle, XCircle,
+  Percent, Truck, BadgeDollarSign, FlaskConical, Loader2, RefreshCw,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAccountStore, Coupon, Gift as GiftType, CouponType } from "@/lib/store/account-store"
 import { cn } from "@/lib/utils"
+import { claimTestCoupon, getUserCoupons } from "@/app/actions/coupons"
 
 function couponTypeLabel(type: CouponType, value: number) {
   if (type === "percent") return `%${value} indirim`
@@ -151,22 +155,108 @@ function GiftCard({ gift }: { gift: GiftType }) {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function CouponsTab({ userId }: { userId: string }) {
-  const { coupons, gifts, addCoupon } = useAccountStore()
+  const { coupons, gifts, addCoupon, setCoupons, addOrUpdateCoupon } = useAccountStore()
   const [code, setCode] = useState("")
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const [isFetching, setIsFetching] = useState(false)
+
+  // On mount, sync real coupons from DB into the Zustand store
+  useEffect(() => {
+    setIsFetching(true)
+    getUserCoupons()
+      .then((dbCoupons) => {
+        if (dbCoupons.length > 0) setCoupons(dbCoupons)
+      })
+      .finally(() => setIsFetching(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
+
+  function showMsg(text: string, ok: boolean) {
+    setMsg({ text, ok })
+    setTimeout(() => setMsg(null), 4000)
+  }
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!code.trim()) return
     const result = addCoupon(code.trim())
-    setMsg({ text: result.message, ok: result.success })
+    showMsg(result.message, result.success)
     if (result.success) setCode("")
-    setTimeout(() => setMsg(null), 3000)
   }
+
+  function handleClaimTest(couponCode: string) {
+    startTransition(async () => {
+      const result = await claimTestCoupon(couponCode)
+      if (!result.success) {
+        showMsg(result.error, false)
+        return
+      }
+      addOrUpdateCoupon(result.coupon)
+      showMsg(
+        result.alreadyHad
+          ? `${result.coupon.code} zaten hesabınızda mevcut.`
+          : `${result.coupon.code} test kuponu hesabınıza eklendi!`,
+        true
+      )
+    })
+  }
+
+  const TEST_COUPONS = [
+    { code: "TEST20",    label: "%20 İndirim" },
+    { code: "TEST50TL",  label: "50 ₺ İndirim" },
+    { code: "TESTKARGO", label: "Ücretsiz Kargo" },
+  ]
 
   return (
     <div className="space-y-5">
-      {/* Add coupon */}
+
+      {/* Test coupon assignment panel */}
+      <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="h-4 w-4 text-primary shrink-0" />
+            <h2 className="font-semibold text-sm">Test Kuponu Al</h2>
+            <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">DEV</Badge>
+          </div>
+          {isFetching && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <RefreshCw className="h-3 w-3 animate-spin" />Güncelleniyor
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Aşağıdaki test kuponlarından birini hesabına atayarak ödeme akışını test edebilirsin.
+          Her kupon bir kez atanır; tekrar tıklama zaten sahip olduğunu bildirir.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {TEST_COUPONS.map(({ code: c, label }) => (
+            <button
+              key={c}
+              onClick={() => handleClaimTest(c)}
+              disabled={isPending}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm font-medium transition-all",
+                "hover:border-primary hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                coupons.some((cp) => cp.code === c) && "border-green-300 bg-green-50 text-green-700"
+              )}
+            >
+              {isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+              ) : coupons.some((cp) => cp.code === c) ? (
+                <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
+              ) : (
+                <Plus className="h-3.5 w-3.5 shrink-0" />
+              )}
+              <span className="font-mono tracking-wide">{c}</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">— {label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Add coupon manually */}
       <div className="rounded-xl border bg-card p-4 space-y-3">
         <h2 className="font-semibold text-sm flex items-center gap-2"><Tag className="h-4 w-4 text-primary" />Kupon Kodu Ekle</h2>
         <form onSubmit={handleAdd} className="flex gap-2">
