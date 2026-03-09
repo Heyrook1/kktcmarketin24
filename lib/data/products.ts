@@ -177,6 +177,10 @@ export const products: Product[] = [
       { name: "Kahverengi", hex: "#8B4513", stock: 10 }
     ],
     material: "100% Hakiki Deri",
+    categoryId: "fashion",
+    vendorId: "modastyle",
+    rating: 4.8,
+    reviewCount: 287,
     specifications: {
       "Kumaş": "Hakiki Deri",
       "Astar": "Polyester",
