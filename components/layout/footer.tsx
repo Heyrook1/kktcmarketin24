@@ -2,7 +2,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react"
 import { categories } from "@/lib/data/categories"
-
 export function Footer() {
   return (
     <footer className="border-t bg-secondary/30">
@@ -99,12 +98,12 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/seller-application"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Satıcı Ol
-                </a>
+                </Link>
               </li>
               <li>
                 <a

@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useCartStore } from "@/lib/store/cart-store"
+import { useWishlistStore } from "@/lib/store/wishlist-store"
 import { categories, type Category } from "@/lib/data/categories"
 import { SearchBar } from "@/components/shared/search-bar"
 import { CartDrawer } from "@/components/cart/cart-drawer"
@@ -136,6 +137,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
 
 export function Header() {
   const { getTotalItems, openCart } = useCartStore()
+  const { items: wishlistItems } = useWishlistStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [megaMenuOpen, setMegaMenuOpen] = useState(false)
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState<string | null>(null)
@@ -227,6 +229,18 @@ export function Header() {
               </Button>
             </Link>
 
+            {/* Favorites link */}
+            <Link href="/wishlist">
+              <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative">
+                <Heart className="h-5 w-5" />
+                {wishlistItems.length > 0 && (
+                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+
             {/* Cart */}
             <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
               <ShoppingCart className="h-5 w-5" />
@@ -257,16 +271,12 @@ export function Header() {
                     </Button>
                   </div>
 
-                  {/* Inline search */}
-                  <div className="px-4 py-3 border-b">
-                    <SearchBar />
-                  </div>
-
                   {/* Quick nav links */}
                   <div className="px-3 py-2 border-b flex gap-1">
                     {[
                       { href: "/products", label: "Tüm Ürünler", icon: Tag },
                       { href: "/vendors", label: "Satıcılar", icon: Store },
+                      { href: "/wishlist", label: "Favoriler", icon: Heart },
                       { href: "/compare", label: "Karşılaştır", icon: LayoutGrid },
                     ].map(({ href, label, icon: Icon }) => (
                       <Link

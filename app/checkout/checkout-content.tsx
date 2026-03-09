@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
   ShoppingBag, CreditCard, Truck, ShieldCheck,
-  Check, AlertTriangle, UserCircle, Info, Loader2,
+  Check, AlertTriangle, UserCircle, Info, Loader2, Tag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,7 +19,10 @@ import { Badge } from "@/components/ui/badge"
 import { useCartStore } from "@/lib/store/cart-store"
 import { formatPrice } from "@/lib/format"
 import { getVendorById } from "@/lib/data/vendors"
+import { useAccountStore } from "@/lib/store/account-store"
+import type { Order } from "@/lib/store/account-store"
 import { cn } from "@/lib/utils"
+import { CouponPicker } from "@/components/checkout/coupon-picker"
 
 interface CheckoutContentProps {
   user: User | null
@@ -49,10 +52,12 @@ function splitName(full: string) {
 
 export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const router = useRouter()
-  const { items, getTotalPrice, clearCart, getItemsByVendor } = useCartStore()
+  const { items, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [errors, setErrors] = useState<FieldErrors>({})
+
+  const { addOrder, coupons, gifts } = useAccountStore()
 
   const { first, last } = splitName((profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? "")
 
@@ -123,12 +128,47 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     }
     setIsSubmitting(true)
     await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Build and persist the new order so it appears immediately in the customer panel
+    const newOrder: Order = {
+      id: `ORD-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: "pending",
+      items: items.map(({ product, quantity }) => ({
+        productId: product.id,
+        productName: product.name,
+        vendorName: getVendorById(product.vendorId)?.name ?? "Bilinmeyen Satıcı",
+        imageUrl: product.images[0] ?? "",
+        quantity,
+        price: product.price,
+      })),
+      subtotal: totalPrice,
+      shippingFee: 0,
+      discount: discountAmount,
+      total: finalPrice,
+      couponCode: appliedCoupon?.code,
+      deliveryAddress: {
+        fullName: `${form.firstName} ${form.lastName}`,
+        phone: form.phone,
+        line1: form.address,
+        city: form.city,
+        district: form.district,
+      },
+      estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      statusHistory: [
+        { status: "pending", timestamp: new Date().toISOString(), note: "Sipariş alındı" },
+      ],
+    }
+    addOrder(newOrder)
     clearCart()
     router.push("/checkout/success")
   }
 
   const itemsByVendor = getItemsByVendor()
   const totalPrice = getTotalPrice()
+  const discountAmount = getDiscountAmount()
+  const finalPrice = getFinalPrice()
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
 
   if (items.length === 0) {
@@ -383,12 +423,50 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                 <span className="text-green-600 font-medium">Ücretsiz</span>
               </div>
 
+              {/* Applied coupon discount */}
+              {appliedCoupon && discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />{appliedCoupon.code}
+                  </span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              {appliedCoupon?.type === "free_shipping" && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />{appliedCoupon.code}
+                  </span>
+                  <span>Ücretsiz kargo</span>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Smart coupon picker — auto-applies best, shows dropdown */}
+              <div className="relative">
+                <CouponPicker
+                  coupons={coupons}
+                  gifts={gifts}
+                  subtotal={totalPrice}
+                  appliedCoupon={appliedCoupon}
+                  onApply={applyCoupon}
+                  onRemove={removeCoupon}
+                  isLoggedIn={!!user}
+                />
+              </div>
+
               <Separator />
 
               <div className="flex justify-between font-semibold text-lg">
                 <span>Toplam</span>
-                <span>{formatPrice(totalPrice)}</span>
+                <span className={cn(discountAmount > 0 && "text-green-700")}>{formatPrice(finalPrice)}</span>
               </div>
+              {discountAmount > 0 && (
+                <p className="text-xs text-right text-green-600 font-medium">
+                  {formatPrice(discountAmount)} tasarruf ettiniz!
+                </p>
+              )}
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                 <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />

@@ -394,12 +394,16 @@ interface AccountState {
   // Profile
   updateProfile: (updates: Partial<UserProfile>) => void
 
-  // Support
+  // Orders
+  addOrder: (order: Order) => void
+  updateOrderStatus: (orderId: string, status: OrderStatus, note?: string) => void
   createTicket: (ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt" | "messages"> & { initialMessage: string }) => void
   replyToTicket: (ticketId: string, content: string) => void
 
   // Coupons
   addCoupon: (code: string) => { success: boolean; message: string }
+  setCoupons: (coupons: Coupon[]) => void
+  addOrUpdateCoupon: (coupon: Coupon) => void
 }
 
 export const useAccountStore = create<AccountState>()(
@@ -448,6 +452,26 @@ export const useAccountStore = create<AccountState>()(
 
       updateProfile: (updates) =>
         set((s) => ({ profile: s.profile ? { ...s.profile, ...updates } : null })),
+
+      addOrder: (order) =>
+        set((s) => ({ orders: [order, ...s.orders] })),
+
+      updateOrderStatus: (orderId, status, note) =>
+        set((s) => ({
+          orders: s.orders.map((o) =>
+            o.id !== orderId
+              ? o
+              : {
+                  ...o,
+                  status,
+                  updatedAt: new Date().toISOString(),
+                  statusHistory: [
+                    ...o.statusHistory,
+                    { status, timestamp: new Date().toISOString(), note },
+                  ],
+                }
+          ),
+        })),
 
       createTicket: ({ initialMessage, ...data }) => {
         const ticket: SupportTicket = {
@@ -501,6 +525,18 @@ export const useAccountStore = create<AccountState>()(
         set((s) => ({ coupons: [newCoupon, ...s.coupons] }))
         return { success: true, message: "Kupon başarıyla eklendi." }
       },
+
+      setCoupons: (coupons) => set({ coupons }),
+
+      addOrUpdateCoupon: (coupon) =>
+        set((s) => {
+          const exists = s.coupons.some((c) => c.id === coupon.id)
+          return {
+            coupons: exists
+              ? s.coupons.map((c) => (c.id === coupon.id ? coupon : c))
+              : [coupon, ...s.coupons],
+          }
+        }),
     }),
     { name: "account-store" }
   )

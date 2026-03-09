@@ -1,14 +1,17 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ShoppingBag, Minus, Plus, Trash2, ArrowRight } from "lucide-react"
+import { ShoppingBag, Minus, Plus, Trash2, ArrowRight, Tag, X, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
 import { useCartStore } from "@/lib/store/cart-store"
 import { formatPrice } from "@/lib/format"
 import { getVendorById } from "@/lib/data/vendors"
+import { cn } from "@/lib/utils"
 
 export function CartContent() {
   const {
@@ -17,12 +20,38 @@ export function CartContent() {
     updateQuantity,
     clearCart,
     getTotalPrice,
+    getDiscountAmount,
+    getFinalPrice,
     getItemsByVendor,
+    appliedCoupon,
+    applyCoupon,
+    removeCoupon,
   } = useCartStore()
+
+  const [couponInput, setCouponInput] = useState("")
+  const [couponError, setCouponError] = useState("")
+  const [couponLoading, setCouponLoading] = useState(false)
 
   const itemsByVendor = getItemsByVendor()
   const totalPrice = getTotalPrice()
+  const discountAmount = getDiscountAmount()
+  const finalPrice = getFinalPrice()
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+
+  async function handleApplyCoupon() {
+    const code = couponInput.trim()
+    if (!code) return
+    setCouponLoading(true)
+    setCouponError("")
+    await new Promise((r) => setTimeout(r, 600)) // simulate network
+    const result = applyCoupon(code)
+    setCouponLoading(false)
+    if (!result.valid) {
+      setCouponError(result.message)
+    } else {
+      setCouponInput("")
+    }
+  }
 
   if (items.length === 0) {
     return (
@@ -167,13 +196,92 @@ export function CartContent() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Kargo</span>
-              <span className="text-green-600">Ücretsiz</span>
+              <span className={appliedCoupon?.type === "free_shipping" ? "text-green-600 font-medium line-through text-muted-foreground" : "text-green-600 font-medium"}>
+                Ücretsiz
+              </span>
             </div>
+
+            {/* Coupon applied */}
+            {appliedCoupon && discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span className="flex items-center gap-1">
+                  <Tag className="h-3.5 w-3.5" />
+                  {appliedCoupon.code}
+                </span>
+                <span>-{formatPrice(discountAmount)}</span>
+              </div>
+            )}
+            {appliedCoupon?.type === "free_shipping" && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span className="flex items-center gap-1">
+                  <Tag className="h-3.5 w-3.5" />
+                  {appliedCoupon.code}
+                </span>
+                <span>Ücretsiz kargo</span>
+              </div>
+            )}
+
             <Separator />
+
+            {/* Coupon input */}
+            {!appliedCoupon ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">İndirim Kodu</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Kupon kodunu girin"
+                    value={couponInput}
+                    onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError("") }}
+                    onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                    className="text-sm uppercase"
+                    maxLength={20}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponInput.trim()}
+                    className="shrink-0"
+                  >
+                    {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Uygula"}
+                  </Button>
+                </div>
+                {couponError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <X className="h-3 w-3 shrink-0" />{couponError}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-3 py-2.5">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-green-800 dark:text-green-400">{appliedCoupon.code}</p>
+                    <p className="text-xs text-green-700 dark:text-green-500">{appliedCoupon.description}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={removeCoupon}
+                  className="text-green-700 hover:text-red-500 transition-colors ml-2"
+                  aria-label="Kuponu kaldır"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <Separator />
+
             <div className="flex justify-between font-semibold text-lg">
               <span>Toplam</span>
-              <span>{formatPrice(totalPrice)}</span>
+              <span className={cn(discountAmount > 0 && "text-green-700")}>{formatPrice(finalPrice)}</span>
             </div>
+            {discountAmount > 0 && (
+              <p className="text-xs text-green-600 text-right font-medium">
+                {formatPrice(discountAmount)} tasarruf ettiniz!
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Vergiler ödeme sayfasında hesaplanacaktır
             </p>
