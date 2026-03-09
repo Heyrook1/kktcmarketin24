@@ -1,78 +1,72 @@
 "use client"
 
 import { useState } from "react"
-import { Save, MapPin, User, Phone, Calendar, Check } from "lucide-react"
+import type { User } from "@supabase/supabase-js"
+import { Save, MapPin, UserIcon, Phone, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { useAccountStore } from "@/lib/store/account-store"
+import { createClient } from "@/lib/supabase/client"
 
-export function ProfileTab() {
-  const { profile, updateProfile } = useAccountStore()
+interface ProfileTabProps {
+  user: User
+  profile: Record<string, unknown> | null
+}
+
+export function ProfileTab({ user, profile }: ProfileTabProps) {
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved]   = useState(false)
+  const [error, setError]   = useState<string | null>(null)
+
   const [form, setForm] = useState({
-    firstName: profile?.firstName ?? "",
-    lastName: profile?.lastName ?? "",
-    email: profile?.email ?? "",
-    phone: profile?.phone ?? "",
-    birthDate: profile?.birthDate ?? "",
-    line1: profile?.address.line1 ?? "",
-    line2: profile?.address.line2 ?? "",
-    city: profile?.address.city ?? "",
-    district: profile?.address.district ?? "",
-    postalCode: profile?.address.postalCode ?? "",
+    full_name:     (profile?.full_name     as string) ?? user.user_metadata?.full_name ?? "",
+    display_name:  (profile?.display_name  as string) ?? "",
+    phone:         (profile?.phone         as string) ?? "",
+    address_line1: (profile?.address_line1 as string) ?? "",
+    address_line2: (profile?.address_line2 as string) ?? "",
+    city:          (profile?.city          as string) ?? "",
+    district:      (profile?.district      as string) ?? "",
+    postal_code:   (profile?.postal_code   as string) ?? "",
   })
-  const [saved, setSaved] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  function validate() {
-    const e: Record<string, string> = {}
-    if (!form.firstName.trim()) e.firstName = "Ad zorunludur."
-    if (!form.lastName.trim()) e.lastName = "Soyad zorunludur."
-    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Geçerli bir e-posta girin."
-    if (!form.phone.trim()) e.phone = "Telefon zorunludur."
-    if (!form.line1.trim()) e.line1 = "Adres satırı zorunludur."
-    if (!form.city.trim()) e.city = "Şehir zorunludur."
-    return e
+  function set(field: keyof typeof form, value: string) {
+    setForm((f) => ({ ...f, [field]: value }))
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
-    setErrors({})
-    updateProfile({
-      firstName: form.firstName,
-      lastName: form.lastName,
-      email: form.email,
-      phone: form.phone,
-      birthDate: form.birthDate,
-      address: {
-        line1: form.line1,
-        line2: form.line2,
-        city: form.city,
-        district: form.district,
-        postalCode: form.postalCode,
-        country: "KKTC",
-      },
-    })
+    setSaving(true)
+    setError(null)
+    const supabase = createClient()
+    const { error: err } = await supabase
+      .from("profiles")
+      .update(form)
+      .eq("id", user.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
-  function field(id: keyof typeof form, label: string, placeholder: string, type = "text") {
+  function field(
+    id: keyof typeof form,
+    label: string,
+    placeholder: string,
+    opts?: { type?: string; disabled?: boolean; hint?: string; colSpan?: boolean }
+  ) {
     return (
-      <div className="space-y-1.5">
-        <Label htmlFor={id} className={errors[id] ? "text-destructive" : ""}>{label}</Label>
+      <div className={opts?.colSpan ? "sm:col-span-2 space-y-1.5" : "space-y-1.5"}>
+        <Label htmlFor={id}>{label}</Label>
         <Input
           id={id}
-          type={type}
+          type={opts?.type ?? "text"}
           placeholder={placeholder}
           value={form[id]}
-          onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))}
-          className={errors[id] ? "border-destructive focus-visible:ring-destructive" : ""}
+          onChange={(e) => set(id, e.target.value)}
+          disabled={opts?.disabled}
+          className={opts?.disabled ? "bg-secondary/50 text-muted-foreground" : ""}
         />
-        {errors[id] && <p className="text-xs text-destructive">{errors[id]}</p>}
+        {opts?.hint && <p className="text-xs text-muted-foreground">{opts.hint}</p>}
       </div>
     )
   }
@@ -82,38 +76,37 @@ export function ProfileTab() {
       {/* Personal info */}
       <div className="rounded-xl border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
-          <User className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold text-sm">Kisisel Bilgiler</h2>
+          <UserIcon className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">Kişisel Bilgiler</h2>
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {field("firstName", "Ad", "Adınız")}
-          {field("lastName", "Soyad", "Soyadınız")}
-        </div>
-        {field("email", "E-posta", "ornek@email.com", "email")}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {field("full_name",    "Ad Soyad",       "Ad Soyad")}
+          {field("display_name", "Kullanıcı Adı",  "kullaniciadı")}
           <div className="space-y-1.5">
-            <Label htmlFor="phone" className={errors.phone ? "text-destructive" : ""}>
-              <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Telefon</span>
+            <Label htmlFor="email">E-posta</Label>
+            <Input
+              id="email"
+              type="email"
+              value={user.email ?? ""}
+              disabled
+              className="bg-secondary/50 text-muted-foreground"
+            />
+            <p className="text-xs text-muted-foreground">E-postayı değiştirmek için destek bölümüne yazın.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone">
+              <span className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" />
+                Telefon
+              </span>
             </Label>
             <Input
               id="phone"
               type="tel"
-              placeholder="+90 5xx xxx xx xx"
+              placeholder="+90 542 000 0000"
               value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              className={errors.phone ? "border-destructive" : ""}
-            />
-            {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="birthDate">
-              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />Dogum Tarihi</span>
-            </Label>
-            <Input
-              id="birthDate"
-              type="date"
-              value={form.birthDate}
-              onChange={(e) => setForm((f) => ({ ...f, birthDate: e.target.value }))}
+              onChange={(e) => set("phone", e.target.value)}
             />
           </div>
         </div>
@@ -124,24 +117,29 @@ export function ProfileTab() {
         <div className="flex items-center gap-2 mb-1">
           <MapPin className="h-4 w-4 text-primary" />
           <h2 className="font-semibold text-sm">Teslimat Adresi</h2>
-          <span className="text-xs text-muted-foreground ml-auto">Siparislerde otomatik doldurulur</span>
+          <span className="text-xs text-muted-foreground ml-auto">Siparişlerde otomatik doldurulur</span>
         </div>
-        {field("line1", "Adres Satiri 1", "Cadde, No, Daire")}
-        {field("line2", "Adres Satiri 2 (opsiyonel)", "Bina adi, Kat vb.")}
-        <div className="grid grid-cols-2 gap-4">
-          {field("city", "Sehir", "Lefkosa")}
-          {field("district", "Ilce", "Merkez")}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {field("address_line1", "Adres Satırı 1",              "Cadde, No, Daire",  { colSpan: true })}
+          {field("address_line2", "Adres Satırı 2 (opsiyonel)", "Bina adı, Kat vb.", { colSpan: true })}
+          {field("city",          "Şehir",                       "Lefkoşa")}
+          {field("district",      "İlçe",                        "Merkez")}
+          {field("postal_code",   "Posta Kodu",                  "99010")}
         </div>
-        {field("postalCode", "Posta Kodu", "99010")}
       </div>
 
+      {error && (
+        <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{error}</p>
+      )}
+
       <div className="flex justify-end">
-        <Button type="submit" className="gap-2 min-w-[140px]">
-          {saved ? (
-            <><Check className="h-4 w-4" />Kaydedildi</>
-          ) : (
-            <><Save className="h-4 w-4" />Kaydet</>
-          )}
+        <Button type="submit" disabled={saving} className="gap-2 min-w-[140px]">
+          {saving
+            ? <><Loader2 className="h-4 w-4 animate-spin" />Kaydediliyor…</>
+            : saved
+            ? <><Check className="h-4 w-4" />Kaydedildi</>
+            : <><Save className="h-4 w-4" />Kaydet</>}
         </Button>
       </div>
     </form>

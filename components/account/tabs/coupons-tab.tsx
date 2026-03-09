@@ -149,7 +149,8 @@ function GiftCard({ gift }: { gift: GiftType }) {
   )
 }
 
-export function CouponsTab() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function CouponsTab({ userId }: { userId: string }) {
   const { coupons, gifts, addCoupon } = useAccountStore()
   const [code, setCode] = useState("")
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)

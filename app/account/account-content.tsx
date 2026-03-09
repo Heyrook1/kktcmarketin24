@@ -1,10 +1,13 @@
 "use client"
 
-import { useAccountStore } from "@/lib/store/account-store"
-import { AuthGate } from "@/components/account/auth-gate"
+import type { User } from "@supabase/supabase-js"
 import { AccountShell } from "@/components/account/account-shell"
 
-export function AccountContent() {
-  const { isLoggedIn } = useAccountStore()
-  return isLoggedIn ? <AccountShell /> : <AuthGate />
+interface AccountContentProps {
+  user: User
+  profile: Record<string, unknown> | null
+}
+
+export function AccountContent({ user, profile }: AccountContentProps) {
+  return <AccountShell user={user} profile={profile} />
 }

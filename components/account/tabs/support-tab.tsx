@@ -124,7 +124,8 @@ function TicketCard({ ticket }: { ticket: SupportTicket }) {
   )
 }
 
-export function SupportTab() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function SupportTab({ userId }: { userId: string }) {
   const { tickets, orders, createTicket } = useAccountStore()
   const [showNew, setShowNew] = useState(false)
   const [newForm, setNewForm] = useState({
