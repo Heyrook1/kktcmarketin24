@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { SellerApplyButton } from '@/components/layout/seller-apply-button'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"] })
@@ -78,6 +79,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <MobileNav />
+          <SellerApplyButton />
         </div>
         <Analytics />
       </body>
