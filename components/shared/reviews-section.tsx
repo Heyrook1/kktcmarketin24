@@ -1,16 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import Image from "next/image"
 import {
   Star, ThumbsUp, ChevronDown, ChevronUp, CheckCircle,
-  User, MessageSquare, BadgeCheck, Send, X,
+  User, MessageSquare, BadgeCheck, Send, X, LogIn,
+  AlertTriangle, Sparkles, UserCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { useReviewUser } from "@/hooks/use-review-user"
 
 interface VendorReply {
   vendorId: string
@@ -91,6 +94,9 @@ export function ReviewsSection({
   const [sortKey, setSortKey] = useState<SortKey>("recent")
   const [showForm, setShowForm] = useState(false)
 
+  // Auth + profile
+  const reviewUser = useReviewUser()
+
   // Form state
   const [formRating, setFormRating] = useState(0)
   const [formTitle, setFormTitle] = useState("")
@@ -98,6 +104,13 @@ export function ReviewsSection({
   const [formName, setFormName] = useState("")
   const [formError, setFormError] = useState("")
   const [submitted, setSubmitted] = useState(false)
+
+  // Auto-fill name from profile whenever the form opens or user loads
+  useEffect(() => {
+    if (reviewUser.nameFromProfile) {
+      setFormName(reviewUser.fullName)
+    }
+  }, [reviewUser.nameFromProfile, reviewUser.fullName])
 
   const sortedReviews = [...reviews].sort((a, b) => {
     if (sortKey === "highest") return b.rating - a.rating
@@ -189,7 +202,6 @@ export function ReviewsSection({
             ))}
           </div>
         )}
-        {!compact && (
           <div className="flex flex-col items-center justify-center gap-2">
             <Button
               size="sm"
@@ -200,7 +212,6 @@ export function ReviewsSection({
               {showForm ? "Vazgeç" : "Yorum Yaz"}
             </Button>
           </div>
-        )}
       </div>
 
       {/* Success banner */}
@@ -225,79 +236,155 @@ export function ReviewsSection({
             </button>
           </div>
           <Separator />
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {/* Star picker */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Puanınız <span className="text-red-500">*</span></label>
-              <StarPicker value={formRating} onChange={setFormRating} />
-            </div>
 
-            {/* Name */}
-            <div className="space-y-1.5">
-              <label htmlFor="review-name" className="text-sm font-medium">
-                Adınız <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="review-name"
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Adınız Soyadınız"
-                maxLength={60}
-                className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
-              />
+          {/* Login wall — shown while loading or when not logged in */}
+          {(reviewUser.isLoading || !reviewUser.isLoggedIn) ? (
+            <div className="flex flex-col items-center justify-center gap-4 py-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary border">
+                <LogIn className="h-7 w-7 text-muted-foreground" />
+              </div>
+              {reviewUser.isLoading ? (
+                <p className="text-sm text-muted-foreground animate-pulse">Hesap bilgileri yükleniyor...</p>
+              ) : (
+                <>
+                  <div>
+                    <p className="font-semibold">Yorum yapmak için giriş yapın</p>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                      Değerlendirme yapabilmek için bir hesabınız olmalıdır. Giriş yaptıktan sonra adınız otomatik doldurulur.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button asChild size="sm" className="gap-2 rounded-xl">
+                      <Link href="/auth/login">
+                        <LogIn className="h-4 w-4" />
+                        Giriş Yap
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="rounded-xl">
+                      <Link href="/auth/sign-up">Kayıt Ol</Link>
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
-            {/* Title */}
-            <div className="space-y-1.5">
-              <label htmlFor="review-title" className="text-sm font-medium">
-                Başlık <span className="text-muted-foreground text-xs font-normal">(isteğe bağlı)</span>
-              </label>
-              <input
-                id="review-title"
-                type="text"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Yorumunuzu özetleyin"
-                maxLength={80}
-                className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
-              />
-            </div>
+              {/* Missing name warning */}
+              {reviewUser.nameMissing && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-500" />
+                  <span>
+                    Profilinizde kayıtlı ad bilgisi bulunamadı. Lütfen aşağıya adınızı girin veya{" "}
+                    <Link href="/account" className="underline font-medium hover:text-amber-900">
+                      hesap sayfanızdan
+                    </Link>{" "}
+                    adınızı kaydedin.
+                  </span>
+                </div>
+              )}
 
-            {/* Comment */}
-            <div className="space-y-1.5">
-              <label htmlFor="review-comment" className="text-sm font-medium">
-                Yorumunuz <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="review-comment"
-                value={formComment}
-                onChange={(e) => setFormComment(e.target.value)}
-                placeholder="Ürün hakkındaki deneyiminizi paylaşın..."
-                rows={4}
-                maxLength={800}
-                className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition resize-none"
-              />
-              <p className="text-xs text-muted-foreground text-right">{formComment.length}/800</p>
-            </div>
+              {/* Star picker */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  Puanınız <span className="text-red-500">*</span>
+                </label>
+                <StarPicker value={formRating} onChange={setFormRating} />
+              </div>
 
-            {formError && (
-              <p className="text-sm text-red-500 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                {formError}
-              </p>
-            )}
+              {/* Name — auto-filled and locked if from profile */}
+              <div className="space-y-1.5">
+                <label htmlFor="review-name" className="text-sm font-medium">
+                  Adınız <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  {reviewUser.nameFromProfile && (
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                      <UserCircle className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                  <input
+                    id="review-name"
+                    type="text"
+                    value={formName}
+                    onChange={(e) => !reviewUser.nameFromProfile && setFormName(e.target.value)}
+                    readOnly={reviewUser.nameFromProfile}
+                    placeholder="Adınız Soyadınız"
+                    maxLength={60}
+                    className={cn(
+                      "w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition",
+                      reviewUser.nameFromProfile && "pl-9 bg-primary/5 border-primary/30 text-foreground cursor-default select-none",
+                      !reviewUser.nameFromProfile && reviewUser.nameMissing && "border-amber-400 focus-visible:ring-amber-400/50"
+                    )}
+                  />
+                  {reviewUser.nameFromProfile && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-medium text-primary hidden sm:inline">Profilden</span>
+                    </div>
+                  )}
+                </div>
+                {reviewUser.nameFromProfile && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    Profilinizden otomatik dolduruldu.{" "}
+                    <Link href="/account" className="underline hover:text-foreground">Değiştir</Link>
+                  </p>
+                )}
+              </div>
 
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
-                Vazgeç
-              </Button>
-              <Button type="submit" size="sm" className="gap-2 rounded-xl">
-                <Send className="h-4 w-4" />
-                Yorumu Gönder
-              </Button>
-            </div>
-          </form>
+              {/* Title */}
+              <div className="space-y-1.5">
+                <label htmlFor="review-title" className="text-sm font-medium">
+                  Başlık{" "}
+                  <span className="text-muted-foreground text-xs font-normal">(isteğe bağlı)</span>
+                </label>
+                <input
+                  id="review-title"
+                  type="text"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="Yorumunuzu özetleyin"
+                  maxLength={80}
+                  className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
+                />
+              </div>
+
+              {/* Comment */}
+              <div className="space-y-1.5">
+                <label htmlFor="review-comment" className="text-sm font-medium">
+                  Yorumunuz <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="review-comment"
+                  value={formComment}
+                  onChange={(e) => setFormComment(e.target.value)}
+                  placeholder="Ürün hakkındaki deneyiminizi paylaşın..."
+                  rows={4}
+                  maxLength={800}
+                  className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right">{formComment.length}/800</p>
+              </div>
+
+              {formError && (
+                <p className="text-sm text-red-500 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                  {formError}
+                </p>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+                  Vazgeç
+                </Button>
+                <Button type="submit" size="sm" className="gap-2 rounded-xl">
+                  <Send className="h-4 w-4" />
+                  Yorumu Gönder
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       )}
 
