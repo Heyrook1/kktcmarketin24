@@ -9,6 +9,7 @@ export interface BrandAd {
   link: string
   featured: boolean
   priority: number
+  images?: string[]
 }
 
 export const brandAds: BrandAd[] = [
@@ -22,7 +23,12 @@ export const brandAds: BrandAd[] = [
     textColor: "text-white",
     link: "/vendor/techzone",
     featured: true,
-    priority: 1
+    priority: 1,
+    images: [
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=400&h=300&fit=crop",
+    ],
   },
   {
     id: "ad-002",
@@ -34,7 +40,12 @@ export const brandAds: BrandAd[] = [
     textColor: "text-white",
     link: "/vendor/modastyle",
     featured: true,
-    priority: 2
+    priority: 2,
+    images: [
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop",
+    ],
   },
   {
     id: "ad-003",
