@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   ArrowRight, Search, Truck, ShieldCheck,
   Tag, Zap, Package, ChevronRight, X,
@@ -12,20 +13,19 @@ import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { products } from "@/lib/data/products"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
 
 const trustPills = [
   { icon: ShieldCheck, label: "SSL Güvenli" },
-  { icon: Truck,       label: "KKTC Kargo" },
-  { icon: Package,     label: "8+ Satıcı"  },
-  { icon: Tag,         label: "100+ Ürün"  },
+  { icon: Truck,       label: "KKTC Kargo"  },
+  { icon: Package,     label: "8+ Satıcı"   },
+  { icon: Tag,         label: "100+ Ürün"   },
 ]
 
 const promoSlides = [
-  { tag: "Bugüne Özel",   headline: "Teknoloji'de", accent: "%30 Fırsat",     sub: "TechZone — sınırlı stok",      href: "/vendor/techzone",   gradient: "from-blue-600 to-cyan-500",     img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=200&fit=crop" },
-  { tag: "Yeni Sezon",    headline: "Moda'da",      accent: "Yeni Geldi",     sub: "Kıbrıs Moda — kadın & erkek", href: "/vendor/modastyle", gradient: "from-rose-500 to-pink-400",    img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=200&fit=crop" },
-  { tag: "Günün Fırsatı", headline: "Güzellik'te",  accent: "%20 İndirim",    sub: "Güzellik Evi — doğal bakım",   href: "/vendor/glowbeauty", gradient: "from-purple-600 to-pink-500",  img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&h=200&fit=crop" },
-  { tag: "Hafta Sonu",    headline: "Spor'da",      accent: "Ücretsiz Kargo", sub: "Spor Merkezi — fitness",        href: "/vendor/sportmax",  gradient: "from-green-600 to-emerald-500", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=200&fit=crop" },
+  { tag: "Bugüne Özel",   headline: "Teknoloji'de", accent: "%30 Fırsat",     sub: "TechZone — sınırlı stok",      href: "/vendor/techzone",   gradient: "from-blue-600 to-cyan-500",    img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=200&fit=crop" },
+  { tag: "Yeni Sezon",    headline: "Moda'da",      accent: "Yeni Geldi",     sub: "Kıbrıs Moda — kadın & erkek", href: "/vendor/modastyle", gradient: "from-rose-500 to-pink-400",   img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=200&fit=crop" },
+  { tag: "Günün Fırsatı", headline: "Güzellik'te",  accent: "%20 İndirim",    sub: "Güzellik Evi — doğal bakım",   href: "/vendor/glowbeauty", gradient: "from-purple-600 to-pink-500", img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&h=200&fit=crop" },
+  { tag: "Hafta Sonu",    headline: "Spor'da",      accent: "Ücretsiz Kargo", sub: "Spor Merkezi — fitness",        href: "/vendor/sportmax",  gradient: "from-green-600 to-emerald-500",img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=200&fit=crop" },
 ]
 
 const POPULAR = ["Kulaklık", "Elbise", "Parfüm", "Spor Ayakkabı", "Tablet"]
@@ -39,7 +39,6 @@ export function CyprusHero() {
   const [slide, setSlide]             = useState(0)
   const [visible, setVisible]         = useState(true)
   const inputRef    = useRef<HTMLInputElement>(null)
-  const sugRef      = useRef<HTMLUListElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Debounced suggestion generation
@@ -55,8 +54,9 @@ export function CyprusHero() {
         )
         .slice(0, 6)
         .map((p) => p.name)
-      setSuggestions([...new Set(names)])
-      setShowSug(names.length > 0)
+      const unique = [...new Set(names)]
+      setSuggestions(unique)
+      setShowSug(unique.length > 0)
       setActiveSug(-1)
     }, 220)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
@@ -74,6 +74,7 @@ export function CyprusHero() {
   // Close suggestions on outside click
   useEffect(() => {
     function onDown(e: MouseEvent) {
+      if (!(e.target as Node)?.isConnected) return
       if (!inputRef.current?.closest("form")?.contains(e.target as Node))
         setShowSug(false)
     }
@@ -136,11 +137,14 @@ export function CyprusHero() {
               </p>
             </div>
 
-            {/* Search with autocomplete */}
+            {/* Search with suggestions */}
             <form onSubmit={handleSubmit} className="relative max-w-lg" role="search" aria-label="Ürün ara">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
                   <Input
                     ref={inputRef}
                     value={query}
@@ -174,7 +178,6 @@ export function CyprusHero() {
               {/* Suggestions dropdown */}
               {showSug && suggestions.length > 0 && (
                 <ul
-                  ref={sugRef}
                   id="hero-suggestions"
                   role="listbox"
                   aria-label="Öneriler"
@@ -200,7 +203,7 @@ export function CyprusHero() {
                 </ul>
               )}
 
-              {/* Popular searches — shown when input is empty */}
+              {/* Popular searches shown when empty */}
               {!query && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {POPULAR.map((s) => (
@@ -230,10 +233,14 @@ export function CyprusHero() {
             {/* CTAs */}
             <div className="flex items-center gap-3 flex-wrap">
               <Button asChild size="default" className="rounded-xl">
-                <Link href="/products">Ürünleri Keşfet <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/products">
+                  Ürünleri Keşfet <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
               <Button asChild variant="ghost" size="default" className="text-muted-foreground">
-                <Link href="/vendors">Tüm Satıcılar <ChevronRight className="ml-1 h-4 w-4" /></Link>
+                <Link href="/vendors">
+                  Tüm Satıcılar <ChevronRight className="ml-1 h-4 w-4" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -263,9 +270,7 @@ export function CyprusHero() {
               </div>
               <div className="relative z-10 p-7 flex flex-col justify-between w-full">
                 <div>
-                  <Badge className="bg-white/20 text-white border-white/20 text-xs mb-3 inline-flex">
-                    {current.tag}
-                  </Badge>
+                  <Badge className="bg-white/20 text-white border-white/20 text-xs mb-3 inline-flex">{current.tag}</Badge>
                   <p className="text-white/80 text-sm font-medium">{current.headline}</p>
                   <p className="text-white text-4xl font-black leading-tight mt-0.5">{current.accent}</p>
                   <p className="text-white/70 text-xs mt-2">{current.sub}</p>
