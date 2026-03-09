@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
   ShoppingBag, CreditCard, Truck, ShieldCheck,
-  Check, AlertTriangle, UserCircle, Info, Loader2, Tag, X,
+  Check, AlertTriangle, UserCircle, Info, Loader2, Tag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +22,7 @@ import { getVendorById } from "@/lib/data/vendors"
 import { useAccountStore } from "@/lib/store/account-store"
 import type { Order } from "@/lib/store/account-store"
 import { cn } from "@/lib/utils"
+import { CouponPicker } from "@/components/checkout/coupon-picker"
 
 interface CheckoutContentProps {
   user: User | null
@@ -55,11 +56,8 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [errors, setErrors] = useState<FieldErrors>({})
-  const [couponInput, setCouponInput] = useState("")
-  const [couponError, setCouponError] = useState("")
-  const [couponLoading, setCouponLoading] = useState(false)
 
-  const { addOrder } = useAccountStore()
+  const { addOrder, coupons, gifts } = useAccountStore()
 
   const { first, last } = splitName((profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? "")
 
@@ -172,21 +170,6 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const discountAmount = getDiscountAmount()
   const finalPrice = getFinalPrice()
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-
-  async function handleApplyCoupon() {
-    const code = couponInput.trim()
-    if (!code) return
-    setCouponLoading(true)
-    setCouponError("")
-    await new Promise((r) => setTimeout(r, 600))
-    const result = applyCoupon(code)
-    setCouponLoading(false)
-    if (!result.valid) {
-      setCouponError(result.message)
-    } else {
-      setCouponInput("")
-    }
-  }
 
   if (items.length === 0) {
     return (
@@ -460,55 +443,18 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
 
               <Separator />
 
-              {/* Coupon input */}
-              {!appliedCoupon ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">İndirim Kodu</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Kupon kodu"
-                      value={couponInput}
-                      onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError("") }}
-                      onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                      className="text-sm uppercase"
-                      maxLength={20}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleApplyCoupon}
-                      disabled={couponLoading || !couponInput.trim()}
-                      className="shrink-0"
-                    >
-                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Uygula"}
-                    </Button>
-                  </div>
-                  {couponError && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <X className="h-3 w-3 shrink-0" />{couponError}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-3 py-2.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-600 shrink-0" />
-                    <div>
-                      <p className="font-semibold text-green-800 dark:text-green-400">{appliedCoupon.code}</p>
-                      <p className="text-xs text-green-700 dark:text-green-500">{appliedCoupon.description}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removeCoupon}
-                    className="text-green-700 hover:text-red-500 transition-colors ml-2"
-                    aria-label="Kuponu kaldır"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
+              {/* Smart coupon picker — auto-applies best, shows dropdown */}
+              <div className="relative">
+                <CouponPicker
+                  coupons={coupons}
+                  gifts={gifts}
+                  subtotal={totalPrice}
+                  appliedCoupon={appliedCoupon}
+                  onApply={applyCoupon}
+                  onRemove={removeCoupon}
+                  isLoggedIn={!!user}
+                />
+              </div>
 
               <Separator />
 
