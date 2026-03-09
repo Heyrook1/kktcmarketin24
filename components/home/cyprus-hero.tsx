@@ -2,174 +2,194 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { ArrowRight, Truck, ShieldCheck, CreditCard, MapPin, Sparkles, Clock } from "lucide-react"
+import {
+  ArrowRight, Search, Truck, ShieldCheck,
+  Tag, Zap, Package, ChevronRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SearchBar } from "@/components/shared/search-bar"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
+import { getFeaturedAds } from "@/lib/data/brand-ads"
+import { cn } from "@/lib/utils"
+import Image from "next/image"
 
-const dynamicStats = [
-  { label: "Aktif Satıcı", value: "8+", icon: ShieldCheck },
-  { label: "Ürün Çeşidi", value: "100+", icon: Sparkles },
-  { label: "KKTC Kargo", value: "Ücretsiz", icon: Truck },
+const trustPills = [
+  { icon: ShieldCheck, label: "SSL Güvenli" },
+  { icon: Truck,       label: "KKTC Kargo" },
+  { icon: Package,     label: "8+ Satıcı"  },
+  { icon: Tag,         label: "100+ Ürün"  },
+]
+
+const promoSlides = [
+  { tag: "Bugüne Özel",   headline: "Teknoloji'de", accent: "%30 Fırsat", sub: "TechZone — sınırlı stok", href: "/vendor/techzone",   gradient: "from-blue-600 to-cyan-500",    img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=200&fit=crop" },
+  { tag: "Yeni Sezon",    headline: "Moda'da",      accent: "Yeni Geldi",  sub: "Kıbrıs Moda — kadın & erkek", href: "/vendor/modastyle", gradient: "from-rose-500 to-pink-400",   img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=200&fit=crop" },
+  { tag: "Günün Fırsatı", headline: "Güzellik'te",  accent: "%20 İndirim", sub: "Güzellik Evi — doğal bakım",  href: "/vendor/glowbeauty",gradient: "from-purple-600 to-pink-500", img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&h=200&fit=crop" },
+  { tag: "Hafta Sonu",    headline: "Spor'da",      accent: "Ücretsiz Kargo", sub: "Spor Merkezi — fitness",  href: "/vendor/sportmax",  gradient: "from-green-600 to-emerald-500", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=200&fit=crop" },
 ]
 
 export function CyprusHero() {
-  const [currentTime, setCurrentTime] = useState<string>("")
-  const [isLive, setIsLive] = useState(true)
+  const router = useRouter()
+  const [query, setQuery]     = useState("")
+  const [slide, setSlide]     = useState(0)
+  const [visible, setVisible] = useState(true)
 
+  // Auto-advance promo card
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setCurrentTime(now.toLocaleTimeString('tr-TR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'Europe/Istanbul'
-      }))
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-    return () => clearInterval(interval)
+    const id = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setSlide((s) => (s + 1) % promoSlides.length)
+        setVisible(true)
+      }, 300)
+    }, 4000)
+    return () => clearInterval(id)
   }, [])
 
-  useEffect(() => {
-    const blinkInterval = setInterval(() => {
-      setIsLive(prev => !prev)
-    }, 1000)
-    return () => clearInterval(blinkInterval)
-  }, [])
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (query.trim()) router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+  }
+
+  const current = promoSlides[slide]
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-primary/90">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/20 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-accent/20 blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
-      </div>
+    <section className="bg-background border-b">
+      <div className="container mx-auto px-4 py-10 md:py-14">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
 
-      <div className="container relative mx-auto px-4 py-16 md:py-24">
-        {/* Live indicator */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <div className={`h-2 w-2 rounded-full bg-green-400 ${isLive ? 'opacity-100' : 'opacity-50'} transition-opacity`} />
-            <span className="text-sm text-white/90 font-medium">Canlı</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <Clock className="h-4 w-4 text-white/80" />
-            <span className="text-sm text-white/90 font-mono">{currentTime} KKTC</span>
-          </div>
-        </div>
-
-        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-          {/* Content */}
-          <div className="flex flex-col gap-8 text-center lg:text-left">
-            {/* Cyprus badge */}
-            <div className="flex justify-center lg:justify-start">
-              <Badge variant="secondary" className="bg-white/10 text-white border-white/20 backdrop-blur-sm px-4 py-2">
-                <MapPin className="h-4 w-4 mr-2" />
-                Kuzey Kıbrıs Türk Cumhuriyeti
+          {/* ── Left: search + quick info ────────────────────────── */}
+          <div className="flex flex-col gap-6">
+            {/* Locale badge */}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl" aria-hidden>🇨🇾</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Kuzey Kıbrıs&apos;ın Pazaryeri
+              </span>
+              <Badge variant="secondary" className="text-xs gap-1 ml-auto">
+                <Zap className="h-3 w-3 text-amber-500" />
+                Canlı
               </Badge>
             </div>
 
+            {/* Headline */}
             <div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-white text-balance">
-                KKTC'nin <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">En Güvenilir</span> Pazaryeri
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight tracking-tight text-balance">
+                KKTC&apos;de alışveriş<br />
+                <span className="text-primary">çok daha kolay.</span>
               </h1>
-              <p className="mt-6 text-lg md:text-xl text-white/80 leading-relaxed text-pretty max-w-xl mx-auto lg:mx-0">
-                Kıbrıs'ın yerel satıcılarından kaliteli ürünler. Tek sepet, tek ödeme, hızlı teslimat. Marketin24 ile güvenle alışveriş yapın.
+              <p className="mt-3 text-base text-muted-foreground max-w-md leading-relaxed">
+                Yerel satıcılar, gerçek ürünler — tek sepette öde, kapına gelsin.
               </p>
             </div>
 
             {/* Search */}
-            <div className="w-full max-w-lg mx-auto lg:mx-0">
-              <div className="bg-white rounded-xl p-1 shadow-2xl shadow-black/20">
-                <SearchBar />
+            <form onSubmit={handleSearch} className="flex gap-2 max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ürün, marka veya kategori ara..."
+                  className="pl-9 h-11 rounded-xl"
+                />
               </div>
+              <Button type="submit" size="lg" className="h-11 px-5 rounded-xl shrink-0">
+                Ara
+              </Button>
+            </form>
+
+            {/* Trust pills */}
+            <div className="flex flex-wrap gap-2">
+              {trustPills.map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 text-xs font-medium bg-secondary border rounded-full px-3 py-1.5 text-muted-foreground">
+                  <Icon className="h-3.5 w-3.5 text-primary" />
+                  {label}
+                </span>
+              ))}
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button size="lg" className="bg-white text-slate-900 hover:bg-white/90 font-semibold shadow-lg" asChild>
+            {/* CTA row */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button asChild size="default" className="rounded-xl">
                 <Link href="/products">
-                  Ürünleri İncele
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  Ürünleri Keşfet
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm" asChild>
-                <Link href="/compare">Platformları Karşılaştır</Link>
+              <Button asChild variant="ghost" size="default" className="text-muted-foreground">
+                <Link href="/vendors">Tüm Satıcılar <ChevronRight className="ml-1 h-4 w-4" /></Link>
               </Button>
             </div>
+          </div>
 
-            {/* Dynamic Stats */}
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              {dynamicStats.map((stat) => (
-                <div key={stat.label} className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                  <stat.icon className="h-6 w-6 text-cyan-400 mx-auto lg:mx-0 mb-2" />
-                  <p className="text-2xl font-bold text-white">{stat.value}</p>
-                  <p className="text-xs text-white/60">{stat.label}</p>
+          {/* ── Right: animated promo card ───────────────────────── */}
+          <div className="relative hidden md:block">
+            {/* Background stack ghost cards */}
+            <div className={cn(
+              "absolute top-3 left-3 right-3 bottom-0 rounded-2xl bg-gradient-to-br opacity-30",
+              promoSlides[(slide + 1) % promoSlides.length].gradient
+            )} />
+            <div className={cn(
+              "absolute top-1.5 left-1.5 right-1.5 bottom-0.5 rounded-2xl bg-gradient-to-br opacity-50",
+              promoSlides[(slide + 1) % promoSlides.length].gradient
+            )} />
+
+            {/* Active card */}
+            <Link
+              href={current.href}
+              className={cn(
+                "relative flex rounded-2xl overflow-hidden shadow-2xl transition-opacity duration-300 min-h-[220px]",
+                visible ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <div className={cn("absolute inset-0 bg-gradient-to-br", current.gradient)} />
+
+              {/* Product image */}
+              <div className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden">
+                <Image
+                  src={current.img}
+                  alt={current.headline}
+                  fill
+                  className="object-cover opacity-60 mix-blend-overlay"
+                  sizes="240px"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/20" />
+              </div>
+
+              {/* Text */}
+              <div className="relative z-10 p-7 flex flex-col justify-between w-full">
+                <div>
+                  <Badge className="bg-white/20 text-white border-white/20 text-xs mb-3 inline-flex">
+                    {current.tag}
+                  </Badge>
+                  <p className="text-white/80 text-sm font-medium">{current.headline}</p>
+                  <p className="text-white text-4xl font-black leading-tight mt-0.5">{current.accent}</p>
+                  <p className="text-white/70 text-xs mt-2">{current.sub}</p>
                 </div>
+                <div className="flex items-center gap-1.5 mt-4">
+                  <span className="text-white font-semibold text-sm">Hemen Gör</span>
+                  <ArrowRight className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </Link>
+
+            {/* Dot indicators */}
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              {promoSlides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setVisible(false); setTimeout(() => { setSlide(i); setVisible(true) }, 300) }}
+                  aria-label={`Slayt ${i + 1}`}
+                  className={cn(
+                    "rounded-full transition-all duration-300",
+                    i === slide ? "w-5 h-2 bg-primary" : "w-2 h-2 bg-border hover:bg-muted-foreground"
+                  )}
+                />
               ))}
             </div>
           </div>
 
-          {/* Cyprus Island Logo */}
-          <div className="relative hidden lg:flex items-center justify-center">
-            <div className="relative">
-              {/* Glow effect behind logo */}
-              <div className="absolute inset-0 blur-3xl bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full scale-110" />
-              
-              {/* Main logo container */}
-              <div className="relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
-                <div className="relative w-80 h-80">
-                  <Image
-                    src="/images/cyprus-island-logo.jpg"
-                    alt="Kıbrıs Adası"
-                    fill
-                    className="object-contain rounded-2xl"
-                    priority
-                  />
-                </div>
-                
-                {/* Floating elements */}
-                <div className="absolute -top-4 -right-4 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-bounce">
-                  CANLI
-                </div>
-                
-                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm text-slate-900 text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
-                  <span className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-primary" />
-                    Tek Ödeme Sistemi
-                  </span>
-                </div>
-              </div>
-
-              {/* Orbiting badges */}
-              <div className="absolute top-0 left-0 -translate-x-1/2 bg-white rounded-lg shadow-xl p-3 animate-pulse">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                    <ShieldCheck className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-semibold text-slate-900">%100 Güvenli</p>
-                    <p className="text-xs text-slate-500">SSL Korumalı</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute bottom-20 -right-8 bg-white rounded-lg shadow-xl p-3 animate-pulse" style={{ animationDelay: "0.5s" }}>
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Truck className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-semibold text-slate-900">Hızlı Teslimat</p>
-                    <p className="text-xs text-slate-500">1-3 iş günü</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

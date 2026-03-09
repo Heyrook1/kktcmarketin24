@@ -1,61 +1,61 @@
 import Link from "next/link"
-import Image from "next/image"
-import { ArrowRight } from "lucide-react"
-import { categories } from "@/lib/data/categories"
+import {
+  Smartphone, Shirt, Home, Sparkles, Dumbbell,
+  Baby, Watch, ShoppingBasket, Heart, BookOpen,
+  ArrowRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { categories } from "@/lib/data/categories"
+import { cn } from "@/lib/utils"
+
+// Map category ids to Lucide icons + a colour accent
+const ICON_MAP: Record<string, { Icon: React.ElementType; bg: string; fg: string }> = {
+  "electronics":  { Icon: Smartphone,     bg: "bg-blue-50",    fg: "text-blue-600"   },
+  "fashion":      { Icon: Shirt,          bg: "bg-rose-50",    fg: "text-rose-600"   },
+  "home-garden":  { Icon: Home,           bg: "bg-amber-50",   fg: "text-amber-600"  },
+  "beauty":       { Icon: Sparkles,       bg: "bg-purple-50",  fg: "text-purple-600" },
+  "sports":       { Icon: Dumbbell,       bg: "bg-green-50",   fg: "text-green-600"  },
+  "kids-baby":    { Icon: Baby,           bg: "bg-sky-50",     fg: "text-sky-600"    },
+  "jewelry":      { Icon: Watch,          bg: "bg-yellow-50",  fg: "text-yellow-600" },
+  "groceries":    { Icon: ShoppingBasket, bg: "bg-lime-50",    fg: "text-lime-700"   },
+  "health":       { Icon: Heart,          bg: "bg-red-50",     fg: "text-red-600"    },
+  "books":        { Icon: BookOpen,       bg: "bg-orange-50",  fg: "text-orange-600" },
+}
 
 export function CategoryGrid() {
   return (
-    <section className="py-12 md:py-16">
+    <section className="bg-background border-b">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold">Kategorilere Göz At</h2>
-            <p className="text-muted-foreground mt-1">
-              İhtiyacınız olan her şey kategorilerimizde
-            </p>
-          </div>
-          <Button variant="ghost" asChild className="hidden sm:flex">
-            <Link href="/products">
-              Tümünü Gör
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+        {/* ── scrollable chip row ─────────────────────────────── */}
+        <div className="flex items-center gap-2 overflow-x-auto py-3 -mx-4 px-4 scrollbar-hide md:mx-0 md:px-0 md:flex-wrap">
+          {categories.map((cat) => {
+            const meta = ICON_MAP[cat.id] ?? { Icon: Sparkles, bg: "bg-secondary", fg: "text-foreground" }
+            return (
+              <Link
+                key={cat.id}
+                href={`/category/${cat.slug}`}
+                className={cn(
+                  "flex-shrink-0 flex items-center gap-2 rounded-full border px-3 py-1.5",
+                  "text-sm font-medium transition-all duration-150",
+                  "hover:border-primary hover:bg-primary hover:text-primary-foreground",
+                  "bg-background border-border text-foreground"
+                )}
+              >
+                <span className={cn("flex items-center justify-center h-5 w-5 rounded-full", meta.bg)}>
+                  <meta.Icon className={cn("h-3 w-3", meta.fg)} />
+                </span>
+                {cat.name}
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {cat.productCount}
+                </span>
+              </Link>
+            )
+          })}
 
-        {/* Horizontal scroll on mobile, grid on desktop */}
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 sm:overflow-visible">
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/category/${category.slug}`}
-              className="group flex-shrink-0 w-36 sm:w-auto"
-            >
-              <div className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
-                <Image
-                  src={category.image}
-                  alt={category.name}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-110"
-                  sizes="(max-width: 640px) 144px, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <h3 className="font-medium text-white text-sm">{category.name}</h3>
-                  <p className="text-white/70 text-xs mt-0.5">
-                    {category.productCount} ürün
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-4 sm:hidden">
-          <Button variant="outline" className="w-full" asChild>
+          {/* View all */}
+          <Button variant="ghost" size="sm" className="flex-shrink-0 rounded-full text-primary gap-1 ml-1" asChild>
             <Link href="/products">
-              Tüm Kategoriler
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Tümü <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>
