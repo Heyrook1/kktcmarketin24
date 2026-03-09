@@ -394,7 +394,9 @@ interface AccountState {
   // Profile
   updateProfile: (updates: Partial<UserProfile>) => void
 
-  // Support
+  // Orders
+  addOrder: (order: Order) => void
+  updateOrderStatus: (orderId: string, status: OrderStatus, note?: string) => void
   createTicket: (ticket: Omit<SupportTicket, "id" | "createdAt" | "updatedAt" | "messages"> & { initialMessage: string }) => void
   replyToTicket: (ticketId: string, content: string) => void
 
@@ -448,6 +450,26 @@ export const useAccountStore = create<AccountState>()(
 
       updateProfile: (updates) =>
         set((s) => ({ profile: s.profile ? { ...s.profile, ...updates } : null })),
+
+      addOrder: (order) =>
+        set((s) => ({ orders: [order, ...s.orders] })),
+
+      updateOrderStatus: (orderId, status, note) =>
+        set((s) => ({
+          orders: s.orders.map((o) =>
+            o.id !== orderId
+              ? o
+              : {
+                  ...o,
+                  status,
+                  updatedAt: new Date().toISOString(),
+                  statusHistory: [
+                    ...o.statusHistory,
+                    { status, timestamp: new Date().toISOString(), note },
+                  ],
+                }
+          ),
+        })),
 
       createTicket: ({ initialMessage, ...data }) => {
         const ticket: SupportTicket = {

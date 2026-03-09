@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import Image from "next/image"
 import {
   Package, Truck, CheckCircle, Clock, XCircle, RefreshCw,
-  ChevronDown, ChevronUp, MapPin, Hash, Calendar,
+  ChevronDown, ChevronUp, MapPin, Hash, Calendar, RotateCcw,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -158,27 +158,72 @@ function OrderCard({ order }: { order: Order }) {
 export function OrdersTab({ userId }: { userId: string }) {
   const { orders } = useAccountStore()
   const [filter, setFilter] = useState<OrderStatus | "all">("all")
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
+  const [refreshing, setRefreshing] = useState(false)
 
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter)
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    // Simulate a sync delay — in production this would re-fetch from the backend
+    await new Promise((r) => setTimeout(r, 800))
+    setLastRefreshed(new Date())
+    setRefreshing(false)
+  }, [])
+
+  const relativeTime = (date: Date) => {
+    const diff = Math.floor((Date.now() - date.getTime()) / 1000)
+    if (diff < 60) return "Az önce güncellendi"
+    if (diff < 3600) return `${Math.floor(diff / 60)} dakika önce güncellendi`
+    return `${Math.floor(diff / 3600)} saat önce güncellendi`
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="font-semibold">Siparislerin ({orders.length})</h2>
-        <select
-          className="text-sm border rounded-lg px-3 py-1.5 bg-background"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as OrderStatus | "all")}
-        >
-          <option value="all">Tum Siparisler</option>
-          <option value="pending">Beklemede</option>
-          <option value="confirmed">Onaylandi</option>
-          <option value="preparing">Hazirlaniyor</option>
-          <option value="shipped">Kargoda</option>
-          <option value="delivered">Teslim Edildi</option>
-          <option value="cancelled">Iptal Edildi</option>
-        </select>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            {relativeTime(lastRefreshed)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RotateCcw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+            Yenile
+          </Button>
+          <select
+            className="text-sm border rounded-lg px-3 py-1.5 bg-background"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as OrderStatus | "all")}
+          >
+            <option value="all">Tum Siparisler</option>
+            <option value="pending">Beklemede</option>
+            <option value="confirmed">Onaylandi</option>
+            <option value="preparing">Hazirlaniyor</option>
+            <option value="shipped">Kargoda</option>
+            <option value="delivered">Teslim Edildi</option>
+            <option value="cancelled">Iptal Edildi</option>
+          </select>
+        </div>
       </div>
+
+      {/* New order confirmation notice */}
+      {orders.length > 0 && orders[0].status === "pending" && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+          <Clock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-primary">Siparişiniz alındı</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {orders[0].id} numaralı siparişiniz işleme alındı. Durumunuzu buradan takip edebilirsiniz.
+            </p>
+          </div>
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border bg-card py-16 text-center">

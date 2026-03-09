@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
   ShoppingBag, CreditCard, Truck, ShieldCheck,
-  Check, AlertTriangle, UserCircle, Info, Loader2,
+  Check, AlertTriangle, UserCircle, Info, Loader2, Tag, X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge"
 import { useCartStore } from "@/lib/store/cart-store"
 import { formatPrice } from "@/lib/format"
 import { getVendorById } from "@/lib/data/vendors"
+import { useAccountStore } from "@/lib/store/account-store"
+import type { Order } from "@/lib/store/account-store"
 import { cn } from "@/lib/utils"
 
 interface CheckoutContentProps {
@@ -49,10 +51,15 @@ function splitName(full: string) {
 
 export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const router = useRouter()
-  const { items, getTotalPrice, clearCart, getItemsByVendor } = useCartStore()
+  const { items, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [errors, setErrors] = useState<FieldErrors>({})
+  const [couponInput, setCouponInput] = useState("")
+  const [couponError, setCouponError] = useState("")
+  const [couponLoading, setCouponLoading] = useState(false)
+
+  const { addOrder } = useAccountStore()
 
   const { first, last } = splitName((profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? "")
 
@@ -123,13 +130,63 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     }
     setIsSubmitting(true)
     await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Build and persist the new order so it appears immediately in the customer panel
+    const newOrder: Order = {
+      id: `ORD-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: "pending",
+      items: items.map(({ product, quantity }) => ({
+        productId: product.id,
+        productName: product.name,
+        vendorName: getVendorById(product.vendorId)?.name ?? "Bilinmeyen Satıcı",
+        imageUrl: product.images[0] ?? "",
+        quantity,
+        price: product.price,
+      })),
+      subtotal: totalPrice,
+      shippingFee: 0,
+      discount: discountAmount,
+      total: finalPrice,
+      couponCode: appliedCoupon?.code,
+      deliveryAddress: {
+        fullName: `${form.firstName} ${form.lastName}`,
+        phone: form.phone,
+        line1: form.address,
+        city: form.city,
+        district: form.district,
+      },
+      estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      statusHistory: [
+        { status: "pending", timestamp: new Date().toISOString(), note: "Sipariş alındı" },
+      ],
+    }
+    addOrder(newOrder)
     clearCart()
     router.push("/checkout/success")
   }
 
   const itemsByVendor = getItemsByVendor()
   const totalPrice = getTotalPrice()
+  const discountAmount = getDiscountAmount()
+  const finalPrice = getFinalPrice()
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+
+  async function handleApplyCoupon() {
+    const code = couponInput.trim()
+    if (!code) return
+    setCouponLoading(true)
+    setCouponError("")
+    await new Promise((r) => setTimeout(r, 600))
+    const result = applyCoupon(code)
+    setCouponLoading(false)
+    if (!result.valid) {
+      setCouponError(result.message)
+    } else {
+      setCouponInput("")
+    }
+  }
 
   if (items.length === 0) {
     return (
@@ -383,12 +440,87 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                 <span className="text-green-600 font-medium">Ücretsiz</span>
               </div>
 
+              {/* Applied coupon discount */}
+              {appliedCoupon && discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />{appliedCoupon.code}
+                  </span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              {appliedCoupon?.type === "free_shipping" && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />{appliedCoupon.code}
+                  </span>
+                  <span>Ücretsiz kargo</span>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Coupon input */}
+              {!appliedCoupon ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">İndirim Kodu</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Kupon kodu"
+                      value={couponInput}
+                      onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError("") }}
+                      onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                      className="text-sm uppercase"
+                      maxLength={20}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="shrink-0"
+                    >
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Uygula"}
+                    </Button>
+                  </div>
+                  {couponError && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <X className="h-3 w-3 shrink-0" />{couponError}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-3 py-2.5">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-green-600 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-green-800 dark:text-green-400">{appliedCoupon.code}</p>
+                      <p className="text-xs text-green-700 dark:text-green-500">{appliedCoupon.description}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    className="text-green-700 hover:text-red-500 transition-colors ml-2"
+                    aria-label="Kuponu kaldır"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
               <Separator />
 
               <div className="flex justify-between font-semibold text-lg">
                 <span>Toplam</span>
-                <span>{formatPrice(totalPrice)}</span>
+                <span className={cn(discountAmount > 0 && "text-green-700")}>{formatPrice(finalPrice)}</span>
               </div>
+              {discountAmount > 0 && (
+                <p className="text-xs text-right text-green-600 font-medium">
+                  {formatPrice(discountAmount)} tasarruf ettiniz!
+                </p>
+              )}
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
                 <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />

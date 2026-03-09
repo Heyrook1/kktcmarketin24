@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { VendorBadge } from "@/components/vendor/vendor-badge"
 import { PriceDisplay } from "@/components/shared/price-display"
 import { useCartStore } from "@/lib/store/cart-store"
+import { useWishlistStore } from "@/lib/store/wishlist-store"
 import { Product } from "@/lib/data/products"
 import { getProductReviews } from "@/lib/data/reviews"
 import { cn } from "@/lib/utils"
@@ -36,10 +37,11 @@ export function EnhancedProductCard({
   const [imgVisible, setImgVisible]       = useState(true)
   const [selectedSize, setSelectedSize]   = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
-  const [isFavorite, setIsFavorite]       = useState(false)
   const [isAdded, setIsAdded]             = useState(false)
   const [liveStock, setLiveStock]         = useState(product.stockCount)
   const { addItem, openCart } = useCartStore()
+  const { toggleItem, isInWishlist } = useWishlistStore()
+  const isFavorite = isInWishlist(product.id)
   const reviews = getProductReviews(product.id)
 
   const hasDiscount     = product.originalPrice && product.originalPrice > product.price
@@ -126,7 +128,7 @@ export function EnhancedProductCard({
               ? "bg-red-50 border-red-200 hover:bg-red-100"
               : "bg-background/80 backdrop-blur border-border hover:bg-background"
           )}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsFavorite(!isFavorite) }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleItem(product) }}
           aria-label={isFavorite ? "Favorilerden çıkar" : "Favorilere ekle"}
         >
           <Heart className={cn("h-3.5 w-3.5 transition-all duration-200", isFavorite ? "fill-red-500 text-red-500 scale-110" : "text-muted-foreground")} />
