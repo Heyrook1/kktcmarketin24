@@ -70,6 +70,10 @@ export const products: Product[] = [
       "Şarj Süresi": "2 saat"
     },
     warranty: "2 yıl",
+    categoryId: "electronics",
+    vendorId: "techzone",
+    rating: 4.8,
+    reviewCount: 324,
     lastUpdated: new Date().toISOString()
   },
   {
