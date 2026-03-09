@@ -398,6 +398,10 @@ export const products: Product[] = [
     ],
     inStock: true,
     stockCount: 250,
+    categoryId: "beauty",
+    vendorId: "glowbeauty",
+    rating: 4.9,
+    reviewCount: 678,
     tags: ["serum", "vitamin-c", "skincare", "brightening"],
     featured: true,
     createdAt: "2024-01-08"

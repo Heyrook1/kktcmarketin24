@@ -38,7 +38,7 @@ type SortKey = "recent" | "highest" | "lowest" | "helpful"
 
 interface ReviewsSectionProps {
   reviews: Review[]
-  averageRating: number
+  averageRating: number | undefined
   totalReviews: number
   productId?: string
   compact?: boolean
@@ -80,7 +80,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 
 export function ReviewsSection({
   reviews: initialReviews,
-  averageRating,
+  averageRating = 0,
   totalReviews,
   compact = false,
   maxVisible = 4,
