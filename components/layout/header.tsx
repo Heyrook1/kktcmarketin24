@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import {
   Search, ShoppingCart, ChevronDown, ChevronRight,
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
@@ -136,6 +137,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
 }
 
 export function Header() {
+  const pathname = usePathname()
   const { getTotalItems, openCart } = useCartStore()
   const { items: wishlistItems } = useWishlistStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -168,7 +170,7 @@ export function Header() {
           {/* ── Desktop nav ── */}
           <nav className="hidden md:flex items-center gap-0.5" ref={megaWrapRef}>
 
-            {/* Kategoriler mega-menu trigger */}
+            {/* Kategoriler mega-menu trigger — Fix 3: keyboard accessible via onFocus */}
             <button
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors",
@@ -177,22 +179,56 @@ export function Header() {
                   : "text-foreground hover:bg-secondary"
               )}
               onMouseEnter={() => setMegaMenuOpen(true)}
+              onFocus={() => setMegaMenuOpen(true)}
+              onBlur={(e) => {
+                // only close if focus leaves the mega-menu wrapper entirely
+                if (!megaWrapRef.current?.contains(e.relatedTarget as Node)) {
+                  setMegaMenuOpen(false)
+                }
+              }}
               onClick={() => setMegaMenuOpen((v) => !v)}
+              aria-expanded={megaMenuOpen}
+              aria-haspopup="true"
             >
               <LayoutGrid className="h-4 w-4" />
               Kategoriler
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
             </button>
 
-            <Link href="/products" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            {/* Fix 1: active-state classes driven by pathname for each nav link */}
+            <Link
+              href="/products"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                pathname === "/products" || pathname.startsWith("/products/")
+                  ? "bg-secondary text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              )}
+            >
               <Tag className="h-4 w-4" />
               Ürünler
             </Link>
-            <Link href="/vendors" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Link
+              href="/vendors"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                pathname === "/vendors" || pathname.startsWith("/vendors/")
+                  ? "bg-secondary text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              )}
+            >
               <Store className="h-4 w-4" />
               Satıcılar
             </Link>
-            <Link href="/compare" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <Link
+              href="/compare"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                pathname === "/compare"
+                  ? "bg-secondary text-foreground font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              )}
+            >
               Karşılaştır
             </Link>
           </nav>
@@ -229,23 +265,23 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* Favorites link */}
+            {/* Favorites link — Fix 2: overflow-visible wrapper prevents badge clipping */}
             <Link href="/wishlist">
-              <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative">
+              <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative overflow-visible">
                 <Heart className="h-5 w-5" />
                 {wishlistItems.length > 0 && (
-                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs pointer-events-none">
                     {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
                   </Badge>
                 )}
               </Button>
             </Link>
 
-            {/* Cart */}
-            <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
+            {/* Cart — Fix 2: overflow-visible wrapper prevents badge clipping */}
+            <Button variant="ghost" size="icon" className="relative overflow-visible" onClick={openCart}>
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
-                <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs pointer-events-none">
                   {totalItems > 99 ? "99+" : totalItems}
                 </Badge>
               )}
