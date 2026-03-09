@@ -8,7 +8,8 @@ import {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
   LayoutGrid, X, Tag, Store, UserCircle,
-} from "lucide-react"import { Button } from "@/components/ui/button"
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
