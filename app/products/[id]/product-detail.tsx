@@ -18,6 +18,7 @@ import { ShareButtons } from "@/components/shared/share-buttons"
 import { ReviewsSection } from "@/components/shared/reviews-section"
 import { useCartStore } from "@/lib/store/cart-store"
 import { getProductReviews } from "@/lib/data/reviews"
+import { ProductDetailSocialProof } from "@/components/social-proof"
 import type { Product } from "@/lib/data/products"
 import type { Vendor } from "@/lib/data/vendors"
 import type { Category } from "@/lib/data/categories"
@@ -165,6 +166,13 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
               <a href="#reviews" className="text-xs text-primary hover:underline ml-1">Yorumları gör</a>
             )}
           </div>
+
+          {/* Social proof — viewers, variant urgency, sold today, purchase toast */}
+          <ProductDetailSocialProof
+            productId={product.id}
+            selectedVariant={selectedColor ?? selectedSize ?? null}
+            inStock={activeStock > 0}
+          />
 
           {/* Price */}
           <div className="mt-4">

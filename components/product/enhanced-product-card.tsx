@@ -16,6 +16,7 @@ import { PriceDisplay } from "@/components/shared/price-display"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useWishlistStore } from "@/lib/store/wishlist-store"
 import { Product } from "@/lib/data/products"
+import { ProductCardSocialProof } from "@/components/social-proof"
 import { getProductReviews } from "@/lib/data/reviews"
 import { cn } from "@/lib/utils"
 
@@ -318,6 +319,9 @@ export function EnhancedProductCard({
                 )}
               </div>
             )}
+
+            {/* Social proof — viewer count + out-of-stock badge */}
+            <ProductCardSocialProof productId={product.id} inStock={activeStock > 0} />
 
             {/* Sizes — hover-only reveal */}
             {showSizes && product.sizes && product.sizes.length > 0 && (
