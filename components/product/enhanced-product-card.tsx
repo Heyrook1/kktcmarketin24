@@ -161,7 +161,7 @@ export function EnhancedProductCard({
             {/* Badges */}
             <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
               {hasDiscount && (
-                <Badge className="bg-red-500 text-white font-bold text-xs shadow">
+                <Badge className="badge-discount bg-red-500 text-white font-bold text-xs shadow">
                   -%{discountPercent}
                 </Badge>
               )}
@@ -272,7 +272,7 @@ export function EnhancedProductCard({
             </div>
 
             <h3 className={cn(
-              "font-semibold text-sm leading-snug line-clamp-2 transition-colors duration-200",
+              "product-card-title font-semibold text-sm transition-colors duration-200",
               isHovered && "text-primary"
             )}>
               {product.name}
