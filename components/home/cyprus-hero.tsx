@@ -22,10 +22,10 @@ const trustPills = [
 ]
 
 const promoSlides = [
-  { tag: "Bugüne Özel",   headline: "Teknoloji'de", accent: "%30 Fırsat",     sub: "TechZone — sınırlı stok",      href: "/vendor/techzone",   gradient: "from-blue-600 to-cyan-500",    img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=200&fit=crop" },
-  { tag: "Yeni Sezon",    headline: "Moda'da",      accent: "Yeni Geldi",     sub: "Kıbrıs Moda — kadın & erkek", href: "/vendor/modastyle", gradient: "from-rose-500 to-pink-400",   img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=200&fit=crop" },
-  { tag: "Günün Fırsatı", headline: "Güzellik'te",  accent: "%20 İndirim",    sub: "Güzellik Evi — doğal bakım",   href: "/vendor/glowbeauty", gradient: "from-purple-600 to-pink-500", img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&h=200&fit=crop" },
-  { tag: "Hafta Sonu",    headline: "Spor'da",      accent: "Ücretsiz Kargo", sub: "Spor Merkezi — fitness",        href: "/vendor/sportmax",  gradient: "from-green-600 to-emerald-500",img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=200&fit=crop" },
+  { tag: "Bugüne Özel",   headline: "Teknoloji'de", accent: "%30 Fırsat",     sub: "TechZone — sınırlı stok",      href: "/vendor/techzone",   gradient: "from-blue-600 to-cyan-500",     img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&h=200&fit=crop" },
+  { tag: "Yeni Sezon",    headline: "Moda'da",      accent: "Yeni Geldi",     sub: "Kıbrıs Moda — kadın & erkek", href: "/vendor/modastyle",  gradient: "from-rose-500 to-pink-400",    img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=200&fit=crop" },
+  { tag: "Günün Fırsatı", headline: "Güzellik'te",  accent: "%20 İndirim",    sub: "Güzellik Evi — doğal bakım",   href: "/vendor/glowbeauty", gradient: "from-purple-600 to-pink-500",  img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&h=200&fit=crop" },
+  { tag: "Hafta Sonu",    headline: "Spor'da",      accent: "Ücretsiz Kargo", sub: "Spor Merkezi — fitness",        href: "/vendor/sportmax",   gradient: "from-green-600 to-emerald-500",img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=200&fit=crop"  },
 ]
 
 const POPULAR = ["Kulaklık", "Elbise", "Parfüm", "Spor Ayakkabı", "Tablet"]
@@ -38,10 +38,10 @@ export function CyprusHero() {
   const [activeSug, setActiveSug]     = useState(-1)
   const [slide, setSlide]             = useState(0)
   const [visible, setVisible]         = useState(true)
-  const inputRef    = useRef<HTMLInputElement>(null)
+  const inputRef  = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Debounced suggestion generation
+  // Debounced suggestions
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!query.trim()) { setSuggestions([]); setShowSug(false); return }
@@ -74,8 +74,7 @@ export function CyprusHero() {
   // Close suggestions on outside click
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (!(e.target as Node)?.isConnected) return
-      if (!inputRef.current?.closest("form")?.contains(e.target as Node))
+      if (!(e.target as Node).closest?.("form"))
         setShowSug(false)
     }
     document.addEventListener("mousedown", onDown)
@@ -141,10 +140,7 @@ export function CyprusHero() {
             <form onSubmit={handleSubmit} className="relative max-w-lg" role="search" aria-label="Ürün ara">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   <Input
                     ref={inputRef}
                     value={query}
@@ -203,7 +199,7 @@ export function CyprusHero() {
                 </ul>
               )}
 
-              {/* Popular searches shown when empty */}
+              {/* Popular searches */}
               {!query && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {POPULAR.map((s) => (
@@ -233,14 +229,10 @@ export function CyprusHero() {
             {/* CTAs */}
             <div className="flex items-center gap-3 flex-wrap">
               <Button asChild size="default" className="rounded-xl">
-                <Link href="/products">
-                  Ürünleri Keşfet <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                <Link href="/products">Ürünleri Keşfet <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
               <Button asChild variant="ghost" size="default" className="text-muted-foreground">
-                <Link href="/vendors">
-                  Tüm Satıcılar <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
+                <Link href="/vendors">Tüm Satıcılar <ChevronRight className="ml-1 h-4 w-4" /></Link>
               </Button>
             </div>
           </div>
@@ -259,13 +251,7 @@ export function CyprusHero() {
             >
               <div className={cn("absolute inset-0 bg-gradient-to-br", current.gradient)} />
               <div className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden">
-                <Image
-                  src={current.img}
-                  alt={current.headline}
-                  fill
-                  className="object-cover opacity-60 mix-blend-overlay"
-                  sizes="240px"
-                />
+                <Image src={current.img} alt={current.headline} fill className="object-cover opacity-60 mix-blend-overlay" sizes="240px" />
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20" />
               </div>
               <div className="relative z-10 p-7 flex flex-col justify-between w-full">
@@ -286,10 +272,7 @@ export function CyprusHero() {
               {promoSlides.map((_, i) => (
                 <button
                   key={i}
-                  onClick={() => {
-                    setVisible(false)
-                    setTimeout(() => { setSlide(i); setVisible(true) }, 300)
-                  }}
+                  onClick={() => { setVisible(false); setTimeout(() => { setSlide(i); setVisible(true) }, 300) }}
                   aria-label={`Slayt ${i + 1}`}
                   className={cn(
                     "rounded-full transition-all duration-300",
