@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, LayoutGrid, ShoppingCart, Tag } from "lucide-react"
+import { Home, Search, LayoutGrid, ShoppingCart, UserCircle } from "lucide-react"
 import { useCartStore } from "@/lib/store/cart-store"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -11,7 +11,7 @@ const navItems = [
   { href: "/", icon: Home, label: "Ana Sayfa" },
   { href: "/search", icon: Search, label: "Ara" },
   { href: "/categories", icon: LayoutGrid, label: "Kategoriler" },
-  { href: "/products", icon: Tag, label: "Ürünler" },
+  { href: "/account", icon: UserCircle, label: "Hesabim" },
   { href: "/cart", icon: ShoppingCart, label: "Sepet", showBadge: true },
 ]
 

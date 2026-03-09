@@ -7,7 +7,7 @@ import {
   Search, ShoppingCart, ChevronDown, ChevronRight,
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
-  LayoutGrid, X, Tag, Store,
+  LayoutGrid, X, Tag, Store, UserCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -219,6 +219,13 @@ export function Header() {
 
             {/* Language switcher — always visible */}
             <LanguageSelector />
+
+            {/* Account link */}
+            <Link href="/account">
+              <Button variant="ghost" size="icon" aria-label="Hesabim">
+                <UserCircle className="h-5 w-5" />
+              </Button>
+            </Link>
 
             {/* Cart */}
             <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
