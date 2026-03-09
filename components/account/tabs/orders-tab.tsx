@@ -154,7 +154,8 @@ function OrderCard({ order }: { order: Order }) {
   )
 }
 
-export function OrdersTab() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function OrdersTab({ userId }: { userId: string }) {
   const { orders } = useAccountStore()
   const [filter, setFilter] = useState<OrderStatus | "all">("all")
 

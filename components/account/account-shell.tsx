@@ -1,15 +1,17 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import type { User } from "@supabase/supabase-js"
 import {
-  User, ShoppingBag, Tag, Gift, HeadphonesIcon,
-  LogOut, ChevronRight, Star, MapPin, Shield,
+  User as UserIcon, ShoppingBag, Tag,
+  HeadphonesIcon, LogOut, ChevronRight, Shield,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useAccountStore } from "@/lib/store/account-store"
+import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
 import { ProfileTab } from "./tabs/profile-tab"
@@ -20,26 +22,50 @@ import { SupportTab } from "./tabs/support-tab"
 type Tab = "profile" | "orders" | "coupons" | "support"
 
 const TABS = [
-  { id: "profile" as Tab, label: "Profilim", icon: User },
-  { id: "orders" as Tab, label: "Siparişlerim", icon: ShoppingBag },
-  { id: "coupons" as Tab, label: "Kupon & Hediyeler", icon: Tag },
-  { id: "support" as Tab, label: "Destek", icon: HeadphonesIcon },
+  { id: "profile" as Tab,  label: "Profilim",        icon: UserIcon       },
+  { id: "orders" as Tab,   label: "Siparişlerim",     icon: ShoppingBag    },
+  { id: "coupons" as Tab,  label: "Kupon & Hediyeler",icon: Tag            },
+  { id: "support" as Tab,  label: "Destek",           icon: HeadphonesIcon },
 ]
 
-export function AccountShell() {
-  const { profile, logout, orders, tickets } = useAccountStore()
+interface AccountShellProps {
+  user: User
+  profile: Record<string, unknown> | null
+}
+
+export function AccountShell({ user, profile }: AccountShellProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("profile")
+  const [loggingOut, setLoggingOut] = useState(false)
 
-  const openTickets = tickets.filter((t) => t.status === "open" || t.status === "in_progress").length
-  const activeOrders = orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled" && o.status !== "refunded").length
+  const fullName = (profile?.full_name as string) ||
+    user.user_metadata?.full_name ||
+    user.email?.split("@")[0] ||
+    "Kullanıcı"
 
-  const initials = profile
-    ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-    : "?"
+  const displayName = (profile?.display_name as string) ||
+    user.user_metadata?.display_name ||
+    fullName.split(" ")[0]
+
+  const roleName = (profile?.roles as { name: string } | null)?.name ?? "customer"
+
+  const initials = fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+
+  async function handleLogout() {
+    setLoggingOut(true)
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/")
+    router.refresh()
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      {/* Page title */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Hesabım</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
@@ -48,9 +74,8 @@ export function AccountShell() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* ── Sidebar ─────────────────────────────────────────────── */}
+        {/* Sidebar */}
         <aside className="w-full lg:w-64 shrink-0 space-y-3">
-          {/* Profile card */}
           <div className="rounded-xl border bg-card p-4 space-y-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-11 w-11 border-2 border-primary/20">
@@ -59,33 +84,23 @@ export function AccountShell() {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="font-semibold text-sm leading-tight truncate">
-                  {profile?.firstName} {profile?.lastName}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                <p className="font-semibold text-sm leading-tight truncate">{fullName}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
             <Separator />
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Star className="h-3.5 w-3.5 text-amber-500" />
-                <span><span className="font-semibold text-foreground">{profile?.loyaltyPoints.toLocaleString("tr-TR")}</span> puan</span>
-              </div>
-              <Badge variant="secondary" className="text-[10px] h-5">
-                <Shield className="h-3 w-3 mr-1" />
-                Dogrulandi
+              <span className="text-muted-foreground capitalize">{displayName}</span>
+              <Badge variant="secondary" className="text-[10px] h-5 gap-1">
+                <Shield className="h-3 w-3" />
+                {roleName === "admin" ? "Admin" : roleName === "vendor" ? "Satıcı" : "Müşteri"}
               </Badge>
             </div>
           </div>
 
-          {/* Nav items */}
           <nav className="rounded-xl border bg-card overflow-hidden">
             {TABS.map((tab, i) => {
               const isActive = activeTab === tab.id
-              const badge =
-                tab.id === "orders" && activeOrders > 0 ? activeOrders :
-                tab.id === "support" && openTickets > 0 ? openTickets : null
-
               return (
                 <button
                   key={tab.id}
@@ -102,37 +117,30 @@ export function AccountShell() {
                     <tab.icon className={cn("h-4 w-4", isActive && "text-primary")} />
                     <span>{tab.label}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {badge != null && (
-                      <Badge className="h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full">
-                        {badge}
-                      </Badge>
-                    )}
-                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isActive && "text-primary rotate-90")} />
-                  </div>
+                  <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isActive && "text-primary rotate-90")} />
                 </button>
               )
             })}
           </nav>
 
-          {/* Logout */}
           <Button
             variant="ghost"
             size="sm"
             className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 justify-start gap-2"
-            onClick={logout}
+            onClick={handleLogout}
+            disabled={loggingOut}
           >
             <LogOut className="h-4 w-4" />
-            Çıkış Yap
+            {loggingOut ? "Çıkış yapılıyor…" : "Çıkış Yap"}
           </Button>
         </aside>
 
-        {/* ── Main content ─────────────────────────────────────────── */}
+        {/* Main content */}
         <main className="flex-1 min-w-0">
-          {activeTab === "profile" && <ProfileTab />}
-          {activeTab === "orders" && <OrdersTab />}
-          {activeTab === "coupons" && <CouponsTab />}
-          {activeTab === "support" && <SupportTab />}
+          {activeTab === "profile"  && <ProfileTab user={user} profile={profile} />}
+          {activeTab === "orders"   && <OrdersTab  userId={user.id} />}
+          {activeTab === "coupons"  && <CouponsTab userId={user.id} />}
+          {activeTab === "support"  && <SupportTab userId={user.id} />}
         </main>
       </div>
     </div>

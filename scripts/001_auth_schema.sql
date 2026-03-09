@@ -146,9 +146,7 @@ end $$;
 -- References auth.users(id) so it is deleted when the auth user is deleted.
 create table if not exists public.profiles (
   id              uuid primary key references auth.users(id) on delete cascade,
-  role_id         uuid not null references public.roles(id) default (
-                    select id from public.roles where name = 'customer'
-                  ),
+  role_id         uuid not null references public.roles(id),
   display_name    text,
   full_name       text,
   phone           text,
