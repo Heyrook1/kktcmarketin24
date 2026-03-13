@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import {
   Smartphone, Shirt, Home, Sparkles, Dumbbell,
@@ -7,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { categories } from "@/lib/data/categories"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/store/language-store"
 
 // Map category ids to Lucide icons + a colour accent
 const ICON_MAP: Record<string, { Icon: React.ElementType; bg: string; fg: string }> = {
@@ -23,6 +26,7 @@ const ICON_MAP: Record<string, { Icon: React.ElementType; bg: string; fg: string
 }
 
 export function CategoryGrid() {
+  const t = useT()
   return (
     <section className="bg-background border-b">
       <div className="container mx-auto px-4">
@@ -55,7 +59,7 @@ export function CategoryGrid() {
           {/* View all */}
           <Button variant="ghost" size="sm" className="flex-shrink-0 rounded-full text-primary gap-1 ml-1" asChild>
             <Link href="/products">
-              Tümü <ArrowRight className="h-3.5 w-3.5" />
+              {t.categories.viewAll} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>

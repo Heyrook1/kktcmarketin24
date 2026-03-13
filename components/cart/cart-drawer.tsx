@@ -10,8 +10,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCartStore } from "@/lib/store/cart-store"
 import { formatPrice } from "@/lib/format"
 import { getVendorById } from "@/lib/data/vendors"
+import { useT } from "@/lib/store/language-store"
 
 export function CartDrawer() {
+  const t = useT()
   const {
     items,
     isOpen,
@@ -31,7 +33,7 @@ export function CartDrawer() {
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
-            Alışveriş Sepeti ({items.length} ürün)
+            {t.cart.title} ({items.length} {t.cart.itemCount})
           </SheetTitle>
         </SheetHeader>
 
@@ -41,13 +43,13 @@ export function CartDrawer() {
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <h3 className="font-semibold">Sepetiniz boş</h3>
+              <h3 className="font-semibold">{t.cart.empty}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Henüz ürün eklemediniz
+                {t.cart.emptyDesc}
               </p>
             </div>
             <Button onClick={closeCart} asChild>
-              <Link href="/products">Ürünleri İncele</Link>
+              <Link href="/products">{t.cart.continueShopping}</Link>
             </Button>
           </div>
         ) : (
@@ -156,15 +158,15 @@ export function CartDrawer() {
             {/* Footer */}
             <div className="flex flex-col gap-4 pt-4">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Ara Toplam</span>
+                <span className="text-muted-foreground">{t.cart.subtotal}</span>
                 <span className="font-semibold">{formatPrice(totalPrice)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Kargo ücreti ödeme sayfasında hesaplanacaktır
+                {t.cart.shippingCalc}
               </p>
               <div className="flex flex-col gap-2">
                 <Button size="lg" asChild onClick={closeCart}>
-                  <Link href="/checkout">Ödemeye Geç</Link>
+                  <Link href="/checkout">{t.cart.checkout}</Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild onClick={closeCart}>
                   <Link href="/cart">Sepeti Görüntüle</Link>

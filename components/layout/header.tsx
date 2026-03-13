@@ -22,6 +22,7 @@ import { CartDrawer } from "@/components/cart/cart-drawer"
 import { LanguageSelector } from "@/components/shared/language-selector"
 import { CurrencySelector } from "@/components/shared/currency-selector"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/store/language-store"
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby, Watch, ShoppingBasket, Heart, BookOpen,
@@ -138,6 +139,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
 }
 
 export function Header() {
+  const t = useT()
   const pathname = usePathname()
   const { getTotalItems, openCart } = useCartStore()
   const { items: wishlistItems } = useWishlistStore()
@@ -192,7 +194,7 @@ export function Header() {
               aria-haspopup="true"
             >
               <LayoutGrid className="h-4 w-4" />
-              Kategoriler
+              {t.nav.categories}
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
             </button>
 
@@ -207,7 +209,7 @@ export function Header() {
               )}
             >
               <Tag className="h-4 w-4" />
-              Ürünler
+              {t.nav.products}
             </Link>
             <Link
               href="/vendors"
@@ -219,7 +221,7 @@ export function Header() {
               )}
             >
               <Store className="h-4 w-4" />
-              Satıcılar
+              {t.nav.vendors}
             </Link>
             <Link
               href="/compare"
@@ -230,7 +232,7 @@ export function Header() {
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               )}
             >
-              Karşılaştır
+              {t.nav.compare}
             </Link>
           </nav>
 

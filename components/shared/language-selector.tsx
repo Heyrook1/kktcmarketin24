@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Globe } from "lucide-react"
+import { Globe, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -9,111 +8,60 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-const languages = [
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "tr", name: "Türkçe", flag: "🇹🇷" },
-  { code: "de", name: "Deutsch", flag: "🇩🇪" },
-  { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
-  { code: "ar", name: "العربية", flag: "🇸🇦" },
-]
-
-declare global {
-  interface Window {
-    google?: {
-      translate?: {
-        TranslateElement?: new (
-          options: { pageLanguage: string; includedLanguages: string; autoDisplay: boolean },
-          element: string
-        ) => void
-      }
-    }
-    googleTranslateElementInit?: () => void
-  }
-}
-
+import { useLanguageStore } from "@/lib/store/language-store"
+import type { LangCode } from "@/lib/translations"
 import { cn } from "@/lib/utils"
 
+const LANGUAGES: { code: LangCode; name: string; native: string }[] = [
+  { code: "tr", name: "Turkish",  native: "Türkçe"   },
+  { code: "en", name: "English",  native: "English"   },
+  { code: "de", name: "German",   native: "Deutsch"   },
+  { code: "fr", name: "French",   native: "Français"  },
+  { code: "es", name: "Spanish",  native: "Español"   },
+  { code: "ar", name: "Arabic",   native: "العربية"   },
+]
+
+const FLAG: Record<LangCode, string> = {
+  tr: "TR", en: "GB", de: "DE", fr: "FR", es: "ES", ar: "SA",
+}
+
 export function LanguageSelector() {
-  const [currentLang, setCurrentLang] = useState("en")
-
-  useEffect(() => {
-    // Check if Google Translate script is already loaded
-    if (document.getElementById("google-translate-script")) return
-
-    // Initialize Google Translate
-    window.googleTranslateElementInit = () => {
-      if (window.google?.translate?.TranslateElement) {
-        new window.google.translate.TranslateElement(
-          {
-            pageLanguage: "en",
-            includedLanguages: languages.map((l) => l.code).join(","),
-            autoDisplay: false,
-          },
-          "google_translate_element"
-        )
-      }
-    }
-
-    // Load Google Translate script
-    const script = document.createElement("script")
-    script.id = "google-translate-script"
-    script.src =
-      "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-    script.async = true
-    document.body.appendChild(script)
-
-    return () => {
-      // Cleanup
-      const scriptElement = document.getElementById("google-translate-script")
-      if (scriptElement) {
-        scriptElement.remove()
-      }
-    }
-  }, [])
-
-  const handleLanguageChange = (langCode: string) => {
-    setCurrentLang(langCode)
-    // Trigger Google Translate
-    const selectElement = document.querySelector(
-      ".goog-te-combo"
-    ) as HTMLSelectElement
-    if (selectElement) {
-      selectElement.value = langCode
-      selectElement.dispatchEvent(new Event("change"))
-    }
-  }
-
-  const currentLanguage = languages.find((l) => l.code === currentLang)
+  const { lang, setLang } = useLanguageStore()
+  const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0]
 
   return (
-    <>
-      <div id="google_translate_element" className="hidden" />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 px-2 font-semibold text-xs tracking-wide rounded-md border border-border hover:border-primary/40"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 px-2 font-semibold text-xs tracking-wide rounded-md border border-border hover:border-primary/40"
+          aria-label="Select language"
+        >
+          <Globe className="h-3.5 w-3.5 flex-shrink-0" />
+          {FLAG[lang]}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[160px]">
+        {LANGUAGES.map((l) => (
+          <DropdownMenuItem
+            key={l.code}
+            onClick={() => setLang(l.code)}
+            className={cn(
+              "flex items-center justify-between gap-3 text-sm",
+              l.code === lang && "font-semibold text-primary"
+            )}
           >
-            <Globe className="h-3.5 w-3.5 flex-shrink-0" />
-            {currentLanguage?.code.toUpperCase()}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[140px]">
-          {languages.map((lang) => (
-            <DropdownMenuItem
-              key={lang.code}
-              onClick={() => handleLanguageChange(lang.code)}
-              className={cn("gap-2 text-sm", lang.code === currentLang && "font-semibold text-primary")}
-            >
-              <span aria-hidden>{lang.flag}</span>
-              <span>{lang.name}</span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </>
+            <span className="flex items-center gap-2">
+              <span className="text-xs font-mono text-muted-foreground w-5">
+                {FLAG[l.code]}
+              </span>
+              {l.native}
+            </span>
+            {l.code === lang && <Check className="h-3.5 w-3.5 text-primary" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
