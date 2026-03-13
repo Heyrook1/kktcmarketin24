@@ -20,6 +20,7 @@ import { categories, type Category } from "@/lib/data/categories"
 import { SearchBar } from "@/components/shared/search-bar"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { LanguageSelector } from "@/components/shared/language-selector"
+import { CurrencySelector } from "@/components/shared/currency-selector"
 import { cn } from "@/lib/utils"
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -255,8 +256,11 @@ export function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Language switcher — always visible */}
-            <LanguageSelector />
+            {/* Language + Currency switchers — always visible */}
+            <div className="flex items-center gap-1.5">
+              <CurrencySelector />
+              <LanguageSelector />
+            </div>
 
             {/* Account link */}
             <Link href="/account">
@@ -375,9 +379,12 @@ export function Header() {
                   </div>
 
                   {/* Sheet footer */}
-                  <div className="border-t px-4 py-3 flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Dil seçimi</p>
-                    <LanguageSelector />
+                  <div className="border-t px-4 py-3 flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">Dil &amp; Para Birimi</p>
+                    <div className="flex items-center gap-2">
+                      <CurrencySelector />
+                      <LanguageSelector />
+                    </div>
                   </div>
                 </div>
               </SheetContent>

@@ -5,6 +5,7 @@ import Image from "next/image"
 import { ArrowRight, Truck, ShieldCheck, CreditCard, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SearchBar } from "@/components/shared/search-bar"
+import { HeroFloatingCards } from "@/components/home/hero-floating-cards"
 
 export function HeroSection() {
   return (
@@ -74,30 +75,8 @@ export function HeroSection() {
                   priority
                 />
               </div>
-              {/* Floating card 1 */}
-              <div className="absolute -left-8 top-1/4 bg-card rounded-lg shadow-lg p-3 border animate-pulse">
-                <div className="flex items-center gap-2">
-                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <ShieldCheck className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Onaylı Satıcılar</p>
-                    <p className="text-xs text-muted-foreground">8+ güvenilir satıcı</p>
-                  </div>
-                </div>
-              </div>
-              {/* Floating card 2 */}
-              <div className="absolute -right-4 bottom-1/4 bg-card rounded-lg shadow-lg p-3 border">
-                <div className="flex items-center gap-2">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Tek Ödeme</p>
-                    <p className="text-xs text-muted-foreground">Tüm satıcılar, tek sepet</p>
-                  </div>
-                </div>
-              </div>
+              {/* Dynamic live floating cards */}
+              <HeroFloatingCards />
             </div>
           </div>
         </div>
