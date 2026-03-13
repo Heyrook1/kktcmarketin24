@@ -6,24 +6,30 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useLanguageStore } from "@/lib/store/language-store"
 import type { LangCode } from "@/lib/translations"
 import { cn } from "@/lib/utils"
 
-const LANGUAGES: { code: LangCode; name: string; native: string }[] = [
-  { code: "tr", name: "Turkish",  native: "Türkçe"   },
-  { code: "en", name: "English",  native: "English"   },
-  { code: "de", name: "German",   native: "Deutsch"   },
-  { code: "fr", name: "French",   native: "Français"  },
-  { code: "es", name: "Spanish",  native: "Español"   },
-  { code: "ar", name: "Arabic",   native: "العربية"   },
-]
-
-const FLAG: Record<LangCode, string> = {
-  tr: "TR", en: "GB", de: "DE", fr: "FR", es: "ES", ar: "SA",
+interface LangOption {
+  code: LangCode
+  native: string
+  flag: string
+  dir?: "rtl"
 }
+
+const LANGUAGES: LangOption[] = [
+  { code: "tr", native: "Türkçe",   flag: "🇹🇷" },
+  { code: "en", native: "English",  flag: "🇬🇧" },
+  { code: "ru", native: "Русский",  flag: "🇷🇺" },
+  { code: "he", native: "עברית",    flag: "🇮🇱", dir: "rtl" },
+  { code: "ar", native: "العربية",  flag: "🇸🇦", dir: "rtl" },
+  { code: "de", native: "Deutsch",  flag: "🇩🇪" },
+  { code: "fr", native: "Français", flag: "🇫🇷" },
+  { code: "es", native: "Español",  flag: "🇪🇸" },
+]
 
 export function LanguageSelector() {
   const { lang, setLang } = useLanguageStore()
@@ -39,26 +45,48 @@ export function LanguageSelector() {
           aria-label="Select language"
         >
           <Globe className="h-3.5 w-3.5 flex-shrink-0" />
-          {FLAG[lang]}
+          <span aria-hidden="true">{current.flag}</span>
+          <span className="hidden sm:inline">{current.code.toUpperCase()}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[160px]">
-        {LANGUAGES.map((l) => (
+
+      <DropdownMenuContent align="end" className="min-w-[175px] p-1">
+        {/* Top 4 featured languages */}
+        {LANGUAGES.slice(0, 4).map((l) => (
+          <DropdownMenuItem
+            key={l.code}
+            onClick={() => setLang(l.code)}
+            dir={l.dir}
+            className={cn(
+              "flex items-center justify-between gap-3 text-sm rounded-md px-2 py-1.5",
+              l.code === lang && "font-semibold text-primary bg-primary/5"
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-base leading-none" aria-hidden="true">{l.flag}</span>
+              {l.native}
+            </span>
+            {l.code === lang && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+          </DropdownMenuItem>
+        ))}
+
+        <DropdownMenuSeparator />
+
+        {/* Remaining languages */}
+        {LANGUAGES.slice(4).map((l) => (
           <DropdownMenuItem
             key={l.code}
             onClick={() => setLang(l.code)}
             className={cn(
-              "flex items-center justify-between gap-3 text-sm",
-              l.code === lang && "font-semibold text-primary"
+              "flex items-center justify-between gap-3 text-sm rounded-md px-2 py-1.5",
+              l.code === lang && "font-semibold text-primary bg-primary/5"
             )}
           >
             <span className="flex items-center gap-2">
-              <span className="text-xs font-mono text-muted-foreground w-5">
-                {FLAG[l.code]}
-              </span>
+              <span className="text-base leading-none" aria-hidden="true">{l.flag}</span>
               {l.native}
             </span>
-            {l.code === lang && <Check className="h-3.5 w-3.5 text-primary" />}
+            {l.code === lang && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
