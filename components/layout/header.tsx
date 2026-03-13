@@ -8,7 +8,7 @@ import {
   Search, ShoppingCart, ChevronDown, ChevronRight,
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
-  LayoutGrid, X, Tag, Store, UserCircle,
+  LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -134,6 +134,81 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic cart button — shows item count, last-added thumbnail, bump on add
+// ---------------------------------------------------------------------------
+function DynamicCartButton() {
+  const { getTotalItems, items, openCart } = useCartStore()
+  const totalItems = getTotalItems()
+  const lastItem = items[items.length - 1] ?? null
+  const prevCount = useRef(totalItems)
+  const [bumping, setBumping] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+
+  // Trigger bump animation whenever an item is added
+  useEffect(() => {
+    if (totalItems > prevCount.current) {
+      setBumping(true)
+      setShowPreview(true)
+      const bumpTimer = setTimeout(() => setBumping(false), 400)
+      const previewTimer = setTimeout(() => setShowPreview(false), 2200)
+      prevCount.current = totalItems
+      return () => { clearTimeout(bumpTimer); clearTimeout(previewTimer) }
+    }
+    prevCount.current = totalItems
+  }, [totalItems])
+
+  return (
+    <button
+      onClick={openCart}
+      aria-label={`Sepet${totalItems > 0 ? ` — ${totalItems} ürün` : ""}`}
+      className={cn(
+        "relative flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-sm font-medium transition-all duration-200",
+        "hover:border-primary/40 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        bumping && "scale-110 border-primary/50 bg-primary/10",
+      )}
+    >
+      {/* Icon */}
+      <span className={cn("relative flex items-center justify-center", bumping && "animate-bounce")}>
+        <ShoppingCart className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+        {totalItems > 0 && (
+          <span className={cn(
+            "absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[10px] font-bold text-primary-foreground leading-none transition-transform",
+            bumping && "scale-125"
+          )}>
+            {totalItems > 99 ? "99+" : totalItems}
+          </span>
+        )}
+      </span>
+
+      {/* Last-added product preview — slides in on add */}
+      {lastItem && showPreview && (
+        <span className="flex items-center gap-1.5 animate-slide-in-up overflow-hidden">
+          <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-md border border-border/60">
+            <Image
+              src={lastItem.product.images?.[0] ?? "/placeholder.svg"}
+              alt={lastItem.product.name}
+              fill
+              className="object-cover"
+              sizes="24px"
+            />
+          </span>
+          <span className="max-w-[80px] truncate text-xs text-foreground/80">
+            {lastItem.product.name}
+          </span>
+        </span>
+      )}
+
+      {/* Static label when nothing animating */}
+      {(!showPreview || !lastItem) && totalItems > 0 && (
+        <span className="hidden sm:inline text-xs text-muted-foreground">
+          Sepet
+        </span>
+      )}
+    </button>
   )
 }
 
@@ -281,16 +356,8 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* Cart — Fix 2: overflow-visible wrapper prevents badge clipping */}
-            <Button variant="ghost" size="icon" className="relative overflow-visible" onClick={openCart}>
-              <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
-                <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs pointer-events-none">
-                  {totalItems > 99 ? "99+" : totalItems}
-                </Badge>
-              )}
-              <span className="sr-only">Sepet</span>
-            </Button>
+            {/* Cart — dynamic button with last-added preview and bump animation */}
+            <DynamicCartButton />
 
             {/* Mobile hamburger */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

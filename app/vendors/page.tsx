@@ -6,7 +6,8 @@ import { products } from "@/lib/data/products"
 import { categories } from "@/lib/data/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star, MapPin, CheckCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Star, MapPin, CheckCircle, Store, ArrowRight } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Satıcılarımız",
@@ -16,13 +17,28 @@ export const metadata: Metadata = {
 export default function VendorsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-          Satıcılarımız
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Marketin24'te onaylı satıcılardan alışveriş yapın
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+            Satıcılarımız
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Marketin24'te onaylı satıcılardan alışveriş yapın
+          </p>
+        </div>
+
+        {/* "Satıcı Ol" physical button — top-right of page header */}
+        <Button
+          asChild
+          size="default"
+          className="shrink-0 gap-2 shadow-md hover:shadow-lg transition-shadow"
+        >
+          <Link href="/seller-application">
+            <Store className="h-4 w-4" />
+            Satıcı Ol
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
