@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { SellerApplyButton } from '@/components/layout/seller-apply-button'
+import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -54,6 +55,12 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <Script id="sw-register" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+          }
+        `}</Script>
         <Script
           src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
           strategy="afterInteractive"
@@ -81,6 +88,7 @@ export default function RootLayout({
           <Footer />
           <MobileNav />
           <SellerApplyButton />
+          <PWAInstallPrompt />
         </div>
         <Analytics />
       </body>
