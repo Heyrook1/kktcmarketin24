@@ -316,8 +316,8 @@ export function Header() {
 
           {/* ── Right actions ── */}
           <div className="flex items-center gap-0.5">
-            {/* Search icon — tablet only (md to lg): no inline bar in header,
-                no hero bar visible at this width without scrolling */}
+
+            {/* Search icon — tablet only (md to lg) */}
             <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
               <SheetTrigger asChild className="hidden md:flex lg:hidden">
                 <Button variant="ghost" size="icon">
@@ -332,21 +332,21 @@ export function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Language + Currency switchers — always visible */}
+            {/* Language + Currency — visible on all sizes */}
             <div className="flex items-center gap-1.5">
               <CurrencySelector />
               <LanguageSelector />
             </div>
 
-            {/* Account link */}
-            <Link href="/account">
+            {/* Account — desktop/tablet only (bottom nav handles mobile) */}
+            <Link href="/account" className="hidden md:inline-flex">
               <Button variant="ghost" size="icon" aria-label="Hesabim">
                 <UserCircle className="h-5 w-5" />
               </Button>
             </Link>
 
-            {/* Favorites link — Fix 2: overflow-visible wrapper prevents badge clipping */}
-            <Link href="/wishlist">
+            {/* Favorites — desktop/tablet only (bottom nav handles mobile) */}
+            <Link href="/wishlist" className="hidden md:inline-flex">
               <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative overflow-visible">
                 <Heart className="h-5 w-5" />
                 {wishlistItems.length > 0 && (
@@ -357,10 +357,12 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* Cart — dynamic button with last-added preview and bump animation */}
-            <DynamicCartButton />
+            {/* Cart — desktop/tablet only (bottom nav handles mobile) */}
+            <div className="hidden md:flex">
+              <DynamicCartButton />
+            </div>
 
-            {/* Mobile hamburger */}
+            {/* Hamburger — mobile only, opens category/nav sheet */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon">
