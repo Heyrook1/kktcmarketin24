@@ -6,11 +6,8 @@ import { ArrowRight, Truck, ShieldCheck, CreditCard, MapPin } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { SearchBar } from "@/components/shared/search-bar"
 import { HeroFloatingCards } from "@/components/home/hero-floating-cards"
-import { useT } from "@/lib/store/language-store"
 
 export function HeroSection() {
-  const t = useT()
-
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background">
       <div className="container mx-auto px-4 py-12 md:py-20">
@@ -20,13 +17,13 @@ export function HeroSection() {
             <div>
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary mb-2">
                 <MapPin className="h-4 w-4" />
-                {t.hero.badge}
+                KKTC'nin Güvenilir Pazaryeri
               </span>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-balance">
-                {t.hero.title}
+                Tüm Satıcılar, Tek Adres
               </h1>
               <p className="mt-4 text-lg text-muted-foreground leading-relaxed text-pretty max-w-xl mx-auto lg:mx-0">
-                {t.hero.subtitle}
+                Kuzey Kıbrıs'ın en güvenilir satıcılarından kaliteli ürünler. Tek sepet, tek ödeme, sınırsız seçenek. Marketin24 ile güvenle alışveriş yapın.
               </p>
             </div>
 
@@ -37,14 +34,14 @@ export function HeroSection() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <Button size="lg" asChild className="cta-arrow">
+              <Button size="lg" asChild>
                 <Link href="/products">
-                  {t.hero.browseProducts}
+                  Ürünleri İncele
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/compare">{t.hero.compareBtn}</Link>
+                <Link href="/compare">Platformları Karşılaştır</Link>
               </Button>
             </div>
 
@@ -52,15 +49,15 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 mt-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Truck className="h-5 w-5 text-primary" />
-                <span>{t.hero.fastDelivery}</span>
+                <span>Hızlı Teslimat</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                <span>{t.hero.verifiedSellers}</span>
+                <span>Onaylı Satıcılar</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CreditCard className="h-5 w-5 text-primary" />
-                <span>{t.hero.securePayment}</span>
+                <span>Güvenli Ödeme</span>
               </div>
             </div>
           </div>

@@ -1,12 +1,9 @@
-"use client"
-
 import Link from "next/link"
 import { ArrowRight, Sparkles, Clock, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ProductGrid } from "@/components/product/product-grid"
 import { getFeaturedProducts, getNewArrivals, getBestSellers } from "@/lib/data/products"
-import { useT } from "@/lib/store/language-store"
 
 interface ProductSectionProps {
   title: string
@@ -18,7 +15,6 @@ interface ProductSectionProps {
 }
 
 function ProductSection({ title, description, viewAllHref, children, icon, badge }: ProductSectionProps) {
-  const t = useT()
   return (
     <section className="py-12 md:py-16">
       <div className="container mx-auto px-4">
@@ -44,9 +40,9 @@ function ProductSection({ title, description, viewAllHref, children, icon, badge
             </div>
           </div>
           {viewAllHref && (
-            <Button variant="ghost" asChild className="hidden sm:flex cta-arrow">
+            <Button variant="ghost" asChild className="hidden sm:flex">
               <Link href={viewAllHref}>
-                {t.common.viewAll}
+                Tümünü Gör
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -55,9 +51,9 @@ function ProductSection({ title, description, viewAllHref, children, icon, badge
         {children}
         {viewAllHref && (
           <div className="mt-6 sm:hidden">
-            <Button variant="outline" className="w-full cta-arrow" asChild>
+            <Button variant="outline" className="w-full" asChild>
               <Link href={viewAllHref}>
-                {t.common.viewAll}
+                Tümünü Gör
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -69,15 +65,15 @@ function ProductSection({ title, description, viewAllHref, children, icon, badge
 }
 
 export function FeaturedProducts() {
-  const t = useT()
   const products = getFeaturedProducts().slice(0, 8)
+
   return (
     <ProductSection
-      title={t.products.featured}
-      description={t.products.featuredDesc}
+      title="Öne Çıkan Ürünler"
+      description="En iyi satıcılarımızdan seçilmiş ürünler"
       viewAllHref="/products?featured=true"
       icon={<Sparkles className="h-5 w-5" />}
-      badge={t.products.featuredBadge}
+      badge="Seçili"
     >
       <ProductGrid products={products} showReviews showSizes showStock />
     </ProductSection>
@@ -85,15 +81,15 @@ export function FeaturedProducts() {
 }
 
 export function NewArrivals() {
-  const t = useT()
   const products = getNewArrivals(8)
+
   return (
     <ProductSection
-      title={t.products.newArrivals}
-      description={t.products.newArrivalsDesc}
+      title="Yeni Gelenler"
+      description="Pazaryerimize yeni eklenen ürünler"
       viewAllHref="/products?sort=newest"
       icon={<Clock className="h-5 w-5" />}
-      badge={t.products.newArrivalsBadge}
+      badge="Yeni"
     >
       <ProductGrid products={products} showReviews showSizes showStock />
     </ProductSection>
@@ -101,12 +97,12 @@ export function NewArrivals() {
 }
 
 export function BestSellers() {
-  const t = useT()
   const products = getBestSellers(8)
+
   return (
     <ProductSection
-      title={t.products.bestSellers}
-      description={t.products.bestSellersDesc}
+      title="Çok Satanlar"
+      description="Müşterilerimizin en çok tercih ettikleri"
       viewAllHref="/products?sort=popular"
       icon={<TrendingUp className="h-5 w-5" />}
     >
@@ -116,25 +112,30 @@ export function BestSellers() {
 }
 
 export function PromoBanner() {
-  const t = useT()
   return (
     <section className="py-12 md:py-16">
       <div className="container mx-auto px-4">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-accent p-8 md:p-12">
           <div className="relative z-10 max-w-lg">
             <span className="inline-block text-sm font-medium text-primary-foreground/80 mb-2">
-              {t.promo.specialOffer}
+              Özel Teklif
             </span>
             <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground">
-              {t.promo.firstOrder}
+              İlk Siparişinize %20 İndirim
             </h2>
             <p className="mt-2 text-primary-foreground/80">
-              {t.promo.firstOrderDesc}
+              Herhangi bir satıcıdan alışveriş yapın ve ilk siparişinizde özel indirimlerden yararlanın. Sınırlı süre!
             </p>
-            <Button size="lg" variant="secondary" className="mt-6 cta-arrow" asChild>
-              <Link href="/products">{t.promo.shopNow}</Link>
+            <Button
+              size="lg"
+              variant="secondary"
+              className="mt-6"
+              asChild
+            >
+              <Link href="/products">Hemen Alışveriş Yap</Link>
             </Button>
           </div>
+          {/* Decorative elements */}
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10" />
           <div className="absolute -right-10 -bottom-10 h-48 w-48 rounded-full bg-white/10" />
         </div>

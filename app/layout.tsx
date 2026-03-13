@@ -7,8 +7,6 @@ import { Footer } from '@/components/layout/footer'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { SellerApplyButton } from '@/components/layout/seller-apply-button'
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
-import { LanguageBar } from '@/components/shared/language-bar'
-import { GoogleTranslateSync } from '@/components/shared/google-translate-sync'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -72,7 +70,7 @@ export default function RootLayout({
             function googleTranslateElementInit() {
               new google.translate.TranslateElement({
                 pageLanguage: 'tr',
-                includedLanguages: 'tr,en,ar,de,fr,es,ru,iw',
+                includedLanguages: 'tr,en,ar,de,fr,es,it,ru,zh-CN,el,bg',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false
               }, 'google_translate_element');
@@ -81,10 +79,8 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.variable} ${syne.variable} font-sans antialiased`}>
-        <div id="google_translate_element" className="hidden" aria-hidden="true" />
-        <GoogleTranslateSync />
+        <div id="google_translate_element" className="hidden" />
         <div className="flex min-h-screen flex-col">
-          <LanguageBar />
           <Header />
           <main className="flex-1 pb-16 md:pb-0">
             {children}
