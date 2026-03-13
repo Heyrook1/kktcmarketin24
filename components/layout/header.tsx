@@ -11,7 +11,8 @@ import {
   LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useCartStore } from "@/lib/store/cart-store"
@@ -326,6 +327,9 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="top" className="h-auto">
+                <VisuallyHidden.Root>
+                  <SheetTitle>Ara</SheetTitle>
+                </VisuallyHidden.Root>
                 <div className="pt-6 pb-4 px-2">
                   <SearchBar autoFocus />
                 </div>
@@ -371,6 +375,9 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[300px] sm:w-[340px] p-0 overflow-y-auto">
+                <VisuallyHidden.Root>
+                  <SheetTitle>Menü</SheetTitle>
+                </VisuallyHidden.Root>
                 <div className="flex flex-col h-full">
 
                   {/* Sheet header */}
