@@ -27,8 +27,8 @@ export function HeroSection() {
               </p>
             </div>
 
-            {/* Search */}
-            <div className="w-full max-w-md mx-auto lg:mx-0">
+            {/* Search — only shown below lg where the header inline bar is absent */}
+            <div className="w-full max-w-md mx-auto lg:mx-0 lg:hidden">
               <SearchBar />
             </div>
 
