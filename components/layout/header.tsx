@@ -365,7 +365,7 @@ export function Header() {
             {/* Hamburger — mobile + tablet, opens category/nav sheet */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden">
+                <Button variant="ghost" size="icon" className="hidden md:flex lg:hidden">
                   <LayoutGrid className="h-5 w-5" />
                   <span className="sr-only">Menüyü aç</span>
                 </Button>
