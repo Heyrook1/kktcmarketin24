@@ -244,7 +244,7 @@ export function Header() {
           </Link>
 
           {/* ── Desktop nav ── */}
-          <nav className="hidden md:flex items-center gap-0.5" ref={megaWrapRef}>
+          <nav className="hidden lg:flex items-center gap-0.5" ref={megaWrapRef}>
 
             {/* Kategoriler mega-menu trigger — Fix 3: keyboard accessible via onFocus */}
             <button
@@ -338,15 +338,15 @@ export function Header() {
               <LanguageSelector />
             </div>
 
-            {/* Account — desktop/tablet only (bottom nav handles mobile) */}
-            <Link href="/account" className="hidden md:inline-flex">
+            {/* Account — desktop only (bottom nav handles mobile + tablet) */}
+            <Link href="/account" className="hidden lg:inline-flex">
               <Button variant="ghost" size="icon" aria-label="Hesabim">
                 <UserCircle className="h-5 w-5" />
               </Button>
             </Link>
 
-            {/* Favorites — desktop/tablet only (bottom nav handles mobile) */}
-            <Link href="/wishlist" className="hidden md:inline-flex">
+            {/* Favorites — desktop only (bottom nav handles mobile + tablet) */}
+            <Link href="/wishlist" className="hidden lg:inline-flex">
               <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative overflow-visible">
                 <Heart className="h-5 w-5" />
                 {wishlistItems.length > 0 && (
@@ -357,14 +357,14 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* Cart — desktop/tablet only (bottom nav handles mobile) */}
-            <div className="hidden md:flex">
+            {/* Cart — desktop only (bottom nav handles mobile + tablet) */}
+            <div className="hidden lg:flex">
               <DynamicCartButton />
             </div>
 
-            {/* Hamburger — mobile only, opens category/nav sheet */}
+            {/* Hamburger — mobile + tablet, opens category/nav sheet */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild className="md:hidden">
+              <SheetTrigger asChild className="lg:hidden">
                 <Button variant="ghost" size="icon">
                   <LayoutGrid className="h-5 w-5" />
                   <span className="sr-only">Menüyü aç</span>
