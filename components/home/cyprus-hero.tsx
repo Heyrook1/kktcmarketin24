@@ -119,10 +119,16 @@ export function CyprusHero() {
           {/* Left: search + info */}
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-2">
-              <span className="text-2xl" aria-hidden>🇨🇾</span>
+              <Image
+                src="/images/marketin24-logo.png"
+                alt="Marketin24"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+              />
               <span className="text-sm font-medium text-muted-foreground">Kuzey Kıbrıs&apos;ın Pazaryeri</span>
               <Badge variant="secondary" className="text-xs gap-1 ml-auto">
-                <Zap className="h-3 w-3 text-amber-500" />Canlı
+                <Zap className="h-3 w-3 text-amber-500" />Test
               </Badge>
             </div>
 
