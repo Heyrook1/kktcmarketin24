@@ -316,9 +316,10 @@ export function Header() {
 
           {/* ── Right actions ── */}
           <div className="flex items-center gap-0.5">
-            {/* Search — tablet/mobile */}
+            {/* Search icon — tablet only (md to lg): no inline bar in header,
+                no hero bar visible at this width without scrolling */}
             <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
-              <SheetTrigger asChild className="lg:hidden">
+              <SheetTrigger asChild className="hidden md:flex lg:hidden">
                 <Button variant="ghost" size="icon">
                   <Search className="h-5 w-5" />
                   <span className="sr-only">Ara</span>
