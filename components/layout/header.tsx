@@ -319,8 +319,8 @@ export function Header() {
 
             {/* Search icon — tablet only (md to lg) */}
             <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
-              <SheetTrigger asChild className="hidden md:flex lg:hidden">
-                <Button variant="ghost" size="icon">
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="hidden md:flex lg:hidden">
                   <Search className="h-5 w-5" />
                   <span className="sr-only">Ara</span>
                 </Button>
@@ -364,8 +364,8 @@ export function Header() {
 
             {/* Hamburger — mobile + tablet, opens category/nav sheet */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild className="lg:hidden">
-                <Button variant="ghost" size="icon">
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden">
                   <LayoutGrid className="h-5 w-5" />
                   <span className="sr-only">Menüyü aç</span>
                 </Button>
