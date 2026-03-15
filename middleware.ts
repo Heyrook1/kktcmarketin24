@@ -2,13 +2,17 @@ import { updateSession } from '@/lib/supabase/middleware'
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
-const PROTECTED_PATHS = ['/account']
+const PROTECTED_PATHS = ['/account', '/vendor-panel']
 
 export async function middleware(request: NextRequest) {
   // Refresh Supabase session cookies first
   const response = await updateSession(request)
 
   const { pathname } = request.nextUrl
+
+  // Never redirect auth routes — avoids infinite redirect loops
+  if (pathname.startsWith('/auth/')) return response
+
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p))
 
   if (isProtected) {
@@ -26,6 +30,7 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const loginUrl = request.nextUrl.clone()
       loginUrl.pathname = '/auth/login'
+      loginUrl.searchParams.set('next', pathname)
       return NextResponse.redirect(loginUrl)
     }
   }
@@ -35,14 +40,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
-     * Feel free to modify this pattern to include more paths.
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
