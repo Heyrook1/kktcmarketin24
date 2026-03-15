@@ -1,7 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
-const PROTECTED_PATHS = ['/account', '/vendor-panel']
+// Only protect routes where a mid-stream redirect would not break RSC prefetches.
+// /account handles its own auth check inside the page (server redirect after getUser).
+const PROTECTED_PATHS = ['/vendor-panel']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -18,7 +20,6 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Write refreshed tokens into both request and response
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
@@ -43,7 +44,6 @@ export async function middleware(request: NextRequest) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/auth/login'
     loginUrl.searchParams.set('next', pathname)
-    // Copy refreshed cookies onto the redirect so the session isn't lost
     const redirectResponse = NextResponse.redirect(loginUrl)
     response.cookies.getAll().forEach(({ name, value }) =>
       redirectResponse.cookies.set(name, value)
@@ -52,10 +52,4 @@ export async function middleware(request: NextRequest) {
   }
 
   return response
-}
-
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
 }
