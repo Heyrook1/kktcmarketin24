@@ -292,14 +292,14 @@ export async function runCheckoutSaga(input: SagaInput): Promise<SagaResult> {
       .eq('id', subOrder.id)
   }
 
-  // ── Step 6: Mark parent order as completed ────────────────────────────────
+  // ── Step 6: Mark parent order as awaiting_otp (OTP must be verified before confirmed) ──
   await supabase
     .from('orders')
-    .update({ saga_status: 'completed' })
+    .update({ saga_status: 'awaiting_otp' })
     .eq('id', orderId)
 
-  // Release all Redis soft-holds
-  await releaseAllReservations(input.cartId)
+  // NOTE: Redis soft-holds are kept until OTP verified or order expires.
+  // The otp-expire cron worker releases them if the customer doesn't verify.
 
   return {
     ok: true,

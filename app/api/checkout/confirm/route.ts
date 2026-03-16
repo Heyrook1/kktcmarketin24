@@ -1,33 +1,6 @@
-/**
- * POST /api/checkout/confirm
- *
- * Entry point for multi-vendor checkout using the Saga pattern.
- *
- * This route:
- *  1. Reads user session (customerId may be null for guest checkouts).
- *  2. Delegates entirely to runCheckoutSaga() which:
- *     - Re-fetches ALL prices from DB (never trusts client-submitted values)
- *     - Validates vendor_store ownership per line item
- *     - Validates Redis reservations (15-min soft-holds)
- *     - Creates parent order + vendor sub-orders in sequence
- *     - Runs compensating transactions on any failure (restores stock)
- *     - Writes outbox events for async vendor notification
- *  3. Returns { ok, orderId, serverTotal, ... } on success
- *     or { error, details } on any failure.
- *
- * Request body:
- *  {
- *    cartId: string
- *    items: { productId: string, quantity: number }[]
- *    customerName: string
- *    customerEmail: string
- *    customerPhone?: string
- *    deliveryAddress: { fullName, phone, line1, city, district }
- *    couponCode?: string
- *  }
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { runCheckoutSaga } from '@/lib/checkout/saga'
 import type { SagaInput } from '@/lib/checkout/types'
 
@@ -47,6 +20,13 @@ interface ConfirmBody {
   couponCode?: string
 }
 
+function sb() {
+  return createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as ConfirmBody
@@ -63,15 +43,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 })
     }
 
-    // Read session — guest checkouts allowed (customerId may be null)
+    // Auth — guest checkout not allowed
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Sipariş vermek için giriş yapmanız gerekiyor.', requiresAuth: true },
+        { status: 401 }
+      )
+    }
+
+    // Check for flagged / no-show accounts
+    const admin = sb()
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('flagged_at, no_show_count')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profile?.flagged_at) {
+      return NextResponse.json(
+        {
+          error: 'Hesabınız inceleme için işaretlenmiştir. Yeni sipariş veremezsiniz. Lütfen destek ekibiyle iletişime geçin.',
+          flagged: true,
+        },
+        { status: 403 }
+      )
+    }
 
     const sagaInput: SagaInput = {
       cartId: body.cartId,
-      customerId: user?.id ?? null,
+      customerId: user.id,
       customerName: body.customerName,
       customerEmail: body.customerEmail,
       customerPhone: body.customerPhone,
@@ -95,6 +97,8 @@ export async function POST(req: NextRequest) {
       serverSubtotal: result.serverSubtotal,
       serverTotal: result.serverTotal,
       discountAmount: result.discountAmount,
+      // Tell client OTP verification is required
+      requiresOtp: true,
     })
   } catch (err) {
     console.error('[checkout/confirm]', err)
