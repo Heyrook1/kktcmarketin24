@@ -52,8 +52,9 @@ function splitName(full: string) {
 
 export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const router = useRouter()
-  const { items, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
+  const { items, cartId, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [stockError, setStockError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [errors, setErrors] = useState<FieldErrors>({})
 
@@ -127,7 +128,29 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
       return
     }
     setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setStockError(null)
+
+    // ── Server-side atomic stock decrement via Redis reservation + DB lock ──
+    const confirmRes = await fetch("/api/checkout/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cartId,
+        items: items.map(({ product, quantity }) => ({
+          productId: product.id,
+          productName: product.name,
+          quantity,
+        })),
+      }),
+    })
+
+    if (!confirmRes.ok) {
+      const data = await confirmRes.json()
+      const msg = (data.details as string[] | undefined)?.join(" ") ?? data.error ?? "Stok doğrulanamadı."
+      setStockError(msg)
+      setIsSubmitting(false)
+      return
+    }
 
     // Build and persist the new order so it appears immediately in the customer panel
     const newOrder: Order = {
@@ -193,6 +216,17 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     <form onSubmit={handleSubmit} noValidate>
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
+
+          {/* Stock / reservation error banner */}
+          {stockError && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3">
+              <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-destructive">Stok hatası — sipariş tamamlanamadı</p>
+                <p className="text-muted-foreground mt-0.5">{stockError}</p>
+              </div>
+            </div>
+          )}
 
           {/* Auto-fill status banner */}
           {isLoggedIn && autoFilledCount > 0 && (
