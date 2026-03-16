@@ -130,7 +130,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     setIsSubmitting(true)
     setStockError(null)
 
-    // ── Server-side atomic stock decrement via Redis reservation + DB lock ──
+    // ── Multi-vendor Saga checkout ────────────────────────────────────────────
     const confirmRes = await fetch("/api/checkout/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -138,23 +138,36 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         cartId,
         items: items.map(({ product, quantity }) => ({
           productId: product.id,
-          productName: product.name,
           quantity,
         })),
+        customerName: `${form.firstName} ${form.lastName}`,
+        customerEmail: form.email,
+        customerPhone: form.phone,
+        deliveryAddress: {
+          fullName: `${form.firstName} ${form.lastName}`,
+          phone: form.phone,
+          line1: form.address,
+          city: form.city,
+          district: form.district,
+        },
+        couponCode: appliedCoupon?.code ?? undefined,
       }),
     })
 
     if (!confirmRes.ok) {
       const data = await confirmRes.json()
-      const msg = (data.details as string[] | undefined)?.join(" ") ?? data.error ?? "Stok doğrulanamadı."
+      const msg = (data.details as string[] | undefined)?.join(" ") ?? data.error ?? "Sipariş tamamlanamadı."
       setStockError(msg)
       setIsSubmitting(false)
       return
     }
 
+    // Use server-computed totals from the Saga response — never client values
+    const sagaData = await confirmRes.json()
+
     // Build and persist the new order so it appears immediately in the customer panel
     const newOrder: Order = {
-      id: `ORD-${Date.now()}`,
+      id: sagaData.orderId ?? `ORD-${Date.now()}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: "pending",
@@ -166,10 +179,10 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         quantity,
         price: product.price,
       })),
-      subtotal: totalPrice,
+      subtotal: sagaData.serverSubtotal ?? totalPrice,
       shippingFee: 0,
-      discount: discountAmount,
-      total: finalPrice,
+      discount: sagaData.discountAmount ?? discountAmount,
+      total: sagaData.serverTotal ?? finalPrice,
       couponCode: appliedCoupon?.code,
       deliveryAddress: {
         fullName: `${form.firstName} ${form.lastName}`,

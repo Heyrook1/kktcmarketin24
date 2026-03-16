@@ -46,7 +46,33 @@ async function callRelease(cartId: string, productId?: string) {
   }
 }
 
-interface CartState {
+// ---------------------------------------------------------------------------
+// Server cart sync — persists cart to DB keyed to user session.
+// Fire-and-forget: client Zustand is the fast-path; DB is the durable backup.
+// Only productId + quantity are sent — never prices (re-fetched at checkout).
+// ---------------------------------------------------------------------------
+async function syncServerCart(
+  cartId: string,
+  items: CartItem[],
+  couponCode?: string
+) {
+  try {
+    await fetch("/api/cart/server", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cartId,
+        items: items.map(({ product, quantity }) => ({
+          productId: product.id,
+          quantity,
+        })),
+        couponCode,
+      }),
+    })
+  } catch {
+    // Non-blocking
+  }
+}
   cartId: string
   items: CartItem[]
   isOpen: boolean
@@ -80,48 +106,52 @@ export const useCartStore = create<CartState>()(
         set((state) => {
           const existingItem = state.items.find(item => item.product.id === product.id)
           const newQuantity = existingItem ? existingItem.quantity + quantity : quantity
-          // Fire Redis reservation (non-blocking — never trust client stock state)
-          callReserve(cartId, product.id, newQuantity)
-          if (existingItem) {
-            return {
-              items: state.items.map(item =>
+          const newItems = existingItem
+            ? state.items.map(item =>
                 item.product.id === product.id
                   ? { ...item, quantity: newQuantity }
                   : item
               )
-            }
-          }
-          return { items: [...state.items, { product, quantity }] }
+            : [...state.items, { product, quantity }]
+          // Fire Redis reservation (non-blocking)
+          callReserve(cartId, product.id, newQuantity)
+          // Sync to server DB (non-blocking, only productId + quantity)
+          syncServerCart(cartId, newItems, state.appliedCoupon?.code)
+          return { items: newItems }
         })
       },
 
       removeItem: (productId: string) => {
-        const { cartId } = get()
+        const { cartId, appliedCoupon } = get()
         callRelease(cartId, productId)
-        set((state) => ({
-          items: state.items.filter(item => item.product.id !== productId)
-        }))
+        set((state) => {
+          const newItems = state.items.filter(item => item.product.id !== productId)
+          syncServerCart(cartId, newItems, appliedCoupon?.code)
+          return { items: newItems }
+        })
       },
 
       updateQuantity: (productId: string, quantity: number) => {
-        const { cartId } = get()
+        const { cartId, appliedCoupon } = get()
         if (quantity <= 0) {
           get().removeItem(productId)
           return
         }
         callReserve(cartId, productId, quantity)
-        set((state) => ({
-          items: state.items.map(item =>
-            item.product.id === productId
-              ? { ...item, quantity }
-              : item
+        set((state) => {
+          const newItems = state.items.map(item =>
+            item.product.id === productId ? { ...item, quantity } : item
           )
-        }))
+          syncServerCart(cartId, newItems, appliedCoupon?.code)
+          return { items: newItems }
+        })
       },
 
       clearCart: () => {
         const { cartId } = get()
-        callRelease(cartId) // release all
+        callRelease(cartId)
+        // Clear server cart after checkout
+        fetch("/api/cart/server", { method: "DELETE" }).catch(() => {})
         set({ items: [], appliedCoupon: null })
       },
 

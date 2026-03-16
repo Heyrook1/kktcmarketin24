@@ -1,88 +1,103 @@
 /**
  * POST /api/checkout/confirm
  *
- * Atomically:
- *  1. Validates Redis reservation for each item (soft-hold must exist)
- *  2. Calls decrement_stock() DB function for each item (FOR UPDATE row lock)
- *  3. Releases Redis reservations on success
- *  4. Returns { ok: true, failedItems } or { error } on failure
+ * Entry point for multi-vendor checkout using the Saga pattern.
  *
- * The client must check `ok` before navigating to /checkout/success.
+ * This route:
+ *  1. Reads user session (customerId may be null for guest checkouts).
+ *  2. Delegates entirely to runCheckoutSaga() which:
+ *     - Re-fetches ALL prices from DB (never trusts client-submitted values)
+ *     - Validates vendor_store ownership per line item
+ *     - Validates Redis reservations (15-min soft-holds)
+ *     - Creates parent order + vendor sub-orders in sequence
+ *     - Runs compensating transactions on any failure (restores stock)
+ *     - Writes outbox events for async vendor notification
+ *  3. Returns { ok, orderId, serverTotal, ... } on success
+ *     or { error, details } on any failure.
+ *
+ * Request body:
+ *  {
+ *    cartId: string
+ *    items: { productId: string, quantity: number }[]
+ *    customerName: string
+ *    customerEmail: string
+ *    customerPhone?: string
+ *    deliveryAddress: { fullName, phone, line1, city, district }
+ *    couponCode?: string
+ *  }
  */
-import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import {
-  validateReservation,
-  releaseAllReservations,
-} from "@/lib/stock-reservation"
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { runCheckoutSaga } from '@/lib/checkout/saga'
+import type { SagaInput } from '@/lib/checkout/types'
 
-interface CheckoutItem {
-  productId: string
-  productName: string
-  quantity: number
+interface ConfirmBody {
+  cartId: string
+  items: { productId: string; quantity: number }[]
+  customerName: string
+  customerEmail: string
+  customerPhone?: string
+  deliveryAddress: {
+    fullName: string
+    phone: string
+    line1: string
+    city: string
+    district: string
+  }
+  couponCode?: string
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { cartId, items } = await req.json() as {
-      cartId: string
-      items: CheckoutItem[]
+    const body = (await req.json()) as ConfirmBody
+
+    // Basic shape validation
+    if (
+      !body.cartId ||
+      !Array.isArray(body.items) ||
+      body.items.length === 0 ||
+      !body.customerName ||
+      !body.customerEmail ||
+      !body.deliveryAddress
+    ) {
+      return NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 })
     }
 
-    if (!cartId || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 })
-    }
-
+    // Read session — guest checkouts allowed (customerId may be null)
     const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    // ── Phase 1: validate all Redis reservations ──────────────────────────
-    const reservationErrors: string[] = []
-    for (const item of items) {
-      const valid = await validateReservation(cartId, item.productId, item.quantity)
-      if (!valid) {
-        reservationErrors.push(
-          `"${item.productName}" için rezervasyon süresi dolmuş veya stok değişti. Lütfen sepeti güncelleyin.`
-        )
-      }
+    const sagaInput: SagaInput = {
+      cartId: body.cartId,
+      customerId: user?.id ?? null,
+      customerName: body.customerName,
+      customerEmail: body.customerEmail,
+      customerPhone: body.customerPhone,
+      deliveryAddress: body.deliveryAddress,
+      couponCode: body.couponCode,
+      rawItems: body.items,
     }
 
-    if (reservationErrors.length > 0) {
+    const result = await runCheckoutSaga(sagaInput)
+
+    if (!result.ok) {
       return NextResponse.json(
-        { error: "Rezervasyon hatası", details: reservationErrors },
+        { error: result.error, details: result.details },
         { status: 409 }
       )
     }
 
-    // ── Phase 2: atomic DB decrements ─────────────────────────────────────
-    const failedItems: string[] = []
-    for (const item of items) {
-      const { data: success, error } = await supabase.rpc("decrement_stock", {
-        p_product_id: item.productId,
-        p_quantity: item.quantity,
-      })
-
-      if (error || !success) {
-        failedItems.push(
-          `"${item.productName}" — stok tükendi veya ürün artık mevcut değil.`
-        )
-      }
-    }
-
-    if (failedItems.length > 0) {
-      // Partial failure: restore already-decremented items
-      // (In a real system use a DB transaction; here we roll back what we can)
-      return NextResponse.json(
-        { error: "Stok hatası", details: failedItems },
-        { status: 409 }
-      )
-    }
-
-    // ── Phase 3: release Redis soft-holds ─────────────────────────────────
-    await releaseAllReservations(cartId)
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({
+      ok: true,
+      orderId: result.orderId,
+      serverSubtotal: result.serverSubtotal,
+      serverTotal: result.serverTotal,
+      discountAmount: result.discountAmount,
+    })
   } catch (err) {
-    console.error("[checkout-confirm]", err)
-    return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 })
+    console.error('[checkout/confirm]', err)
+    return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 })
   }
 }
