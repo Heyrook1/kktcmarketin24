@@ -8,7 +8,9 @@ import type { User } from "@supabase/supabase-js"
 import {
   ShoppingBag, CreditCard, Truck, ShieldCheck,
   Check, AlertTriangle, UserCircle, Info, Loader2, Tag,
+  Smartphone, RefreshCw, Lock,
 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -52,10 +54,23 @@ function splitName(full: string) {
 
 export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const router = useRouter()
-  const { items, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
+  const { items, cartId, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [stockError, setStockError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [errors, setErrors] = useState<FieldErrors>({})
+
+  // OTP modal state
+  const [otpOpen, setOtpOpen] = useState(false)
+  const [otpOrderId, setOtpOrderId] = useState<string | null>(null)
+  const [otpCode, setOtpCode] = useState("")
+  const [otpPhone, setOtpPhone] = useState<string>("")
+  const [otpDevCode, setOtpDevCode] = useState<string | null>(null)
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [otpResending, setOtpResending] = useState(false)
+  const [otpCountdown, setOtpCountdown] = useState(0)
+  const [sagaData, setSagaData] = useState<{ serverSubtotal?: number; serverTotal?: number; discountAmount?: number } | null>(null)
 
   const { addOrder, coupons, gifts } = useAccountStore()
 
@@ -120,18 +135,70 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     return Object.keys(errs).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) {
-      document.getElementById("contact-section")?.scrollIntoView({ behavior: "smooth", block: "start" })
-      return
-    }
-    setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (otpCountdown <= 0) return
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [otpCountdown])
 
-    // Build and persist the new order so it appears immediately in the customer panel
+  // Send (or resend) OTP for a given order
+  const sendOtp = async (orderId: string) => {
+    setOtpResending(true)
+    setOtpError(null)
+    try {
+      const res = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setOtpError(data.error ?? "OTP gönderilemedi.")
+      } else {
+        setOtpPhone(data.phone ?? "")
+        setOtpDevCode(data.devCode ?? null)
+        setOtpCountdown(60) // 60-second resend cooldown
+      }
+    } catch {
+      setOtpError("OTP gönderilemedi. Lütfen tekrar deneyin.")
+    } finally {
+      setOtpResending(false)
+    }
+  }
+
+  // Verify submitted OTP code
+  const handleOtpVerify = async () => {
+    if (!otpOrderId || otpCode.trim().length !== 6) return
+    setOtpVerifying(true)
+    setOtpError(null)
+    try {
+      const res = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: otpOrderId, code: otpCode.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setOtpError(data.error ?? "Doğrulama başarısız.")
+        setOtpVerifying(false)
+        return
+      }
+      // OTP verified — complete the checkout flow
+      setOtpOpen(false)
+      completeCheckout(otpOrderId)
+    } catch {
+      setOtpError("Doğrulama başarısız. Lütfen tekrar deneyin.")
+      setOtpVerifying(false)
+    }
+  }
+
+  const completeCheckout = (orderId: string) => {
+    const totalPrice = getTotalPrice()
+    const discountAmount = getDiscountAmount()
+    const finalPrice = getFinalPrice()
     const newOrder: Order = {
-      id: `ORD-${Date.now()}`,
+      id: orderId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: "pending",
@@ -143,11 +210,13 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         quantity,
         price: product.price,
       })),
-      subtotal: totalPrice,
+      subtotal: sagaData?.serverSubtotal ?? totalPrice,
       shippingFee: 0,
-      discount: discountAmount,
-      total: finalPrice,
-      couponCode: appliedCoupon?.code,
+      discount: sagaData?.discountAmount ?? discountAmount,
+      total: sagaData?.serverTotal ?? finalPrice,
+      customerName: `${form.firstName} ${form.lastName}`,
+      customerEmail: form.email,
+      customerPhone: form.phone,
       deliveryAddress: {
         fullName: `${form.firstName} ${form.lastName}`,
         phone: form.phone,
@@ -155,14 +224,63 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         city: form.city,
         district: form.district,
       },
-      estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      statusHistory: [
-        { status: "pending", timestamp: new Date().toISOString(), note: "Sipariş alındı" },
-      ],
+      paymentMethod,
+      coupon: appliedCoupon ? { code: appliedCoupon.code, description: appliedCoupon.description, discount: getDiscountAmount() } : undefined,
     }
     addOrder(newOrder)
     clearCart()
-    router.push("/checkout/success")
+    router.push(`/checkout/success?orderId=${orderId}`)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validate()) {
+      document.getElementById("contact-section")?.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+    setIsSubmitting(true)
+    setStockError(null)
+
+    // ── Multi-vendor Saga checkout ────────────────────────────────────────────
+    // Items and cartId are loaded from server_carts (keyed to user session).
+    // Never send prices or items[] from the client — the server is the source of truth.
+    const confirmRes = await fetch("/api/checkout/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerName: `${form.firstName} ${form.lastName}`,
+        customerEmail: form.email,
+        customerPhone: form.phone,
+        deliveryAddress: {
+          fullName: `${form.firstName} ${form.lastName}`,
+          phone: form.phone,
+          line1: form.address,
+          city: form.city,
+          district: form.district,
+        },
+        couponCode: appliedCoupon?.code ?? undefined,
+      }),
+    })
+
+    if (!confirmRes.ok) {
+      const data = await confirmRes.json()
+      const msg = (data.details as string[] | undefined)?.join(" ") ?? data.error ?? "Sipariş tamamlanamadı."
+      setStockError(msg)
+      setIsSubmitting(false)
+      return
+    }
+
+    // Saga succeeded — OTP verification required before order is confirmed
+    const data = await confirmRes.json()
+    setSagaData({ serverSubtotal: data.serverSubtotal, serverTotal: data.serverTotal, discountAmount: data.discountAmount })
+    setOtpOrderId(data.orderId)
+    setOtpCode("")
+    setOtpError(null)
+    setOtpOpen(true)
+    setIsSubmitting(false)
+
+    // Trigger first OTP send automatically
+    await sendOtp(data.orderId)
   }
 
   const itemsByVendor = getItemsByVendor()
@@ -193,6 +311,17 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     <form onSubmit={handleSubmit} noValidate>
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
+
+          {/* Stock / reservation error banner */}
+          {stockError && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3">
+              <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-destructive">Stok hatası — sipariş tamamlanamadı</p>
+                <p className="text-muted-foreground mt-0.5">{stockError}</p>
+              </div>
+            </div>
+          )}
 
           {/* Auto-fill status banner */}
           {isLoggedIn && autoFilledCount > 0 && (
@@ -490,6 +619,96 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         </div>
       </div>
     </form>
+
+    {/* ── OTP Verification Modal ─────────────────────────────────────────── */}
+    <Dialog open={otpOpen} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <div className="flex items-center justify-center mb-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Smartphone className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+          <DialogTitle className="text-center">SMS Doğrulama</DialogTitle>
+          <DialogDescription className="text-center">
+            {otpPhone
+              ? <>{otpPhone} numarasına gönderilen 6 haneli kodu girin.</>
+              : "Telefon numaranıza gönderilen 6 haneli kodu girin."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          {/* Dev mode helper */}
+          {otpDevCode && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <Lock className="h-4 w-4 shrink-0" />
+              <span>Geliştirici modu — OTP kodu: <strong>{otpDevCode}</strong></span>
+            </div>
+          )}
+
+          {/* Code input */}
+          <div className="space-y-1.5">
+            <Label htmlFor="otp-code">Doğrulama Kodu</Label>
+            <Input
+              id="otp-code"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="000000"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && handleOtpVerify()}
+            />
+          </div>
+
+          {/* Error */}
+          {otpError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{otpError}</span>
+            </div>
+          )}
+
+          {/* Verify button */}
+          <Button
+            className="w-full"
+            onClick={handleOtpVerify}
+            disabled={otpVerifying || otpCode.length !== 6}
+          >
+            {otpVerifying ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Doğrulanıyor…</>
+            ) : (
+              <><Check className="mr-2 h-4 w-4" />Doğrula ve Siparişi Onayla</>
+            )}
+          </Button>
+
+          {/* Resend */}
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => otpOrderId && sendOtp(otpOrderId)}
+              disabled={otpResending || otpCountdown > 0}
+              className="text-muted-foreground"
+            >
+              {otpResending ? (
+                <><RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />Gönderiliyor…</>
+              ) : otpCountdown > 0 ? (
+                `Tekrar gönder (${otpCountdown}s)`
+              ) : (
+                <><RefreshCw className="mr-1.5 h-3.5 w-3.5" />Kodu tekrar gönder</>
+              )}
+            </Button>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Kod 15 dakika içinde doğrulanmazsa sipariş otomatik iptal edilir.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

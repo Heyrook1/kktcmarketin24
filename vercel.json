@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/worker/outbox-flush",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/worker/otp-expire",
+      "schedule": "* * * * *"
+    }
+  ]
+}

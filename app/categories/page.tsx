@@ -1,8 +1,25 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import {
+  Smartphone, Shirt, Home, Sparkles, Dumbbell,
+  Baby, Watch, ShoppingBasket, Heart, BookOpen, type LucideIcon,
+} from "lucide-react"
 import { categories } from "@/lib/data/categories"
 import { products } from "@/lib/data/products"
 import { Card, CardContent } from "@/components/ui/card"
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Smartphone,
+  Shirt,
+  Home,
+  Sparkles,
+  Dumbbell,
+  Baby,
+  Watch,
+  ShoppingBasket,
+  Heart,
+  BookOpen,
+}
 
 export const metadata: Metadata = {
   title: "All Categories",
@@ -24,7 +41,7 @@ export default function CategoriesPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {categories.map((category) => {
           const productCount = products.filter(p => p.category === category.slug).length
-          const IconComponent = category.icon
+          const IconComponent = ICON_MAP[category.icon] ?? Smartphone
           
           return (
             <Link key={category.id} href={`/category/${category.slug}`}>
