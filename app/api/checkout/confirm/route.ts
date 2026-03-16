@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { runCheckoutSaga } from '@/lib/checkout/saga'
 import type { SagaInput } from '@/lib/checkout/types'
+import { checkCheckoutGate } from '@/lib/reliability'
 
 interface ConfirmBody {
   // Line items and cartId are NOT accepted from the client.
@@ -53,19 +54,11 @@ export async function POST(req: NextRequest) {
 
     const admin = adminClient()
 
-    // Check for flagged / no-show accounts
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('flagged_at, no_show_count')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (profile?.flagged_at) {
+    // ── Checkout gate: flagged + reliability checks (single source) ───────
+    const gate = await checkCheckoutGate(user.id)
+    if (!gate.allowed) {
       return NextResponse.json(
-        {
-          error: 'Hesabınız inceleme için işaretlenmiştir. Yeni sipariş veremezsiniz. Lütfen destek ekibiyle iletişime geçin.',
-          flagged: true,
-        },
+        { error: gate.message, reason: gate.reason, flagged: gate.reason === 'flagged' },
         { status: 403 }
       )
     }

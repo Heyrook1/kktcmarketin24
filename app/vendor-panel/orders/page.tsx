@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdmin } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ShoppingBag } from "lucide-react"
+import { VendorOrdersTable, type OrderRow } from "@/components/vendor/vendor-orders-table"
+import { getReliabilityScore } from "@/lib/reliability"
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Bekliyor", confirmed: "Onaylandı", shipped: "Kargoda",
@@ -26,13 +28,46 @@ export default async function VendorOrdersPage() {
     .from("vendor_stores").select("id").eq("owner_id", user.id).single()
   if (!store) redirect("/vendor-panel")
 
-  const { data: orders } = await supabase
+  // Fetch orders alongside their parent orders to get customer_id
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: rawOrders } = await admin
     .from("vendor_orders")
-    .select("*")
+    .select("*, orders!inner(customer_id)")
     .eq("store_id", store.id)
     .order("created_at", { ascending: false })
 
-  const items = orders ?? []
+  const items = rawOrders ?? []
+
+  // Fetch reliability scores for all unique customers in parallel
+  const customerIds = [...new Set(
+    items
+      .map((o) => (o.orders as { customer_id: string } | null)?.customer_id)
+      .filter(Boolean) as string[]
+  )]
+
+  const scoreMap = Object.fromEntries(
+    await Promise.all(
+      customerIds.map(async (id) => [id, await getReliabilityScore(id)])
+    )
+  )
+
+  const ordersWithReliability: OrderRow[] = items.map((o) => {
+    const customerId = (o.orders as { customer_id: string } | null)?.customer_id ?? null
+    return {
+      id:            o.id,
+      customer_name: o.customer_name,
+      customer_email: o.customer_email,
+      items_count:   o.items_count,
+      total:         Number(o.total),
+      status:        o.status,
+      created_at:    o.created_at,
+      reliability:   customerId ? (scoreMap[customerId] ?? null) : null,
+    }
+  })
 
   const statusGroups = Object.keys(STATUS_LABELS).reduce<Record<string, number>>((acc, s) => {
     acc[s] = items.filter(o => o.status === s).length
@@ -46,7 +81,7 @@ export default async function VendorOrdersPage() {
         <p className="text-sm text-muted-foreground mt-0.5">{items.length} toplam sipariş</p>
       </div>
 
-      {/* Status summary */}
+      {/* Status summary pills */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(statusGroups).filter(([, count]) => count > 0).map(([status, count]) => (
           <span key={status} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[status]}`}>
@@ -55,46 +90,32 @@ export default async function VendorOrdersPage() {
         ))}
       </div>
 
-      {items.length === 0 ? (
-        <Card className="shadow-sm">
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Güvenilirlik Skoru:</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />Mükemmel ≥80</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-blue-500" />İyi 60–79</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-amber-500" />Orta 40–59</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-red-500" />Düşük {'<'}40</span>
+      </div>
+
+      <Card className="shadow-sm overflow-hidden">
+        {items.length === 0 ? (
           <CardContent className="flex flex-col items-center gap-3 py-12">
             <ShoppingBag className="h-10 w-10 text-muted-foreground" />
             <p className="text-muted-foreground text-sm">Henüz sipariş yok.</p>
           </CardContent>
-        </Card>
-      ) : (
-        <Card className="shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/30">
-                  {["Müşteri", "E-posta", "Ürün Sayısı", "Tutar", "Durum", "Tarih"].map(h => (
-                    <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(order => (
-                  <tr key={order.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-medium">{order.customer_name}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{order.customer_email}</td>
-                    <td className="px-4 py-3 text-center">{order.items_count}</td>
-                    <td className="px-4 py-3 font-semibold">₺{Number(order.total).toLocaleString("tr-TR")}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
-                        {STATUS_LABELS[order.status] ?? order.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
-                      {new Date(order.created_at).toLocaleDateString("tr-TR")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+        ) : (
+          <>
+            <CardHeader className="pb-0 pt-4 px-4">
+              <CardTitle className="text-base">Sipariş Listesi</CardTitle>
+              <CardDescription className="text-xs">Teslimat durumu güncellemek için "Güncelle" düğmesini kullanın. Her güncelleme müşterinin güvenilirlik skoruna yansır.</CardDescription>
+            </CardHeader>
+            <VendorOrdersTable initialOrders={ordersWithReliability} />
+          </>
+        )}
+      </Card>
     </div>
   )
 }
+
