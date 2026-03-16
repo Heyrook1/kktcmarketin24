@@ -73,6 +73,8 @@ async function syncServerCart(
     // Non-blocking
   }
 }
+
+interface CartState {
   cartId: string
   items: CartItem[]
   isOpen: boolean
