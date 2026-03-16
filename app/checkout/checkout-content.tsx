@@ -242,15 +242,12 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     setStockError(null)
 
     // ── Multi-vendor Saga checkout ────────────────────────────────────────────
+    // Items and cartId are loaded from server_carts (keyed to user session).
+    // Never send prices or items[] from the client — the server is the source of truth.
     const confirmRes = await fetch("/api/checkout/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        cartId,
-        items: items.map(({ product, quantity }) => ({
-          productId: product.id,
-          quantity,
-        })),
         customerName: `${form.firstName} ${form.lastName}`,
         customerEmail: form.email,
         customerPhone: form.phone,

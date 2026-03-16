@@ -5,8 +5,8 @@ import { runCheckoutSaga } from '@/lib/checkout/saga'
 import type { SagaInput } from '@/lib/checkout/types'
 
 interface ConfirmBody {
-  cartId: string
-  items: { productId: string; quantity: number }[]
+  // Line items and cartId are NOT accepted from the client.
+  // They are loaded server-side from server_carts keyed to the user session.
   customerName: string
   customerEmail: string
   customerPhone?: string
@@ -20,7 +20,7 @@ interface ConfirmBody {
   couponCode?: string
 }
 
-function sb() {
+function adminClient() {
   return createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -31,14 +31,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as ConfirmBody
 
-    // Basic shape validation
+    // Validate required fields (no items[] — those come from the server cart)
     if (
-      !body.cartId ||
-      !Array.isArray(body.items) ||
-      body.items.length === 0 ||
       !body.customerName ||
       !body.customerEmail ||
-      !body.deliveryAddress
+      !body.deliveryAddress?.line1 ||
+      !body.deliveryAddress?.city
     ) {
       return NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 })
     }
@@ -53,8 +51,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const admin = adminClient()
+
     // Check for flagged / no-show accounts
-    const admin = sb()
     const { data: profile } = await admin
       .from('profiles')
       .select('flagged_at, no_show_count')
@@ -71,15 +70,42 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // ── Load cart from server (single source of truth) ────────────────────
+    // Uses service-role client so it bypasses RLS — we already verified user above.
+    const { data: serverCart } = await admin
+      .from('server_carts')
+      .select('cart_id, items, coupon_code')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!serverCart || !Array.isArray(serverCart.items) || serverCart.items.length === 0) {
+      return NextResponse.json(
+        { error: 'Sunucu tarafında sepetiniz bulunamadı veya boş. Lütfen sepetinizi güncelleyip tekrar deneyin.' },
+        { status: 422 }
+      )
+    }
+
+    // Strip to productId + quantity only — vendor_id and price always re-fetched in Saga
+    const rawItems = (serverCart.items as { productId: string; quantity: number }[])
+      .filter((i) => i.productId && Number(i.quantity) > 0)
+      .map(({ productId, quantity }) => ({ productId, quantity: Number(quantity) }))
+
+    if (rawItems.length === 0) {
+      return NextResponse.json({ error: 'Geçerli sepet kalemi bulunamadı.' }, { status: 422 })
+    }
+
+    // Coupon: prefer server cart's stored coupon; allow override only if provided
+    const couponCode = body.couponCode ?? serverCart.coupon_code ?? undefined
+
     const sagaInput: SagaInput = {
-      cartId: body.cartId,
+      cartId: serverCart.cart_id,          // server's cartId, not client's
       customerId: user.id,
       customerName: body.customerName,
       customerEmail: body.customerEmail,
       customerPhone: body.customerPhone,
       deliveryAddress: body.deliveryAddress,
-      couponCode: body.couponCode,
-      rawItems: body.items,
+      couponCode,
+      rawItems,                             // from server_carts — never client body
     }
 
     const result = await runCheckoutSaga(sagaInput)
@@ -91,13 +117,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Clear the server cart now that the Saga has committed
+    await admin
+      .from('server_carts')
+      .delete()
+      .eq('user_id', user.id)
+
     return NextResponse.json({
       ok: true,
       orderId: result.orderId,
       serverSubtotal: result.serverSubtotal,
       serverTotal: result.serverTotal,
       discountAmount: result.discountAmount,
-      // Tell client OTP verification is required
       requiresOtp: true,
     })
   } catch (err) {
@@ -105,3 +136,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 })
   }
 }
+
