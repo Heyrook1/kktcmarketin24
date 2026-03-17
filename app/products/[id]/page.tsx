@@ -6,6 +6,11 @@ import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
 import { ProductGrid } from "@/components/product/product-grid"
 
+// ISR: regenerate product pages at most once per hour so price/stock changes
+// propagate without a full redeploy. Switch to `revalidate = 60` for faster
+// freshness once products are served from the DB.
+export const revalidate = 3600
+
 interface ProductPageProps {
   params: Promise<{ id: string }>
 }
