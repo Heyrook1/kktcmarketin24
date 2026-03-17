@@ -228,7 +228,7 @@ function ContactForm() {
   // Use Cloudflare's always-pass test key when no real key is configured.
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
-  function renderTurnstile() {
+  function handleScriptLoad() {
     if (!window.turnstile || !containerRef.current || widgetIdRef.current) return
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
@@ -289,14 +289,12 @@ function ContactForm() {
 
   return (
     <>
-      {siteKey && (
-        <Script
+      <Script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js"
           strategy="lazyOnload"
-          onLoad={renderTurnstile}
+          onLoad={handleScriptLoad}
         />
-      )}
-      <form id={formId} onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form id={formId} onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldWrap label="Ad Soyad" id="cf-name" required error={errors.fullName}>
             <Input id="cf-name" placeholder="Adınız Soyadınız" value={form.fullName}
@@ -335,14 +333,13 @@ function ContactForm() {
           <p className="text-right text-xs text-muted-foreground mt-1">{form.message.length}/2000</p>
         </FieldWrap>
 
-        {siteKey && (
-          <div>
-            <div ref={containerRef} />
-            {turnstileError && (
-              <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.</p>
-            )}
-          </div>
-        )}
+        {/* Turnstile container — always in DOM so ref is valid when onLoad fires */}
+        <div>
+          <div ref={containerRef} />
+          {turnstileError && (
+            <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.</p>
+          )}
+        </div>
 
         <Button type="submit" disabled={isPending} className="w-full gap-2 rounded-xl h-11 font-semibold">
           {isPending
