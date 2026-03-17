@@ -6,8 +6,9 @@ export interface Vendor {
   logo: string
   coverImage: string
   rating: number
-  reviewCount: number
-  productCount: number
+  // reviewCount and productCount are NOT stored here — always compute at call-site:
+  //   reviewCount → getVendorReviews(id).length
+  //   productCount → getProductsByVendor(id).length
   joinedDate: string
   location: string
   categories: string[]
@@ -29,8 +30,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=300&fit=crop",
     rating: 4.8,
-    reviewCount: 1247,
-    productCount: 45,
     joinedDate: "2023-01",
     location: "Lefkoşa, KKTC",
     categories: ["electronics"],
@@ -50,8 +49,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=300&fit=crop",
     rating: 4.6,
-    reviewCount: 892,
-    productCount: 62,
     joinedDate: "2023-03",
     location: "Girne, KKTC",
     categories: ["fashion"],
@@ -69,8 +66,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&h=300&fit=crop",
     rating: 4.7,
-    reviewCount: 654,
-    productCount: 38,
     joinedDate: "2023-02",
     location: "Gazimağusa, KKTC",
     categories: ["home-garden"],
@@ -89,8 +84,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800&h=300&fit=crop",
     rating: 4.9,
-    reviewCount: 1456,
-    productCount: 54,
     joinedDate: "2023-01",
     location: "Lefkoşa, KKTC",
     categories: ["beauty"],
@@ -109,8 +102,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&h=300&fit=crop",
     rating: 4.5,
-    reviewCount: 578,
-    productCount: 41,
     joinedDate: "2023-04",
     location: "Güzelyurt, KKTC",
     categories: ["sports"],
@@ -128,8 +119,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&h=300&fit=crop",
     rating: 4.8,
-    reviewCount: 823,
-    productCount: 33,
     joinedDate: "2023-02",
     location: "Girne, KKTC",
     categories: ["kids-baby"],
@@ -147,8 +136,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&h=300&fit=crop",
     rating: 4.7,
-    reviewCount: 412,
-    productCount: 29,
     joinedDate: "2023-05",
     location: "Lefkoşa, KKTC",
     categories: ["jewelry"],
@@ -166,8 +153,6 @@ export const vendors: Vendor[] = [
     logo: "https://images.unsplash.com/photo-1506617420156-8e4536971650?w=100&h=100&fit=crop",
     coverImage: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800&h=300&fit=crop",
     rating: 4.6,
-    reviewCount: 967,
-    productCount: 67,
     joinedDate: "2023-01",
     location: "Lefkoşa, KKTC",
     categories: ["groceries", "health"],

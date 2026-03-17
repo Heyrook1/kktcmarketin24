@@ -12,7 +12,8 @@ export interface Category {
   description: string
   image: string
   icon: string
-  productCount: number
+  // productCount is NOT stored here — always compute with:
+  //   products.filter(p => p.categoryId === category.id).length
   subcategories?: Subcategory[]
   featured?: { label: string; image: string; href: string }
 }
@@ -25,7 +26,6 @@ export const categories: Category[] = [
     description: "Telefon, bilgisayar, aksesuar ve daha fazlası",
     image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=300&fit=crop",
     icon: "Smartphone",
-    productCount: 45,
     subcategories: [
       { id: "phones", name: "Cep Telefonları", slug: "phones", href: "/category/electronics?sub=phones" },
       { id: "computers", name: "Bilgisayarlar", slug: "computers", href: "/category/electronics?sub=computers" },
@@ -45,7 +45,6 @@ export const categories: Category[] = [
     description: "Giyim, ayakkabı ve herkes için kıyafetler",
     image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
     icon: "Shirt",
-    productCount: 62,
     subcategories: [
       { id: "mens", name: "Erkek Giyim", slug: "mens", href: "/category/fashion?sub=mens" },
       { id: "womens", name: "Kadın Giyim", slug: "womens", href: "/category/fashion?sub=womens" },
@@ -63,7 +62,6 @@ export const categories: Category[] = [
     description: "Mobilya, dekorasyon ve bahçe ürünleri",
     image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=400&h=300&fit=crop",
     icon: "Home",
-    productCount: 38,
     subcategories: [
       { id: "furniture", name: "Mobilya", slug: "furniture", href: "/category/home-garden?sub=furniture" },
       { id: "decor", name: "Dekorasyon", slug: "decor", href: "/category/home-garden?sub=decor" },
@@ -81,7 +79,6 @@ export const categories: Category[] = [
     description: "Cilt bakımı, makyaj ve parfümler",
     image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
     icon: "Sparkles",
-    productCount: 54,
     subcategories: [
       { id: "skincare", name: "Cilt Bakımı", slug: "skincare", href: "/category/beauty?sub=skincare" },
       { id: "makeup", name: "Makyaj", slug: "makeup", href: "/category/beauty?sub=makeup" },
@@ -98,7 +95,6 @@ export const categories: Category[] = [
     description: "Fitness ekipmanları, kamp ve spor malzemeleri",
     image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop",
     icon: "Dumbbell",
-    productCount: 41,
     subcategories: [
       { id: "fitness", name: "Fitness", slug: "fitness", href: "/category/sports?sub=fitness" },
       { id: "running", name: "Koşu", slug: "running", href: "/category/sports?sub=running" },
@@ -115,7 +111,6 @@ export const categories: Category[] = [
     description: "Oyuncaklar, kıyafetler ve bebek ürünleri",
     image: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&h=300&fit=crop",
     icon: "Baby",
-    productCount: 33,
     subcategories: [
       { id: "toys", name: "Oyuncaklar", slug: "toys", href: "/category/kids-baby?sub=toys" },
       { id: "baby-clothes", name: "Bebek Giyim", slug: "baby-clothes", href: "/category/kids-baby?sub=baby-clothes" },
@@ -130,7 +125,6 @@ export const categories: Category[] = [
     description: "Saat, çanta ve değerli takılar",
     image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop",
     icon: "Watch",
-    productCount: 29,
     subcategories: [
       { id: "watches", name: "Saatler", slug: "watches", href: "/category/jewelry?sub=watches" },
       { id: "necklaces", name: "Kolyeler", slug: "necklaces", href: "/category/jewelry?sub=necklaces" },
@@ -145,7 +139,6 @@ export const categories: Category[] = [
     description: "Temel gıdalar, içecekler ve taze ürünler",
     image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
     icon: "ShoppingBasket",
-    productCount: 67,
     subcategories: [
       { id: "fresh", name: "Taze Ürünler", slug: "fresh", href: "/category/groceries?sub=fresh" },
       { id: "beverages", name: "İçecekler", slug: "beverages", href: "/category/groceries?sub=beverages" },
@@ -161,7 +154,6 @@ export const categories: Category[] = [
     description: "Vitaminler, takviyeler ve medikal ürünler",
     image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop",
     icon: "Heart",
-    productCount: 36,
     subcategories: [
       { id: "vitamins", name: "Vitaminler", slug: "vitamins", href: "/category/health?sub=vitamins" },
       { id: "supplements", name: "Takviyeler", slug: "supplements", href: "/category/health?sub=supplements" },
@@ -175,7 +167,6 @@ export const categories: Category[] = [
     description: "Kitaplar, ofis malzemeleri ve sanat ürünleri",
     image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop",
     icon: "BookOpen",
-    productCount: 48,
     subcategories: [
       { id: "novels", name: "Romanlar", slug: "novels", href: "/category/books?sub=novels" },
       { id: "educational", name: "Eğitim", slug: "educational", href: "/category/books?sub=educational" },
