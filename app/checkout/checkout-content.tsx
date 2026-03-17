@@ -238,6 +238,13 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
       document.getElementById("contact-section")?.scrollIntoView({ behavior: "smooth", block: "start" })
       return
     }
+
+    // Hard-block COD for unauthenticated users (defence-in-depth — UI already disables it)
+    if (paymentMethod === "cod" && !user) {
+      setStockError("Kapıda ödeme için hesap oluşturmanız zorunludur. Lütfen giriş yapın.")
+      return
+    }
+
     setIsSubmitting(true)
     setStockError(null)
 
@@ -476,14 +483,23 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                   </div>
                 </label>
                 <label className={cn(
-                  "flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors",
-                  paymentMethod === "cod" ? "border-primary bg-primary/5" : "hover:bg-secondary/50"
+                  "flex items-center gap-3 p-4 border rounded-xl transition-colors",
+                  !isLoggedIn
+                    ? "opacity-50 cursor-not-allowed bg-muted/30"
+                    : "cursor-pointer " + (paymentMethod === "cod" ? "border-primary bg-primary/5" : "hover:bg-secondary/50")
                 )}>
-                  <RadioGroupItem value="cod" id="cod" />
+                  <RadioGroupItem value="cod" id="cod" disabled={!isLoggedIn} />
                   <Truck className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium text-sm">Kapıda Ödeme</p>
-                    <p className="text-xs text-muted-foreground">Siparişinizi teslim alırken ödeyin</p>
+                    {!isLoggedIn ? (
+                      <p className="text-xs text-destructive font-medium mt-0.5">
+                        Kapıda ödeme için hesap oluşturmanız zorunludur.{" "}
+                        <a href="/auth/login?next=/checkout" className="underline">Giriş yap</a>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Siparişinizi teslim alırken ödeyin</p>
+                    )}
                   </div>
                 </label>
               </RadioGroup>

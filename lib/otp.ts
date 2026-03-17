@@ -15,6 +15,7 @@
 
 import { redis } from '@/lib/redis'
 import { createClient } from '@supabase/supabase-js'
+import { sendSms, otpMessage, normalisePhone } from '@/lib/sms'
 
 const OTP_TTL_SECONDS   = 15 * 60   // 15 minutes
 const RATE_TTL_SECONDS  = 10 * 60   // 10-minute rate-limit window
@@ -57,33 +58,38 @@ export async function createOtp(
     return { ok: false, error: 'Çok fazla OTP talebi. Lütfen 10 dakika bekleyin.' }
   }
 
-  // 2. Generate code + write to Redis
+  // 2. Normalise phone to E.164 and generate code + write to Redis
+  const normalisedPhone = normalisePhone(phone)
   const code = sixDigit()
   const otpKey = `otp:${orderId}`
-  await redis.set(otpKey, JSON.stringify({ code, phone, attempts: 0 }), { ex: OTP_TTL_SECONDS })
+  await redis.set(otpKey, JSON.stringify({ code, phone: normalisedPhone, attempts: 0 }), { ex: OTP_TTL_SECONDS })
 
   // 3. Write audit row to sms_otps
   await supabase.from('sms_otps').insert({
     order_id: orderId,
     user_id: userId,
-    phone,
+    phone: normalisedPhone,
     expires_at: new Date(Date.now() + OTP_TTL_SECONDS * 1000).toISOString(),
   })
 
   // 4. Log phone
   await supabase.from('phone_logs').insert({
     user_id: userId,
-    phone,
+    phone: normalisedPhone,
     event: 'otp_sent',
     order_id: orderId,
   })
 
-  // 5. Send SMS — swap this block for a real SMS provider (Twilio, Vonage, etc.)
-  const isDev = process.env.NODE_ENV !== 'production'
-  if (!isDev) {
-    // await sendSmsViaTwilio(phone, `KKTC Market doğrulama kodunuz: ${code}`)
+  // 5. Send real SMS — always in all environments when credentials are set.
+  //    In local dev without credentials, sendSms() is a no-op returning ok=true.
+  const smsResult = await sendSms(normalisedPhone, otpMessage(code))
+  if (!smsResult.ok) {
+    console.error('[otp] SMS delivery failed:', smsResult.error)
+    // We do NOT block the order — the verify endpoint will catch code mismatches.
+    // Return the devCode so local dev / staging can still complete the flow.
   }
 
+  const isDev = process.env.NODE_ENV !== 'production'
   return { ok: true, devCode: isDev ? code : undefined }
 }
 
