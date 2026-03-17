@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
 import { runCheckoutSaga } from '@/lib/checkout/saga'
 import type { SagaInput } from '@/lib/checkout/types'
 import { checkCheckoutGate } from '@/lib/reliability'
+import { redis } from '@/lib/redis'
+import type { ServerCartPayload } from '@/app/api/cart/server/route'
 
 interface ConfirmBody {
-  // Line items and cartId are NOT accepted from the client.
-  // They are loaded server-side from server_carts keyed to the user session.
+  // Line items, prices, and cartId are NOT accepted from the client.
+  // They are loaded server-side from Redis keyed to the authenticated user session.
   customerName: string
   customerEmail: string
   customerPhone?: string
@@ -21,18 +22,15 @@ interface ConfirmBody {
   couponCode?: string
 }
 
-function adminClient() {
-  return createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+function cartKey(userId: string) {
+  return `cart:session:${userId}`
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as ConfirmBody
 
-    // Validate required fields (no items[] — those come from the server cart)
+    // Validate required delivery fields — no items[], no prices
     if (
       !body.customerName ||
       !body.customerEmail ||
@@ -52,9 +50,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const admin = adminClient()
-
-    // ── Checkout gate: flagged + reliability checks (single source) ───────
+    // ── Checkout gate: flagged + reliability checks ───────────────────────
     const gate = await checkCheckoutGate(user.id)
     if (!gate.allowed) {
       return NextResponse.json(
@@ -63,13 +59,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Load cart from server (single source of truth) ────────────────────
-    // Uses service-role client so it bypasses RLS — we already verified user above.
-    const { data: serverCart } = await admin
-      .from('server_carts')
-      .select('cart_id, items, coupon_code')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // ── Load cart from Redis — server is the single source of truth ───────
+    // Key: cart:session:{userId}  (set by POST /api/cart/server)
+    // Contains only productId + quantity — prices are NEVER stored here.
+    const serverCart = await redis.get<ServerCartPayload>(cartKey(user.id))
 
     if (!serverCart || !Array.isArray(serverCart.items) || serverCart.items.length === 0) {
       return NextResponse.json(
@@ -78,8 +71,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Strip to productId + quantity only — vendor_id and price always re-fetched in Saga
-    const rawItems = (serverCart.items as { productId: string; quantity: number }[])
+    // Strip to productId + quantity — vendor_id and price are always re-fetched in the Saga
+    const rawItems = serverCart.items
       .filter((i) => i.productId && Number(i.quantity) > 0)
       .map(({ productId, quantity }) => ({ productId, quantity: Number(quantity) }))
 
@@ -87,18 +80,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Geçerli sepet kalemi bulunamadı.' }, { status: 422 })
     }
 
-    // Coupon: prefer server cart's stored coupon; allow override only if provided
-    const couponCode = body.couponCode ?? serverCart.coupon_code ?? undefined
+    // Coupon: prefer the value stored in the server cart; allow body override
+    const couponCode = body.couponCode ?? serverCart.couponCode ?? undefined
 
     const sagaInput: SagaInput = {
-      cartId: serverCart.cart_id,          // server's cartId, not client's
+      cartId: serverCart.cartId,   // server's cartId — never trusted from client body
       customerId: user.id,
       customerName: body.customerName,
       customerEmail: body.customerEmail,
       customerPhone: body.customerPhone,
       deliveryAddress: body.deliveryAddress,
       couponCode,
-      rawItems,                             // from server_carts — never client body
+      rawItems,                    // from Redis — never from client body
     }
 
     const result = await runCheckoutSaga(sagaInput)
@@ -110,11 +103,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Clear the server cart now that the Saga has committed
-    await admin
-      .from('server_carts')
-      .delete()
-      .eq('user_id', user.id)
+    // Clear the Redis cart now that the Saga has committed
+    await redis.del(cartKey(user.id))
 
     return NextResponse.json({
       ok: true,
@@ -129,4 +119,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 })
   }
 }
+
 

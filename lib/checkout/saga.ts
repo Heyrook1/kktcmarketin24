@@ -194,15 +194,18 @@ export async function runCheckoutSaga(input: SagaInput): Promise<SagaResult> {
 
   // ── Step 5a–d: Process each vendor group in sequence ─────────────────────
   for (const group of vendorGroups) {
-    // 5a. Atomic stock decrement for each item in this vendor group
+    // 5a. Atomic stock decrement — UPDATE ... WHERE qty >= n, check rowsAffected === 1.
+    // The RPC returns boolean TRUE only when exactly one row was updated.
     const stockFailures: string[] = []
     for (const item of group.items) {
-      const { data: success, error: rpcErr } = await supabase.rpc('decrement_stock', {
+      const { data: decremented, error: rpcErr } = await supabase.rpc('decrement_stock', {
         p_product_id: item.productId,
         p_quantity: item.quantity,
       })
-      if (rpcErr || !success) {
-        stockFailures.push(`"${item.productName}" — stok yetersiz.`)
+      // decremented is the boolean returned by the SQL function.
+      // false means qty was insufficient (WHERE stock >= p_quantity matched 0 rows).
+      if (rpcErr || decremented !== true) {
+        stockFailures.push(`"${item.productName}" — stok yetersiz veya ürün bulunamadı.`)
       }
     }
 

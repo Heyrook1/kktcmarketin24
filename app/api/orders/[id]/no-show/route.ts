@@ -4,17 +4,21 @@
  * Called by vendor or admin to report a delivery no-show.
  * Increments no_show_count on the customer profile and flags
  * the account for manual review after NO_SHOW_THRESHOLD.
+ *
+ * Ownership: vendors must own a sub-order for the given order.
+ * Admins bypass the ownership check via role lookup.
  */
 
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordNoShow } from '@/lib/otp'
+import { assertDeliveryEventOwnership, isUuid } from '@/lib/vendor-auth'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function sb() {
+function adminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -27,16 +31,19 @@ export async function POST(
 ) {
   const { id: orderId } = await params
 
-  // Auth — must be vendor or admin
-  const supabaseUser = await createServerClient()
-  const { data: { user } } = await supabaseUser.auth.getUser()
+  if (!isUuid(orderId)) {
+    return NextResponse.json({ error: 'Geçersiz sipariş kimliği.' }, { status: 400 })
+  }
+
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz.' }, { status: 401 })
   }
 
-  const admin = sb()
+  const admin = adminClient()
 
-  // Verify caller owns the store for this order (or is admin)
+  // Check if caller is admin — admins bypass ownership check
   const { data: profile } = await admin
     .from('profiles')
     .select('role_id, roles(name)')
@@ -47,20 +54,9 @@ export async function POST(
   const isAdmin = roleName === 'admin'
 
   if (!isAdmin) {
-    // Check vendor owns a sub-order for this order
-    const { data: subOrder } = await admin
-      .from('order_vendor_sub_orders')
-      .select('id')
-      .eq('order_id', orderId)
-      .in(
-        'store_id',
-        admin.from('vendor_stores').select('id').eq('owner_id', user.id)
-      )
-      .maybeSingle()
-
-    if (!subOrder) {
-      return NextResponse.json({ error: 'Bu sipariş üzerinde yetkiniz yok.' }, { status: 403 })
-    }
+    // Vendors must own a sub-order for this order via assertDeliveryEventOwnership
+    const auth = await assertDeliveryEventOwnership(orderId)
+    if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
   }
 
   // Fetch order to get customer_id
@@ -76,7 +72,6 @@ export async function POST(
 
   await recordNoShow(order.customer_id, orderId)
 
-  // Fetch updated profile to return flagged status
   const { data: updated } = await admin
     .from('profiles')
     .select('no_show_count, flagged_at')

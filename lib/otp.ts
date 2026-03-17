@@ -15,6 +15,8 @@
 
 import { redis } from '@/lib/redis'
 import { createClient } from '@supabase/supabase-js'
+import { sendSms, otpMessage, normalisePhone } from '@/lib/sms'
+import { releaseAllReservations } from '@/lib/stock-reservation'
 
 const OTP_TTL_SECONDS   = 15 * 60   // 15 minutes
 const RATE_TTL_SECONDS  = 10 * 60   // 10-minute rate-limit window
@@ -57,33 +59,38 @@ export async function createOtp(
     return { ok: false, error: 'Çok fazla OTP talebi. Lütfen 10 dakika bekleyin.' }
   }
 
-  // 2. Generate code + write to Redis
+  // 2. Normalise phone to E.164 and generate code + write to Redis
+  const normalisedPhone = normalisePhone(phone)
   const code = sixDigit()
   const otpKey = `otp:${orderId}`
-  await redis.set(otpKey, JSON.stringify({ code, phone, attempts: 0 }), { ex: OTP_TTL_SECONDS })
+  await redis.set(otpKey, JSON.stringify({ code, phone: normalisedPhone, attempts: 0 }), { ex: OTP_TTL_SECONDS })
 
   // 3. Write audit row to sms_otps
   await supabase.from('sms_otps').insert({
     order_id: orderId,
     user_id: userId,
-    phone,
+    phone: normalisedPhone,
     expires_at: new Date(Date.now() + OTP_TTL_SECONDS * 1000).toISOString(),
   })
 
   // 4. Log phone
   await supabase.from('phone_logs').insert({
     user_id: userId,
-    phone,
+    phone: normalisedPhone,
     event: 'otp_sent',
     order_id: orderId,
   })
 
-  // 5. Send SMS — swap this block for a real SMS provider (Twilio, Vonage, etc.)
-  const isDev = process.env.NODE_ENV !== 'production'
-  if (!isDev) {
-    // await sendSmsViaTwilio(phone, `KKTC Market doğrulama kodunuz: ${code}`)
+  // 5. Send real SMS — always in all environments when credentials are set.
+  //    In local dev without credentials, sendSms() is a no-op returning ok=true.
+  const smsResult = await sendSms(normalisedPhone, otpMessage(code))
+  if (!smsResult.ok) {
+    console.error('[otp] SMS delivery failed:', smsResult.error)
+    // We do NOT block the order — the verify endpoint will catch code mismatches.
+    // Return the devCode so local dev / staging can still complete the flow.
   }
 
+  const isDev = process.env.NODE_ENV !== 'production'
   return { ok: true, devCode: isDev ? code : undefined }
 }
 
@@ -162,7 +169,7 @@ export async function expireStaleOrders(): Promise<{ cancelled: string[] }> {
 
   const { data: stale } = await supabase
     .from('orders')
-    .select('id, customer_id')
+    .select('id, customer_id, cart_id, payment_method')
     .eq('saga_status', 'awaiting_otp')
     .lt('created_at', cutoff)
 
@@ -202,6 +209,12 @@ export async function expireStaleOrders(): Promise<{ cancelled: string[] }> {
     await supabase.from('orders')
       .update({ saga_status: 'failed' })
       .eq('id', order.id)
+
+    // Release Redis soft-hold for ALL payment methods — on COD especially
+    // the hold must be freed so other customers can purchase the same item.
+    if (order.cart_id) {
+      await releaseAllReservations(order.cart_id)
+    }
 
     // Increment no-show counter on profile
     await recordNoShow(order.customer_id, order.id)
