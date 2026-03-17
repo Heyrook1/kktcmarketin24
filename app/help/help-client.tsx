@@ -225,7 +225,8 @@ function ContactForm() {
   const widgetIdRef = useRef<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const formId = useId()
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""
+  // Use Cloudflare's always-pass test key when no real key is configured.
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
   function renderTurnstile() {
     if (!window.turnstile || !containerRef.current || widgetIdRef.current) return

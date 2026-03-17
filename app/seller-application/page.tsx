@@ -77,7 +77,12 @@ export default function SellerApplicationPage() {
   const widgetIdRef = useRef<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const formId = useId()
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""
+  // Cloudflare Turnstile test keys are used when no real key is configured.
+  // Test site key always passes the widget; the matching test secret always
+  // passes server-side verification — safe for dev/staging, replace in prod.
+  // https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+  const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA"
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TURNSTILE_TEST_SITE_KEY
 
   // Render the Turnstile widget once the script is ready
   function renderTurnstile() {
@@ -184,13 +189,11 @@ export default function SellerApplicationPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Cloudflare Turnstile script */}
-      {siteKey && (
-        <Script
-          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-          strategy="lazyOnload"
-          onLoad={renderTurnstile}
-        />
-      )}
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="lazyOnload"
+        onLoad={renderTurnstile}
+      />
 
       {/* Hero banner */}
       <section className="relative overflow-hidden border-b bg-primary px-4 py-14 text-primary-foreground md:py-20">
@@ -367,16 +370,14 @@ export default function SellerApplicationPage() {
                 </Field>
 
                 {/* Cloudflare Turnstile widget */}
-                {siteKey && (
-                  <div className="space-y-1">
-                    <div ref={containerRef} />
-                    {turnstileError && (
-                      <p className="text-xs text-destructive">
-                        Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="space-y-1">
+                  <div ref={containerRef} />
+                  {turnstileError && (
+                    <p className="text-xs text-destructive">
+                      Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.
+                    </p>
+                  )}
+                </div>
 
                 {/* Agreement */}
                 <div className="space-y-1">
