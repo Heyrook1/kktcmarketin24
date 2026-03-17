@@ -16,6 +16,7 @@
 import { redis } from '@/lib/redis'
 import { createClient } from '@supabase/supabase-js'
 import { sendSms, otpMessage, normalisePhone } from '@/lib/sms'
+import { releaseAllReservations } from '@/lib/stock-reservation'
 
 const OTP_TTL_SECONDS   = 15 * 60   // 15 minutes
 const RATE_TTL_SECONDS  = 10 * 60   // 10-minute rate-limit window
@@ -168,7 +169,7 @@ export async function expireStaleOrders(): Promise<{ cancelled: string[] }> {
 
   const { data: stale } = await supabase
     .from('orders')
-    .select('id, customer_id')
+    .select('id, customer_id, cart_id, payment_method')
     .eq('saga_status', 'awaiting_otp')
     .lt('created_at', cutoff)
 
@@ -208,6 +209,12 @@ export async function expireStaleOrders(): Promise<{ cancelled: string[] }> {
     await supabase.from('orders')
       .update({ saga_status: 'failed' })
       .eq('id', order.id)
+
+    // Release Redis soft-hold for ALL payment methods — on COD especially
+    // the hold must be freed so other customers can purchase the same item.
+    if (order.cart_id) {
+      await releaseAllReservations(order.cart_id)
+    }
 
     // Increment no-show counter on profile
     await recordNoShow(order.customer_id, order.id)
