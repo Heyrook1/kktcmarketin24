@@ -1,15 +1,33 @@
 /**
- * GET  /api/cart/server — load the server-side cart for the authenticated user
- * POST /api/cart/server — upsert (sync) the client cart to the server
- * DELETE /api/cart/server — clear the server-side cart after checkout
+ * GET    /api/cart/server  — load the server-side cart for the authenticated user
+ * POST   /api/cart/server  — upsert (sync) the client cart to the server
+ * DELETE /api/cart/server  — clear the server-side cart
  *
- * The server cart is stored in `public.server_carts` keyed to auth.users(id).
- * It is the authoritative fallback: if a user signs in on a new device, their
- * cart is restored from here.  The client (Zustand persist) is kept as the
- * primary fast-path; this is the durable backup.
+ * Cart is stored in Redis, keyed to the authenticated user's session:
+ *   cart:session:{userId}
+ *
+ * Only productId + quantity are stored — prices are NEVER persisted here.
+ * All prices are re-fetched from vendor_products at checkout confirm time.
+ *
+ * TTL: 7 days (rolling — refreshed on every POST).
  */
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { redis } from "@/lib/redis"
+
+const CART_TTL_SECONDS = 60 * 60 * 24 * 7 // 7 days
+
+function cartKey(userId: string) {
+  return `cart:session:${userId}`
+}
+
+export interface ServerCartPayload {
+  cartId: string
+  // Only IDs + quantities — no prices, no vendor info
+  items: { productId: string; quantity: number }[]
+  couponCode?: string | null
+  updatedAt: string
+}
 
 export async function GET() {
   try {
@@ -17,14 +35,8 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 })
 
-    const { data, error } = await supabase
-      .from("server_carts")
-      .select("cart_id, items, coupon_code, updated_at")
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    if (error) return NextResponse.json({ error: "Sepet alınamadı." }, { status: 500 })
-    return NextResponse.json({ cart: data ?? null })
+    const raw = await redis.get<ServerCartPayload>(cartKey(user.id))
+    return NextResponse.json({ cart: raw ?? null })
   } catch (err) {
     console.error("[cart-server GET]", err)
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 })
@@ -37,34 +49,28 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 })
 
-    const { cartId, items, couponCode } = await req.json() as {
+    const body = await req.json() as {
       cartId: string
       items: { productId: string; quantity: number }[]
       couponCode?: string
     }
 
-    if (!cartId || !Array.isArray(items)) {
+    if (!body.cartId || !Array.isArray(body.items)) {
       return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 })
     }
 
-    // Store only productId + quantity — no prices, no vendor info
-    // (prices are always re-fetched from DB at checkout)
-    const safeItems = items.map(({ productId, quantity }) => ({ productId, quantity }))
+    // Strip to productId + quantity only — prices are NEVER stored
+    const payload: ServerCartPayload = {
+      cartId: body.cartId,
+      items: body.items
+        .filter((i) => i.productId && Number(i.quantity) > 0)
+        .map(({ productId, quantity }) => ({ productId, quantity: Number(quantity) })),
+      couponCode: body.couponCode ?? null,
+      updatedAt: new Date().toISOString(),
+    }
 
-    const { error } = await supabase
-      .from("server_carts")
-      .upsert(
-        {
-          user_id: user.id,
-          cart_id: cartId,
-          items: safeItems,
-          coupon_code: couponCode ?? null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      )
+    await redis.set(cartKey(user.id), payload, { ex: CART_TTL_SECONDS })
 
-    if (error) return NextResponse.json({ error: "Sepet kaydedilemedi." }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error("[cart-server POST]", err)
@@ -78,12 +84,8 @@ export async function DELETE() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 })
 
-    const { error } = await supabase
-      .from("server_carts")
-      .delete()
-      .eq("user_id", user.id)
+    await redis.del(cartKey(user.id))
 
-    if (error) return NextResponse.json({ error: "Sepet silinemedi." }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error("[cart-server DELETE]", err)
