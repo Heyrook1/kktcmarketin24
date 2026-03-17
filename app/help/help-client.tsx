@@ -218,25 +218,16 @@ function AccordionItem({ q, a, open, onToggle }: {
 function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
-  const [turnstileToken, setTurnstileToken] = useState("")
   const [turnstileError, setTurnstileError] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const widgetIdRef = useRef<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const formId = useId()
-  // Use Cloudflare's always-pass test key when no real key is configured.
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
-  function handleScriptLoad() {
-    if (!window.turnstile || !containerRef.current || widgetIdRef.current) return
-    widgetIdRef.current = window.turnstile.render(containerRef.current, {
-      sitekey: siteKey,
-      theme: "light",
-      callback: (token: string) => { setTurnstileToken(token); setTurnstileError(false) },
-      "expired-callback": () => setTurnstileToken(""),
-      "error-callback": () => setTurnstileError(true),
-    })
+  function getToken(): string {
+    const input = formRef.current?.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')
+    return input?.value ?? ""
   }
 
   function set(field: keyof typeof form, value: string) {
@@ -259,13 +250,14 @@ function ContactForm() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
-    if (siteKey && !turnstileToken) { setTurnstileError(true); return }
-
+    const token = getToken()
+    if (!token) { setTurnstileError(true); return }
+    setTurnstileError(false)
     startTransition(async () => {
       await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken }),
+        body: JSON.stringify({ ...form, turnstileToken: token }),
       })
       setSubmitted(true)
     })
@@ -290,11 +282,10 @@ function ContactForm() {
   return (
     <>
       <Script
-          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-          strategy="lazyOnload"
-          onLoad={handleScriptLoad}
-        />
-        <form id={formId} onSubmit={handleSubmit} noValidate className="space-y-4">
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="lazyOnload"
+      />
+      <form id={formId} ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldWrap label="Ad Soyad" id="cf-name" required error={errors.fullName}>
             <Input id="cf-name" placeholder="Adınız Soyadınız" value={form.fullName}
@@ -333,11 +324,11 @@ function ContactForm() {
           <p className="text-right text-xs text-muted-foreground mt-1">{form.message.length}/2000</p>
         </FieldWrap>
 
-        {/* Turnstile container — always in DOM so ref is valid when onLoad fires */}
+        {/* Declarative Turnstile — script auto-discovers class="cf-turnstile" and renders once */}
         <div>
-          <div ref={containerRef} />
+          <div className="cf-turnstile" data-sitekey={siteKey} data-theme="light" />
           {turnstileError && (
-            <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.</p>
+            <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması tamamlanmadı. Lütfen kutucuğu doldurun.</p>
           )}
         </div>
 
