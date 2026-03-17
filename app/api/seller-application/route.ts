@@ -105,20 +105,22 @@ export async function POST(req: NextRequest) {
   // We log EVERYTHING — valid, rate-limited, bot — to detect patterns.
   const admin = adminClient()
   await admin.from('form_submissions').insert({
-    form_type:      'seller_application',
-    status:         !allowed ? 'rate_limited' : !turnstileOk ? 'bot_suspected' : 'pending',
-    applicant_name: String(fullName ?? '').slice(0, 255),
-    applicant_email: String(email ?? '').slice(0, 255),
-    applicant_phone: String(phone ?? '').slice(0, 50),
-    store_name:     String(storeName ?? '').slice(0, 255),
-    raw_payload: {
-      category:    String(category ?? '').slice(0, 100),
-      city:        String(city ?? '').slice(0, 100),
-      description: String(description ?? '').slice(0, 500),
+    form_type:    'seller_application',
+    status:       !allowed ? 'spam' : !turnstileOk ? 'spam' : 'pending',
+    full_name:    String(fullName ?? '').slice(0, 255),
+    email:        String(email ?? '').slice(0, 255),
+    phone:        String(phone ?? '').slice(0, 50),
+    store_name:   String(storeName ?? '').slice(0, 255),
+    category:     String(category ?? '').slice(0, 100),
+    city:         String(city ?? '').slice(0, 100),
+    description:  String(description ?? '').slice(0, 500),
+    payload: {
+      rate_limited: !allowed,
+      turnstile_ok: turnstileOk,
     },
-    ip_address:     ip,
-    user_agent:     userAgent.slice(0, 512),
-    turnstile_ok:   turnstileOk,
+    ip_address:   ip,
+    user_agent:   userAgent.slice(0, 512),
+    turnstile_ok: turnstileOk,
   })
 
   // ── 4. Always return identical generic success response ─────────────────
