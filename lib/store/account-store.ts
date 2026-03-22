@@ -57,6 +57,11 @@ export interface Order {
   discount: number
   total: number
   couponCode?: string
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  paymentMethod?: string
+  coupon?: { code: string; description: string; discount: number }
   deliveryAddress: {
     fullName: string
     phone: string

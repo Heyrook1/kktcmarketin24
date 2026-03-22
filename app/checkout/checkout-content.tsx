@@ -57,7 +57,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const { items, cartId, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [stockError, setStockError] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState("card")
+  const [paymentMethod] = useState("cod") // COD-only platform
   const [errors, setErrors] = useState<FieldErrors>({})
 
   // OTP modal state
@@ -205,7 +205,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
       items: items.map(({ product, quantity }) => ({
         productId: product.id,
         productName: product.name,
-        vendorName: getVendorById(product.vendorId)?.name ?? "Bilinmeyen Satıcı",
+        vendorName: product.vendorId,
         imageUrl: product.images[0] ?? "",
         quantity,
         price: product.price,
@@ -224,8 +224,9 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         city: form.city,
         district: form.district,
       },
-      paymentMethod,
+      paymentMethod: "cod",
       coupon: appliedCoupon ? { code: appliedCoupon.code, description: appliedCoupon.description, discount: getDiscountAmount() } : undefined,
+      statusHistory: [{ status: "pending", timestamp: new Date().toISOString(), note: "Sipariş alındı" }],
     }
     addOrder(newOrder)
     clearCart()
@@ -239,9 +240,9 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
       return
     }
 
-    // Hard-block COD for unauthenticated users (defence-in-depth — UI already disables it)
-    if (paymentMethod === "cod" && !user) {
-      setStockError("Kapıda ödeme için hesap oluşturmanız zorunludur. Lütfen giriş yapın.")
+    // Hard-block non-COD for unauthenticated users (defence-in-depth — UI already shows it)
+    if (!user) {
+      setStockError("Sipariş vermek için giriş yapmanız gerekiyor.")
       return
     }
 
@@ -465,62 +466,28 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
           </Card>
 
           {/* Payment Method */}
+          {/* Payment Method — COD only */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">Ödeme Yöntemi</CardTitle>
             </CardHeader>
             <CardContent>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
-                <label className={cn(
-                  "flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors",
-                  paymentMethod === "card" ? "border-primary bg-primary/5" : "hover:bg-secondary/50"
-                )}>
-                  <RadioGroupItem value="card" id="card" />
-                  <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium text-sm">Kredi / Banka Kartı</p>
-                    <p className="text-xs text-muted-foreground">Kartınızla güvenli ödeme yapın</p>
-                  </div>
-                </label>
-                <label className={cn(
-                  "flex items-center gap-3 p-4 border rounded-xl transition-colors",
-                  !isLoggedIn
-                    ? "opacity-50 cursor-not-allowed bg-muted/30"
-                    : "cursor-pointer " + (paymentMethod === "cod" ? "border-primary bg-primary/5" : "hover:bg-secondary/50")
-                )}>
-                  <RadioGroupItem value="cod" id="cod" disabled={!isLoggedIn} />
-                  <Truck className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium text-sm">Kapıda Ödeme</p>
-                    {!isLoggedIn ? (
-                      <p className="text-xs text-destructive font-medium mt-0.5">
-                        Kapıda ödeme için hesap oluşturmanız zorunludur.{" "}
-                        <a href="/auth/login?next=/checkout" className="underline">Giriş yap</a>
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Siparişinizi teslim alırken ödeyin</p>
-                    )}
-                  </div>
-                </label>
-              </RadioGroup>
-
-              {paymentMethod === "card" && (
-                <div className="mt-5 grid gap-4">
-                  <FieldGroup
-                    id="cardNumber" label="Kart Numarası" placeholder="1234 5678 9012 3456"
-                    value="" onChange={() => {}}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FieldGroup
-                      id="expiry" label="Son Kullanma" placeholder="AA/YY"
-                      value="" onChange={() => {}}
-                    />
-                    <FieldGroup
-                      id="cvv" label="CVV" placeholder="123"
-                      value="" onChange={() => {}}
-                    />
-                  </div>
+              <div className="flex items-center gap-3 p-4 border border-primary rounded-xl bg-primary/5">
+                <Truck className="h-5 w-5 text-primary shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Kapıda Ödeme (COD)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Siparişiniz teslim edildiğinde nakit veya kart ile ödeme yapabilirsiniz.
+                  </p>
                 </div>
+                <Check className="h-5 w-5 text-primary ml-auto shrink-0" />
+              </div>
+              {!isLoggedIn && (
+                <p className="text-xs text-destructive font-medium mt-3 flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 shrink-0" />
+                  Kapıda ödeme için giriş yapmanız zorunludur.{" "}
+                  <a href="/auth/login?next=/checkout" className="underline">Giriş yap</a>
+                </p>
               )}
             </CardContent>
           </Card>
