@@ -22,7 +22,7 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
     const supabase = createClient()
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (err) {
       setError(err.message === "Invalid login credentials"
@@ -30,7 +30,22 @@ export default function LoginPage() {
         : err.message)
       return
     }
-    router.push("/account")
+
+    // Redirect based on role stored in profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('roles(name)')
+      .eq('id', data.user.id)
+      .single()
+
+    const roleName = (profile?.roles as { name?: string } | null)?.name ?? 'customer'
+    const nextParam = new URLSearchParams(window.location.search).get('next')
+
+    let destination = '/account'
+    if (roleName === 'admin')  destination = '/admin'
+    if (roleName === 'vendor') destination = '/vendor-panel'
+
+    router.push(nextParam ?? destination)
     router.refresh()
   }
 
