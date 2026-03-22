@@ -18,16 +18,41 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const supabase = createClient()
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/update-password`,
-    })
-    setLoading(false)
-    if (err) {
-      setError(err.message)
-      return
+
+    try {
+      // Step 1: Check if the email is registered before sending anything
+      const checkRes = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      const checkData = await checkRes.json() as { exists: boolean | null }
+
+      // exists === false means definitively not registered
+      if (checkData.exists === false) {
+        setError("Bu e-posta adresi sistemimizde kayıtlı değil. Lütfen kayıtlı e-posta adresinizi girin.")
+        setLoading(false)
+        return
+      }
+
+      // Step 2: Email is registered (or check was inconclusive) — send reset link
+      const supabase = createClient()
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      })
+
+      if (err) {
+        setError(err.message)
+        setLoading(false)
+        return
+      }
+
+      setSent(true)
+    } catch {
+      setError("Bir hata oluştu. Lütfen tekrar deneyin.")
     }
-    setSent(true)
+
+    setLoading(false)
   }
 
   return (
