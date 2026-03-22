@@ -106,12 +106,12 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/help"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Yardım Merkezi
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -240,23 +240,23 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row">
+          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} Marketin24. Tüm hakları saklıdır.
           </p>
           <div className="flex gap-6">
-            <a
-              href="#"
+            <Link
+              href="/privacy"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
               Gizlilik Politikası
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              href="/terms"
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
               Kullanım Koşulları
-            </a>
+            </Link>
           </div>
         </div>
       </div>

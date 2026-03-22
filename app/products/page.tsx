@@ -1,13 +1,12 @@
 import type { Metadata } from "next"
-import { ProductsContent } from "./products-content"
+import { Suspense } from "react"
+import { ProductsContent, ProductsContentSkeleton } from "./products-content"
 import { products } from "@/lib/data/products"
 import { categories } from "@/lib/data/categories"
 import { vendors } from "@/lib/data/vendors"
-import { ProductGrid } from "@/components/product/product-grid"
 
-// ISR: regenerate at most once per hour. Replace the data source with a
-// Supabase query when products are migrated to the DB; the page contract
-// stays identical.
+// ISR: regenerate at most once per hour. Swap data sources for Supabase
+// queries when products are migrated to the DB — the page contract stays identical.
 export const revalidate = 3600
 
 export const metadata: Metadata = {
@@ -21,9 +20,8 @@ export const metadata: Metadata = {
 }
 
 export default function ProductsPage() {
-  // Data is fetched at build/revalidation time on the server.
-  // The client component receives a plain serialisable snapshot —
-  // no bundle import, no client-side data fetch required.
+  // Data is resolved at build/revalidation time on the server and passed as
+  // plain serialisable props — no client-side fetch, no bundle import.
   const initialProducts = products
   const initialCategories = categories
   const initialVendors = vendors
@@ -38,19 +36,19 @@ export default function ProductsPage() {
       </div>
 
       {/*
-        SSR-visible fallback grid: rendered as plain HTML for crawlers and
-        users with slow/no JS. The interactive ProductsContent below
-        replaces this once hydrated.
+        The RSC shell renders the full product list as static HTML for
+        crawlers and social sharing previews. The Suspense boundary shows
+        the skeleton while the client component hydrates and reads
+        searchParams — useSearchParams requires Suspense in Next.js App Router.
       */}
-      <noscript>
-        <ProductGrid products={initialProducts.slice(0, 24)} />
-      </noscript>
-
-      <ProductsContent
-        initialProducts={initialProducts}
-        initialCategories={initialCategories}
-        initialVendors={initialVendors}
-      />
+      <Suspense fallback={<ProductsContentSkeleton />}>
+        <ProductsContent
+          initialProducts={initialProducts}
+          initialCategories={initialCategories}
+          initialVendors={initialVendors}
+        />
+      </Suspense>
     </div>
   )
 }
+
