@@ -35,6 +35,13 @@ export default function ResetPasswordPage() {
         return
       }
 
+      // exists === null means the server check failed — block to be safe
+      if (checkData.exists === null) {
+        setError("E-posta doğrulanamadı. Lütfen daha sonra tekrar deneyin.")
+        setLoading(false)
+        return
+      }
+
       // Step 2: Email is registered (or check was inconclusive) — send reset link
       const supabase = createClient()
       const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {

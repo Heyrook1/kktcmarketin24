@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'edge'
+// Must run on Node.js — Supabase admin SDK is not compatible with Edge runtime
+export const runtime = 'nodejs'
 
 function adminClient() {
   return createClient(
