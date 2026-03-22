@@ -9,13 +9,16 @@ export const metadata: Metadata = {
 }
 
 export default async function AccountPage() {
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Auth check must run OUTSIDE try/catch — redirect() throws a special
+  // Next.js error that must not be swallowed by a catch block.
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      redirect("/auth/login")
-    }
+  if (authError || !user) {
+    redirect("/auth/login")
+  }
+
+  try {
 
     // Fetch profile — single query, no join (avoids FK null crash)
     const { data: profile } = await supabase
