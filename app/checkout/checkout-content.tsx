@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
-  ShoppingBag, CreditCard, Truck, ShieldCheck,
+  ShoppingBag, Truck, ShieldCheck,
   Check, AlertTriangle, UserCircle, Info, Loader2, Tag,
   Smartphone, RefreshCw, Lock,
 } from "lucide-react"
@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
 import { useCartStore } from "@/lib/store/cart-store"
 import { formatPrice } from "@/lib/format"
@@ -465,7 +464,6 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
             </CardContent>
           </Card>
 
-          {/* Payment Method */}
           {/* Payment Method — COD only */}
           <Card>
             <CardHeader className="pb-3">
