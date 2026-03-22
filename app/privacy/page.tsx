@@ -8,17 +8,12 @@ export const metadata: Metadata = {
     "Marketin24 olarak kişisel verilerinizi KVKK kapsamında nasıl işlediğimizi, sakladığımızı ve koruduğumuzu öğrenin.",
 }
 
-const LAST_UPDATED = "17 Mart 2026"
+const LAST_UPDATED = "22 Mart 2026"
 
 const SECTIONS = [
   {
-    id: "controller",
-    title: "1. Veri Sorumlusu",
-    content: `Marketin24 ("Platform", "biz", "bizim"), 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında veri sorumlusudur. İletişim: info@marketin24.com`,
-  },
-  {
-    id: "data-collected",
-    title: "2. Toplanan Kişisel Veriler",
+    id: "toplanan-veriler",
+    title: "1. Toplanan Veriler",
     items: [
       "Kimlik bilgileri: ad, soyad, e-posta adresi, telefon numarası.",
       "İşlem bilgileri: sipariş içeriği, teslimat adresi, ödeme yöntemi (kart numarası tarafımızca saklanmaz).",
@@ -29,8 +24,8 @@ const SECTIONS = [
     ],
   },
   {
-    id: "purposes",
-    title: "3. İşleme Amaçları",
+    id: "kullanim-amaci",
+    title: "2. Kullanım Amacı",
     items: [
       "Sipariş oluşturma, onaylama ve takip hizmetinin sunulması.",
       "SMS ile kimlik doğrulama (sipariş OTP).",
@@ -38,45 +33,57 @@ const SECTIONS = [
       "Yasal yükümlülüklerin yerine getirilmesi ve vergi belgelerinin düzenlenmesi.",
       "Müşteri desteği ve şikâyet yönetimi.",
       "Dolandırıcılık, bot saldırısı ve kötüye kullanımın önlenmesi.",
-      "Yasal süreler boyunca muhasebeye ilişkin kayıtların tutulması.",
     ],
   },
   {
-    id: "legal-basis",
-    title: "4. Hukuki Dayanak",
-    content: `Verileriniz; sözleşmenin ifası (KVKK m. 5/2-c), meşru menfaat (KVKK m. 5/2-f) ve yasal yükümlülük (KVKK m. 5/2-ç) kapsamında işlenmektedir. Pazarlama iletişimleri için açık rıza alınmaktadır.`,
+    id: "hukuki-dayanak",
+    title: "3. Hukuki Dayanak (KVKK)",
+    content: `Verileriniz; 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında sözleşmenin ifası (m. 5/2-c), meşru menfaat (m. 5/2-f) ve yasal yükümlülük (m. 5/2-ç) hukuki dayanakları çerçevesinde işlenmektedir. Pazarlama iletişimleri için ayrıca açık rıza alınmaktadır. Marketin24, KVKK kapsamında veri sorumlusudur.`,
   },
   {
-    id: "sharing",
-    title: "5. Veri Paylaşımı",
+    id: "veri-guvenligi",
+    title: "4. Veri Güvenliği",
+    items: [
+      "Tüm veriler TLS 1.2+ ile şifreli bağlantı üzerinden iletilir.",
+      "Parolalar bcrypt ile hash'lenerek saklanır; düz metin parola tarafımızca tutulmaz.",
+      "Kart numaraları işlenmez; ödeme işlemleri PCI-DSS uyumlu altyapılar üzerinden yürütülür.",
+      "Supabase veri tabanı Avrupa bölgesinde şifreli bağlantıyla barındırılmaktadır.",
+      "Upstash Redis üzerindeki geçici veriler (sepet, OTP) TTL süresi dolunca otomatik silinir.",
+      "Sisteme yetkisiz erişim girişimleri kayıt altına alınmaktadır.",
+    ],
+  },
+  {
+    id: "cerezler",
+    title: "5. Çerezler",
+    content: `Platform, oturum yönetimi ve güvenlik amacıyla yalnızca HTTP-only çerezler kullanmaktadır. Analitik veya reklam çerezleri yerleştirilmemektedir. Cloudflare Turnstile yalnızca bot tespiti amacıyla kullanılır; form içerikleri Cloudflare'e iletilmez. Tarayıcı ayarlarından çerezleri yönetebilirsiniz; ancak bazı işlevler çerezler devre dışıyken çalışmayabilir.`,
+  },
+  {
+    id: "veri-paylasimi",
+    title: "6. Veri Paylaşımı",
     items: [
       "Kargo şirketleri: ad, adres ve telefon bilgisi, yalnızca teslimat amacıyla.",
       "SMS sağlayıcıları (Netgsm / İletimerkezi): sipariş OTP iletimi için telefon numarası.",
-      "Supabase (veri tabanı altyapısı): şifreli bağlantı ile Avrupa bölgesinde barındırılmaktadır.",
-      "Upstash (Redis altyapısı): geçici sepet ve OTP verileri, TTL süresi dolduğunda otomatik silinir.",
-      "Cloudflare Turnstile: yalnızca bot tespiti; form içerikleri Cloudflare'e iletilmez.",
+      "Supabase ve Upstash: platform altyapısı — veri işleme sözleşmeleri mevcuttur.",
       "Yetkili kamu kurum ve kuruluşları: yasal talep halinde.",
     ],
   },
   {
-    id: "retention",
-    title: "6. Saklama Süreleri",
+    id: "saklama-sureleri",
+    title: "7. Saklama Süreleri",
     items: [
       "Sipariş ve müşteri kayıtları: son işlemden itibaren 10 yıl (Vergi Usul Kanunu).",
       "OTP logları ve form gönderimleri: 1 yıl.",
       "IP adresi ve erişim logları: 2 yıl (5651 sayılı Kanun).",
-      "Redis geçici veriler (sepet, OTP kodu, stok rezervasyonu): 15 dakika – 7 gün arası TTL, ardından otomatik silme.",
+      "Redis geçici veriler (sepet, OTP kodu, stok rezervasyonu): 15 dakika – 7 gün TTL, ardından otomatik silme.",
       "Pazarlama rızası geri alındığında ilgili veriler 30 gün içinde silinir.",
     ],
   },
   {
-    id: "rights",
-    title: "7. Haklarınız",
+    id: "haklariniz",
+    title: "8. Haklarınız",
     items: [
       "Kişisel verilerinizin işlenip işlenmediğini öğrenme.",
       "İşlenmişse buna ilişkin bilgi talep etme.",
-      "İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme.",
-      "Yurt içinde veya yurt dışında verilerin aktarıldığı üçüncü kişileri bilme.",
       "Eksik veya yanlış işlenmiş verilerin düzeltilmesini isteme.",
       "KVKK m. 7 çerçevesinde silinmesini veya yok edilmesini isteme.",
       "Otomatik sistemler vasıtasıyla aleyhinize bir sonuç ortaya çıkmasına itiraz etme.",
@@ -84,23 +91,13 @@ const SECTIONS = [
     ],
   },
   {
-    id: "exercise-rights",
-    title: "8. Hakların Kullanımı",
-    content: `Haklarınızı kullanmak için info@marketin24.com adresine kimliğinizi doğrulayan bir e-posta gönderebilirsiniz. Talepleriniz en geç 30 gün içinde yanıtlanır. Hakkınızın ihlal edildiğini düşünüyorsanız Kişisel Verileri Koruma Kurumu'na (kvkk.gov.tr) başvurabilirsiniz.`,
+    id: "iletisim",
+    title: "9. İletişim",
+    content: `Haklarınızı kullanmak veya gizlilik politikamız hakkında soru sormak için info@marketin24.com adresine kimliğinizi doğrulayan bir e-posta gönderebilirsiniz. Talepleriniz en geç 30 gün içinde yanıtlanır. Hakkınızın ihlal edildiğini düşünüyorsanız Kişisel Verileri Koruma Kurumu'na (kvkk.gov.tr) başvurabilirsiniz.`,
   },
   {
-    id: "cookies",
-    title: "9. Çerezler",
-    content: `Platform oturum yönetimi ve güvenlik amacıyla HTTP-only çerezler kullanmaktadır. Analitik veya reklam çerezleri yerleştirilmemektedir. Tarayıcı ayarlarından çerezleri yönetebilirsiniz; ancak bazı işlevler çerezler devre dışıyken çalışmayabilir.`,
-  },
-  {
-    id: "security",
-    title: "10. Güvenlik",
-    content: `Verileriniz TLS 1.2+ ile şifreli bağlantı üzerinden iletilir. Parolalar bcrypt ile hash'lenerek saklanır. Kart numaraları tarafımızca işlenmez; ödeme işlemleri PCI-DSS uyumlu altyapılar üzerinden yürütülür. Sisteme yetkisiz erişim girişimleri kayıt altına alınmaktadır.`,
-  },
-  {
-    id: "changes",
-    title: "11. Değişiklikler",
+    id: "degisiklikler",
+    title: "10. Değişiklikler",
     content: `Bu politika önceden bildirim yapılarak güncellenebilir. Önemli değişikliklerde kayıtlı e-posta adresinize bildirim gönderilir. Güncel versiyona her zaman bu sayfadan ulaşabilirsiniz.`,
   },
 ]
@@ -125,13 +122,18 @@ export default function PrivacyPage() {
       <div className="container mx-auto max-w-5xl px-4 py-10 md:py-14">
         <div className="grid gap-10 lg:grid-cols-4">
 
-          {/* ToC */}
+          {/* Table of Contents */}
           <nav aria-label="İçindekiler" className="hidden lg:block">
             <div className="sticky top-20 rounded-xl border bg-card p-4 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">İçindekiler</p>
-              {SECTIONS.map(s => (
-                <a key={s.id} href={`#${s.id}`}
-                  className="block text-xs text-muted-foreground hover:text-primary transition-colors py-0.5 leading-relaxed">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                İçindekiler
+              </p>
+              {SECTIONS.map((s) => (
+                <a
+                  key={s.id}
+                  href={`#${s.id}`}
+                  className="block text-xs text-muted-foreground hover:text-primary transition-colors py-0.5 leading-relaxed"
+                >
                   {s.title}
                 </a>
               ))}
@@ -145,14 +147,29 @@ export default function PrivacyPage() {
             </div>
 
             {SECTIONS.map(({ id, title, content, items }) => (
-              <section key={id} id={id} aria-labelledby={`${id}-heading`} className="space-y-3 scroll-mt-20">
-                <h2 id={`${id}-heading`} className="text-lg font-semibold border-b pb-2">{title}</h2>
-                {content && <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>}
+              <section
+                key={id}
+                id={id}
+                aria-labelledby={`${id}-heading`}
+                className="space-y-3 scroll-mt-20"
+              >
+                <h2 id={`${id}-heading`} className="text-lg font-semibold border-b pb-2">
+                  {title}
+                </h2>
+                {content && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
+                )}
                 {items && (
                   <ul className="space-y-2">
                     {items.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden="true" />
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed"
+                      >
+                        <span
+                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60"
+                          aria-hidden="true"
+                        />
                         {item}
                       </li>
                     ))}
@@ -164,12 +181,18 @@ export default function PrivacyPage() {
             <div className="border-t pt-8 flex flex-col sm:flex-row gap-3 justify-between items-start">
               <p className="text-xs text-muted-foreground">
                 Sorularınız için:{" "}
-                <a href="mailto:info@marketin24.com" className="text-primary underline underline-offset-2">
+                <a
+                  href="mailto:info@marketin24.com"
+                  className="text-primary underline underline-offset-2"
+                >
                   info@marketin24.com
                 </a>
               </p>
-              <Link href="/terms" className="text-xs text-primary underline underline-offset-2 hover:text-primary/80">
-                Kullanım Koşulları &rarr;
+              <Link
+                href="/terms"
+                className="text-xs text-primary underline underline-offset-2 hover:text-primary/80"
+              >
+                Kullanım Şartları &rarr;
               </Link>
             </div>
           </article>
