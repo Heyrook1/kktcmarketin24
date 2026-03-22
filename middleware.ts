@@ -1,9 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
-// Only protect routes where a mid-stream redirect would not break RSC prefetches.
-// /account handles its own auth check inside the page (server redirect after getUser).
-const PROTECTED_PATHS = ['/vendor-panel']
+// ─── Route protection map ────────────────────────────────────────────────────
+// Routes that require authentication and (optionally) a specific role.
+// Roles are read from the `user_role` JWT claim set by custom_access_token_hook.
+// Falls back to a DB profile lookup if the claim is absent (e.g. older tokens).
+const ROLE_PROTECTED: Array<{ path: string; roles: string[] }> = [
+  { path: '/admin',        roles: ['admin'] },
+  { path: '/vendor-panel', roles: ['admin', 'vendor'] },
+  { path: '/account',      roles: ['admin', 'vendor', 'customer'] },
+]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -32,24 +38,73 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Single getUser() call — refreshes session and gives us the user
+  // Refresh session — this is the only getUser() call we make
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Never redirect auth routes — prevents infinite redirect loops
+  // Auth routes: never redirect, just pass through
   if (pathname.startsWith('/auth/')) return response
 
-  const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p))
+  // Find whether this path is protected and what roles are required
+  const rule = ROLE_PROTECTED.find((r) => pathname.startsWith(r.path))
+  if (!rule) return response   // public route
 
-  if (isProtected && !user) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/auth/login'
-    loginUrl.searchParams.set('next', pathname)
-    const redirectResponse = NextResponse.redirect(loginUrl)
+  // Not logged in → send to login
+  if (!user) {
+    return redirectToLogin(request, response, pathname)
+  }
+
+  // Retrieve role — first try JWT claim (fast), then DB (authoritative)
+  const jwtRole = (await supabase.auth.getSession())
+    .data.session?.user?.user_metadata?.user_role as string | undefined
+
+  let role: string = jwtRole ?? 'customer'
+
+  if (!jwtRole) {
+    // Fallback: query the profile directly
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('roles(name)')
+      .eq('id', user.id)
+      .single()
+    role = (profile?.roles as { name?: string } | null)?.name ?? 'customer'
+  }
+
+  // Check if user's role is allowed for this route
+  if (!rule.roles.includes(role)) {
+    // Logged in but wrong role — redirect to their correct home
+    const destination = role === 'vendor' ? '/vendor-panel'
+                      : role === 'admin'  ? '/admin'
+                      : '/account'
+    const url = request.nextUrl.clone()
+    url.pathname = destination
+    const redirect = NextResponse.redirect(url)
     response.cookies.getAll().forEach(({ name, value }) =>
-      redirectResponse.cookies.set(name, value)
+      redirect.cookies.set(name, value)
     )
-    return redirectResponse
+    return redirect
   }
 
   return response
+}
+
+function redirectToLogin(
+  request: NextRequest,
+  response: NextResponse,
+  pathname: string
+): NextResponse {
+  const loginUrl = request.nextUrl.clone()
+  loginUrl.pathname = '/auth/login'
+  loginUrl.searchParams.set('next', pathname)
+  const redirect = NextResponse.redirect(loginUrl)
+  response.cookies.getAll().forEach(({ name, value }) =>
+    redirect.cookies.set(name, value)
+  )
+  return redirect
+}
+
+export const config = {
+  matcher: [
+    // Run on all paths except Next.js internals and static files
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|otf|eot)$).*)',
+  ],
 }
