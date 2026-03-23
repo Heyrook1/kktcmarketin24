@@ -79,6 +79,7 @@
   "pnpm": {
     "overrides": {
       "zustand": "^4.5.5"
-    }
+    },
+    "onlyBuiltDependencies": ["sharp", "@swc/core", "esbuild"]
   }
 }
