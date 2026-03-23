@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { CheckoutContent } from "./checkout-content"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Ödeme",
   description: "Siparişinizi güvenle tamamlayın",

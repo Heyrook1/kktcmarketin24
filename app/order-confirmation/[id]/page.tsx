@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server"
 import { formatPrice, formatDate } from "@/lib/format"
 import { OrderConfirmationClient } from "./order-confirmation-client"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Sipariş Onaylandı | Marketin24",
   description: "Siparişiniz başarıyla alındı",
