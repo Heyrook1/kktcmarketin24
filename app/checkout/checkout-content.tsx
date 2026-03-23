@@ -6,9 +6,9 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
-  ShoppingBag, Truck, ShieldCheck,
-  Check, AlertTriangle, UserCircle, Info, Loader2, Tag,
-  Smartphone, RefreshCw, Lock,
+  ShoppingBag, Truck, Check, AlertTriangle, Loader2,
+  UserCircle, MapPin, Phone, MessageSquare, Banknote,
+  ChevronDown, ArrowRight, Store, Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,27 +40,11 @@ type FieldErrors = Partial<Record<keyof FormState, string>>
 
 export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const router = useRouter()
-  const { items, cartId, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [stockError, setStockError] = useState<string | null>(null)
-  const [paymentMethod] = useState("cod") // COD-only platform
-  const [errors, setErrors] = useState<FieldErrors>({})
-
-  // OTP modal state
-  const [otpOpen, setOtpOpen] = useState(false)
-  const [otpOrderId, setOtpOrderId] = useState<string | null>(null)
-  const [otpCode, setOtpCode] = useState("")
-  const [otpPhone, setOtpPhone] = useState<string>("")
-  const [otpDevCode, setOtpDevCode] = useState<string | null>(null)
-  const [otpError, setOtpError] = useState<string | null>(null)
-  const [otpVerifying, setOtpVerifying] = useState(false)
-  const [otpResending, setOtpResending] = useState(false)
-  const [otpCountdown, setOtpCountdown] = useState(0)
-  const [sagaData, setSagaData] = useState<{ serverSubtotal?: number; serverTotal?: number; discountAmount?: number } | null>(null)
-
-  const { addOrder, coupons, gifts } = useAccountStore()
-
-  const { first, last } = splitName((profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? "")
+  const {
+    items, cartId,
+    getTotalPrice, getDiscountAmount, getFinalPrice,
+    appliedCoupon, clearCart, getItemsByVendor,
+  } = useCartStore()
 
   const profileName  = (profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? ""
   const profilePhone = (profile?.phone as string) ?? ""
@@ -74,9 +58,11 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     city:     CITIES.includes(profileCity as typeof CITIES[number]) ? profileCity : "",
     notes:    "",
   })
-  const [errors, setErrors]       = useState<FieldErrors>({})
-  const [submitting, setSubmitting] = useState(false)
+  const [errors, setErrors]           = useState<FieldErrors>({})
+  const [submitting, setSubmitting]   = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+
+  const isLoggedIn = !!user
 
   function setField(field: keyof FormState, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -125,7 +111,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(payload),
       })
-      const data = await res.json()
+      const data = await res.json() as { orderId?: string; error?: string }
 
       if (!res.ok) {
         setServerError(data.error ?? "Sipariş oluşturulamadı. Lütfen tekrar deneyin.")
@@ -133,89 +119,11 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         return
       }
 
-  const completeCheckout = (orderId: string) => {
-    const totalPrice = getTotalPrice()
-    const discountAmount = getDiscountAmount()
-    const finalPrice = getFinalPrice()
-    const newOrder: Order = {
-      id: orderId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: "pending",
-      items: items.map(({ product, quantity }) => ({
-        productId: product.id,
-        productName: product.name,
-        vendorName: product.vendorId,
-        imageUrl: product.images[0] ?? "",
-        quantity,
-        price: product.price,
-      })),
-      subtotal: sagaData?.serverSubtotal ?? totalPrice,
-      shippingFee: 0,
-      discount: sagaData?.discountAmount ?? discountAmount,
-      total: sagaData?.serverTotal ?? finalPrice,
-      customerName: `${form.firstName} ${form.lastName}`,
-      customerEmail: form.email,
-      customerPhone: form.phone,
-      deliveryAddress: {
-        fullName: `${form.firstName} ${form.lastName}`,
-        phone: form.phone,
-        line1: form.address,
-        city: form.city,
-        district: form.district,
-      },
-      paymentMethod: "cod",
-      coupon: appliedCoupon ? { code: appliedCoupon.code, description: appliedCoupon.description, discount: getDiscountAmount() } : undefined,
-      statusHistory: [{ status: "pending", timestamp: new Date().toISOString(), note: "Sipariş alındı" }],
-    }
-    addOrder(newOrder)
-    clearCart()
-    router.push(`/checkout/success?orderId=${orderId}`)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) {
-      document.getElementById("contact-section")?.scrollIntoView({ behavior: "smooth", block: "start" })
-      return
-    }
-
-    // Hard-block non-COD for unauthenticated users (defence-in-depth — UI already shows it)
-    if (!user) {
-      setStockError("Sipariş vermek için giriş yapmanız gerekiyor.")
-      return
-    }
-
-    setIsSubmitting(true)
-    setStockError(null)
-
-    // ── Multi-vendor Saga checkout ────────────────────────────────────────────
-    // Items and cartId are loaded from server_carts (keyed to user session).
-    // Never send prices or items[] from the client — the server is the source of truth.
-    const confirmRes = await fetch("/api/checkout/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerName: `${form.firstName} ${form.lastName}`,
-        customerEmail: form.email,
-        customerPhone: form.phone,
-        deliveryAddress: {
-          fullName: `${form.firstName} ${form.lastName}`,
-          phone: form.phone,
-          line1: form.address,
-          city: form.city,
-          district: form.district,
-        },
-        couponCode: appliedCoupon?.code ?? undefined,
-      }),
-    })
-
-    if (!confirmRes.ok) {
-      const data = await confirmRes.json()
-      const msg = (data.details as string[] | undefined)?.join(" ") ?? data.error ?? "Sipariş tamamlanamadı."
-      setStockError(msg)
-      setIsSubmitting(false)
-      return
+      clearCart()
+      router.push(`/order-confirmation/${data.orderId}`)
+    } catch {
+      setServerError("Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.")
+      setSubmitting(false)
     }
   }
 
@@ -247,7 +155,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     <form onSubmit={handleSubmit} noValidate>
       <div className="grid gap-8 lg:grid-cols-3">
 
-        {/* ── LEFT: Delivery form ────────────────────────────────── */}
+        {/* ── LEFT: Delivery form ── */}
         <div className="lg:col-span-2 space-y-5">
 
           {serverError && (
@@ -261,20 +169,20 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <UserIcon className="h-4 w-4 text-primary" />
+                <UserCircle className="h-4 w-4 text-primary" />
                 İletişim Bilgileri
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <Field
+              <CheckoutField
                 id="fullName" label="Ad Soyad" required
                 placeholder="Ahmet Yılmaz"
                 value={form.fullName}
                 onChange={(v) => setField("fullName", v)}
                 error={errors.fullName}
-                icon={<UserIcon className="h-4 w-4" />}
+                icon={<UserCircle className="h-4 w-4" />}
               />
-              <Field
+              <CheckoutField
                 id="phone" label="Telefon" required type="tel"
                 placeholder="05XX XXX XX XX"
                 value={form.phone}
@@ -294,7 +202,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <Field
+              <CheckoutField
                 id="address" label="Adres" required
                 placeholder="Atatürk Caddesi No:10, Daire:3"
                 value={form.address}
@@ -303,8 +211,6 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                 icon={<MapPin className="h-4 w-4" />}
                 multiline
               />
-
-              {/* City dropdown */}
               <div className="space-y-1.5">
                 <Label htmlFor="city" className="text-sm font-medium">
                   Şehir <span className="text-destructive">*</span>
@@ -321,16 +227,12 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                     )}
                   >
                     <option value="" disabled>Şehir seçin</option>
-                    {CITIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 </div>
                 {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
               </div>
-
-              {/* Notes */}
               <div className="space-y-1.5">
                 <Label htmlFor="notes" className="text-sm font-medium flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
@@ -350,7 +252,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
             </CardContent>
           </Card>
 
-          {/* Payment Method — COD only */}
+          {/* Payment */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -380,7 +282,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
           </Card>
         </div>
 
-        {/* ── RIGHT: Order summary ───────────────────────────────── */}
+        {/* ── RIGHT: Order summary ── */}
         <div className="lg:col-span-1">
           <Card className="sticky top-24">
             <CardHeader className="pb-3">
@@ -391,8 +293,6 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-
-              {/* Items grouped by vendor */}
               {Object.entries(itemsByVendor).map(([vendorId, vendorItems]) => {
                 const vendor = getVendorById(vendorId)
                 return (
@@ -422,7 +322,6 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                 )
               })}
 
-              {/* Totals */}
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Ara Toplam</span>
@@ -473,8 +372,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   )
 }
 
-// ── Reusable field component ──────────────────────────────────────────────────
-function Field({
+function CheckoutField({
   id, label, required, placeholder, value, onChange, error, icon, type, multiline,
 }: {
   id: string; label: string; required?: boolean; placeholder?: string
@@ -500,10 +398,10 @@ function Field({
         {multiline
           ? <textarea id={id} placeholder={placeholder} value={value}
               onChange={(e) => onChange(e.target.value)} rows={3}
-              className={cn(base, "resize-none", icon && "pl-9")} aria-invalid={!!error} />
+              className={cn(base, "resize-none")} aria-invalid={!!error} />
           : <Input id={id} type={type ?? "text"} placeholder={placeholder} value={value}
               onChange={(e) => onChange(e.target.value)}
-              className={cn(base, icon && "pl-9")} aria-invalid={!!error} />
+              className={base} aria-invalid={!!error} />
         }
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
