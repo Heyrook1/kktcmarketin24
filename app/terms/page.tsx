@@ -143,7 +143,7 @@ export default function TermsPage() {
                 href={`#${s.id}`}
                 className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80 hover:bg-white/20 hover:text-white transition-colors"
               >
-                {s.label}
+                {s.title}
               </a>
             ))}
           </div>

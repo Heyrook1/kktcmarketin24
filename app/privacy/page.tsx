@@ -108,13 +108,12 @@ const SECTIONS = [
   },
 ]
 
-// Quick-jump anchor pills matching the 5 requested anchors
 const QUICK_LINKS = [
-  { id: "data-collected", label: "Toplanan Veriler" },
-  { id: "usage",          label: "Kullanım Amaçları" },
-  { id: "third-party",    label: "Üçüncü Taraf Paylaşımı" },
-  { id: "cookies",        label: "Çerezler" },
-  { id: "user-rights",    label: "Kullanıcı Hakları" },
+  { id: "toplanan-veriler",  label: "Toplanan Veriler" },
+  { id: "kullanim-amaci",    label: "Kullanım Amacı" },
+  { id: "veri-paylasimi",    label: "Üçüncü Taraf Paylaşımı" },
+  { id: "cerezler",          label: "Çerezler" },
+  { id: "haklariniz",        label: "Kullanıcı Hakları" },
 ]
 
 export default function PrivacyPage() {
