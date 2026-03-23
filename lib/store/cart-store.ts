@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist } from '@/lib/zustand-middleware'
 import type { Product } from '@/lib/data/products'
 
 export interface CartItem {
