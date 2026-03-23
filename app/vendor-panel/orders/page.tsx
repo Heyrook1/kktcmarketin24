@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdmin } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
+
+export const dynamic = "force-dynamic"
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ShoppingBag } from "lucide-react"
 import { VendorOrdersTable, type OrderRow } from "@/components/vendor/vendor-orders-table"

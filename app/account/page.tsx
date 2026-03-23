@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { AccountContent } from "./account-content"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Hesabim | KKTC Market",
   description: "Profilinizi, siparişlerinizi, kuponlarınızı ve destek taleplerinizi yönetin.",
