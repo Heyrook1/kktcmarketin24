@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { persist } from "@/lib/zustand-middleware"
 
 export type CurrencyCode = "TRY" | "USD" | "EUR" | "GBP"
 
