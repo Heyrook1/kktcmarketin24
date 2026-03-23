@@ -1,16 +1,18 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Shield } from "lucide-react"
+import { ArrowLeft, Shield, ExternalLink } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Gizlilik Politikası | Marketin24",
   description:
-    "Marketin24 olarak kişisel verilerinizi KVKK kapsamında nasıl işlediğimizi, sakladığımızı ve koruduğumuzu öğrenin.",
+    "Marketin24 KKTC pazaryeri gizlilik politikası — KVKK kapsamında kişisel veri toplama, kullanım, paylaşım, çerezler ve kullanıcı hakları.",
 }
 
 const LAST_UPDATED = "22 Mart 2026"
 
+// Named top-level anchors: data-collected, usage, third-party, cookies, user-rights
 const SECTIONS = [
+  // ── 1. Veri Sorumlusu ───────────────────────────────────────────────────
   {
     id: "toplanan-veriler",
     title: "1. Toplanan Veriler",
@@ -23,6 +25,7 @@ const SECTIONS = [
       "Redis geçici verileri: sepet içeriği, stok rezervasyonu ve OTP kodları maksimum 15 dakika veya oturum süresince tutulur; ardından otomatik silinir.",
     ],
   },
+  // ── 3. Kullanım Amaçları ────────────────────────────────────────────────
   {
     id: "kullanim-amaci",
     title: "2. Kullanım Amacı",
@@ -35,6 +38,7 @@ const SECTIONS = [
       "Dolandırıcılık, bot saldırısı ve kötüye kullanımın önlenmesi.",
     ],
   },
+  // ── 4. Üçüncü Taraf Paylaşımı ───────────────────────────────────────────
   {
     id: "hukuki-dayanak",
     title: "3. Hukuki Dayanak (KVKK)",
@@ -67,6 +71,7 @@ const SECTIONS = [
       "Yetkili kamu kurum ve kuruluşları: yasal talep halinde.",
     ],
   },
+  // ── 5. Çerezler ─────────────────────────────────────────────────────────
   {
     id: "saklama-sureleri",
     title: "7. Saklama Süreleri",
@@ -78,6 +83,7 @@ const SECTIONS = [
       "Pazarlama rızası geri alındığında ilgili veriler 30 gün içinde silinir.",
     ],
   },
+  // ── 6. Kullanıcı Hakları ────────────────────────────────────────────────
   {
     id: "haklariniz",
     title: "8. Haklarınız",
@@ -102,20 +108,59 @@ const SECTIONS = [
   },
 ]
 
+// Quick-jump anchor pills matching the 5 requested anchors
+const QUICK_LINKS = [
+  { id: "data-collected", label: "Toplanan Veriler" },
+  { id: "usage",          label: "Kullanım Amaçları" },
+  { id: "third-party",    label: "Üçüncü Taraf Paylaşımı" },
+  { id: "cookies",        label: "Çerezler" },
+  { id: "user-rights",    label: "Kullanıcı Hakları" },
+]
+
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <section className="border-b bg-primary text-primary-foreground px-4 py-12 md:py-16">
-        <div className="container mx-auto max-w-3xl">
+
+      {/* Dark navy header — matches /terms design */}
+      <section
+        className="border-b px-4 py-12 md:py-16"
+        style={{ background: "oklch(0.22 0.06 255)", color: "white" }}
+      >
+        <div className="container mx-auto max-w-5xl">
+
+          {/* Back button */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors mb-6"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Önceki Sayfaya Dön
+          </Link>
+
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium mb-4">
             <Shield className="h-3.5 w-3.5" />
-            Yasal
+            Gizlilik
           </div>
-          <h1 className="text-3xl font-bold text-balance md:text-4xl">Gizlilik Politikası</h1>
-          <p className="mt-2 text-primary-foreground/75 text-sm">
-            Son güncelleme: {LAST_UPDATED}
+
+          <h1 className="text-3xl font-bold text-balance md:text-4xl">
+            Gizlilik Politikası
+          </h1>
+          <p className="mt-2 text-white/65 text-sm">
+            Son güncelleme: {LAST_UPDATED} &nbsp;·&nbsp; KVKK Uyumlu
           </p>
+
+          {/* Quick-jump anchor pills */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            {QUICK_LINKS.map(({ id, label }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -140,10 +185,14 @@ export default function PrivacyPage() {
             </div>
           </nav>
 
-          {/* Content */}
-          <article className="lg:col-span-3 space-y-10">
+          {/* Main content */}
+          <article className="lg:col-span-3 space-y-12">
+
+            {/* KVKK notice banner */}
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-primary leading-relaxed">
-              Bu politika, 6698 sayılı KVKK kapsamındaki aydınlatma yükümlülüğümüz çerçevesinde hazırlanmıştır. Platformumuzu kullanarak bu politikayı kabul etmiş sayılırsınız.
+              Bu politika, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamındaki
+              aydınlatma yükümlülüğümüz çerçevesinde hazırlanmıştır. Platformumuzu kullanarak
+              bu politikayı okuduğunuzu ve kabul ettiğinizi beyan edersiniz.
             </div>
 
             {SECTIONS.map(({ id, title, content, items }) => (
@@ -186,6 +235,7 @@ export default function PrivacyPage() {
                   className="text-primary underline underline-offset-2"
                 >
                   info@marketin24.com
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               </p>
               <Link
@@ -195,6 +245,7 @@ export default function PrivacyPage() {
                 Kullanım Şartları &rarr;
               </Link>
             </div>
+
           </article>
         </div>
       </div>

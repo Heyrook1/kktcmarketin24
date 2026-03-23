@@ -8,7 +8,7 @@ import {
   Search, ShoppingCart, ChevronDown, ChevronRight,
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
-  LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag,
+  LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag, LogIn,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -23,6 +23,8 @@ import { CartDrawer } from "@/components/cart/cart-drawer"
 import { LanguageSelector } from "@/components/shared/language-selector"
 import { CurrencySelector } from "@/components/shared/currency-selector"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby, Watch, ShoppingBasket, Heart, BookOpen,
@@ -213,6 +215,50 @@ function DynamicCartButton() {
   )
 }
 
+// ---------------------------------------------------------------------------
+// AuthButton — shows "Giriş Yap" for guests, account icon for logged-in users
+// ---------------------------------------------------------------------------
+function AuthButton() {
+  const [user, setUser] = useState<User | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    // Initial session check
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+      setReady(true)
+    })
+    // Keep in sync with sign-in / sign-out events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Render nothing until we know auth state to avoid flash
+  if (!ready) return <div className="h-8 w-8" />
+
+  if (user) {
+    return (
+      <Link href="/account" className="hidden md:inline-flex">
+        <Button variant="ghost" size="icon" aria-label="Hesabım">
+          <UserCircle className="h-5 w-5" />
+        </Button>
+      </Link>
+    )
+  }
+
+  return (
+    <Link href="/auth/login" className="hidden md:inline-flex">
+      <Button variant="ghost" size="sm" aria-label="Giriş Yap" className="gap-1.5 text-sm font-medium">
+        <LogIn className="h-4 w-4" />
+        <span>Giriş Yap</span>
+      </Button>
+    </Link>
+  )
+}
+
 export function Header() {
   const pathname = usePathname()
   const { getTotalItems, openCart } = useCartStore()
@@ -342,12 +388,8 @@ export function Header() {
               <LanguageSelector />
             </div>
 
-            {/* Account — tablet + desktop (bottom nav handles mobile only) */}
-            <Link href="/account" className="hidden md:inline-flex">
-              <Button variant="ghost" size="icon" aria-label="Hesabim">
-                <UserCircle className="h-5 w-5" />
-              </Button>
-            </Link>
+            {/* Account — shows login button for guests, account icon for authenticated users */}
+            <AuthButton />
 
             {/* Favorites — tablet + desktop (bottom nav handles mobile only) */}
             <Link href="/wishlist" className="hidden md:inline-flex">

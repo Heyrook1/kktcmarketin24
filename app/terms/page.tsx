@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { FileText } from "lucide-react"
+import { ArrowLeft, FileText, ExternalLink } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Kullanım Şartları | Marketin24",
@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 
 const LAST_UPDATED = "22 Mart 2026"
 
+// Named anchors as requested: user-terms, vendor-terms, payment-terms, returns-policy, privacy
 const SECTIONS = [
+  // ── User Terms ──────────────────────────────────────────────────────────
   {
     id: "platform-kullanimi",
     title: "1. Platform Kullanımı",
@@ -29,6 +31,8 @@ const SECTIONS = [
       "Yanıltıcı, sahte veya izinsiz lisanslı ürün listelememek.",
     ],
   },
+
+  // ── Vendor Terms ─────────────────────────────────────────────────────────
   {
     id: "alici-sorumluluklari",
     title: "3. Alıcı Sorumlulukları",
@@ -41,6 +45,8 @@ const SECTIONS = [
       "İade taleplerini dürüst ve gerçeğe uygun biçimde oluşturmak.",
     ],
   },
+
+  // ── Payment Terms ─────────────────────────────────────────────────────────
   {
     id: "odeme",
     title: "4. Ödeme — Kapıda Ödeme",
@@ -58,11 +64,15 @@ const SECTIONS = [
       "İade talebi 'Siparişlerim' sayfasından oluşturulur; sonuç e-posta ile bildirilir.",
     ],
   },
+
+  // ── Returns Policy ───────────────────────────────────────────────────────
   {
     id: "gizlilik",
     title: "6. Gizlilik",
     content: `Kişisel verileriniz, 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında işlenmektedir. Toplanan veriler; kimlik bilgileri, sipariş bilgileri, teknik veriler ve SMS OTP loglarını kapsamakta olup yalnızca hizmetin sunulması, dolandırıcılığın önlenmesi ve yasal yükümlülüklerin yerine getirilmesi amacıyla kullanılmaktadır. Verileriniz üçüncü taraflarla (kargo şirketi, SMS sağlayıcısı, yasal talepler) yalnızca zorunlu hallerde paylaşılır. Ayrıntılı bilgi için Gizlilik Politikamızı inceleyebilirsiniz.`,
   },
+
+  // ── Privacy ───────────────────────────────────────────────────────────────
   {
     id: "yasakli",
     title: "7. Yasaklı Ürün ve Davranışlar",
@@ -75,6 +85,8 @@ const SECTIONS = [
       "Sahte yorum, derecelendirme veya üçüncü taraf kimliğine bürünme.",
     ],
   },
+
+  // ── Legal ─────────────────────────────────────────────────────────────────
   {
     id: "ip",
     title: "8. Fikri Mülkiyet",
@@ -99,23 +111,48 @@ const SECTIONS = [
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <section className="border-b bg-primary text-primary-foreground px-4 py-12 md:py-16">
-        <div className="container mx-auto max-w-3xl">
+    <div className="min-h-screen bg-background font-sans">
+
+      {/* ── Dark navy hero header ─────────────────────────────────────────── */}
+      <header className="bg-[oklch(0.22_0.06_255)] text-white px-4 pt-6 pb-12 md:pb-16">
+        <div className="container mx-auto max-w-4xl">
+
+          {/* Back button */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors mb-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Önceki Sayfaya Dön
+          </Link>
+
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium mb-4">
             <FileText className="h-3.5 w-3.5" />
-            Yasal
+            Yasal Belge
           </div>
           <h1 className="text-3xl font-bold text-balance md:text-4xl">Kullanım Şartları</h1>
           <p className="mt-2 text-primary-foreground/75 text-sm">
             Son güncelleme: {LAST_UPDATED}
           </p>
-        </div>
-      </section>
 
+          {/* Quick-jump anchor pills */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            {SECTIONS.map((s) => (
+              <a
+                key={s.id}
+                href={`#${s.id}`}
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* ── Body ─────────────────────────────────────────────────────────── */}
       <div className="container mx-auto max-w-5xl px-4 py-10 md:py-14">
-        <div className="grid gap-10 lg:grid-cols-4">
+        <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
 
           {/* Table of Contents */}
           <nav aria-label="İçindekiler" className="hidden lg:block">
@@ -190,6 +227,7 @@ export default function TermsPage() {
                 Gizlilik Politikası &rarr;
               </Link>
             </div>
+
           </article>
         </div>
       </div>
