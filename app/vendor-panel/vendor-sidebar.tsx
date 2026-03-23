@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard, Package, ShoppingBag, Star,
-  BarChart2, TrendingUp, Settings, LogOut, Store, Menu, X,
+  BarChart2, TrendingUp, Settings, LogOut, Store, Menu, X, Link2,
 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -19,8 +19,9 @@ const NAV = [
   { href: "/vendor-panel/orders",   label: "Siparişler",    icon: ShoppingBag },
   { href: "/vendor-panel/reviews",  label: "Yorumlar",      icon: Star },
   { href: "/vendor-panel/traffic",  label: "Trafik",        icon: BarChart2 },
-  { href: "/vendor-panel/analytics",label: "Satış Analizi", icon: TrendingUp },
-  { href: "/vendor-panel/settings", label: "Ayarlar",       icon: Settings },
+  { href: "/vendor-panel/analytics",   label: "Satış Analizi", icon: TrendingUp },
+  { href: "/vendor-panel/smart-links", label: "Smart Linkler", icon: Link2 },
+  { href: "/vendor-panel/settings",    label: "Ayarlar",       icon: Settings },
 ]
 
 export function VendorSidebar() {

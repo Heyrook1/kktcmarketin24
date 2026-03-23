@@ -57,6 +57,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
+    "qrcode": "^1.5.4",
     "recharts": "2.15.0",
     "resend": "^4.5.1",
     "sonner": "^1.7.1",
@@ -69,6 +70,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "postcss": "^8.5",
