@@ -23,49 +23,30 @@ export default function LoginPage() {
     setLoading(true)
 
     const supabase = createClient()
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (signInError) {
-      setLoading(false)
-      const msg = signInError.message.toLowerCase()
-      if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
-        setError("E-posta veya şifre hatalı.")
-      } else if (msg.includes("email not confirmed")) {
-        setError("E-posta adresinizi doğrulamanız gerekiyor.")
-      } else if (msg.includes("too many requests")) {
-        setError("Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.")
-      } else {
-        setError("Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.")
-      }
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
+    setLoading(false)
+    if (err) {
+      setError(err.message === "Invalid login credentials"
+        ? "E-posta veya şifre hatalı."
+        : err.message)
       return
     }
 
-    // Fetch role name via JOIN since profiles uses role_id (UUID FK → roles.name)
-    const userId = data.user?.id
-    let redirectPath = "/"
+    // Redirect based on role stored in profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('roles(name)')
+      .eq('id', data.user.id)
+      .single()
 
-    if (userId) {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("roles(name)")
-        .eq("id", userId)
-        .single()
+    const roleName = (profile?.roles as { name?: string } | null)?.name ?? 'customer'
+    const nextParam = new URLSearchParams(window.location.search).get('next')
 
-      const roleName = (profileData?.roles as { name?: string } | null)?.name?.toLowerCase()
+    let destination = '/account'
+    if (roleName === 'admin')  destination = '/admin'
+    if (roleName === 'vendor') destination = '/vendor-panel'
 
-      if (roleName === "vendor") {
-        redirectPath = "/vendor-panel"
-      } else if (roleName === "admin") {
-        redirectPath = "/admin/dashboard"
-      } else {
-        // customer or unknown — honour ?next= param if present, otherwise home
-        const params = new URLSearchParams(window.location.search)
-        redirectPath = params.get("next") ?? "/"
-      }
-    }
-
-    setLoading(false)
-    router.push(redirectPath)
+    router.push(nextParam ?? destination)
     router.refresh()
   }
 

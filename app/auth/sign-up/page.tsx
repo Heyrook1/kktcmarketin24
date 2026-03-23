@@ -212,9 +212,8 @@ export default function SignUpPage() {
       email,
       password,
       options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${window.location.origin}/account`,
+        // Callback route exchanges the code for a session and redirects by role
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: { full_name: fullName, display_name: fullName.split(" ")[0] },
       },
     })

@@ -347,14 +347,14 @@ export function CartContent() {
   const discountAmount = getDiscountAmount()
   const finalPrice = getFinalPrice()
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+  const vendorCount = Object.keys(itemsByVendor).length
 
   async function handleApplyCoupon() {
     const code = couponInput.trim()
     if (!code) return
     setCouponLoading(true)
     setCouponError("")
-    await new Promise((r) => setTimeout(r, 600)) // simulate network
-    const result = applyCoupon(code)
+    const result = await applyCoupon(code)
     setCouponLoading(false)
     if (!result.valid) {
       setCouponError(result.message)
@@ -387,6 +387,20 @@ export function CartContent() {
     <div className="grid lg:grid-cols-3 gap-8">
       {/* Cart Items */}
       <div className="lg:col-span-2 space-y-6">
+        {/* Multi-vendor warning */}
+        {vendorCount > 1 && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3">
+            <svg className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+            <div className="text-sm">
+              <p className="font-semibold text-amber-800 dark:text-amber-400">
+                Bu ürünler {vendorCount} farklı satıcıdan — ayrı siparişler oluşturulacak
+              </p>
+              <p className="text-amber-700 dark:text-amber-500 mt-0.5 text-xs">
+                Kapıda ödeme (COD) sisteminde her satıcı için ayrı bir sipariş ve teslimat gerçekleşir.
+              </p>
+            </div>
+          </div>
+        )}
         {Object.entries(itemsByVendor).map(([vendorId, vendorItems]) => {
           const vendor = getVendorById(vendorId)
           return (
@@ -599,7 +613,7 @@ export function CartContent() {
           <CardFooter>
             <Button className="w-full" size="lg" asChild>
               <Link href="/checkout">
-                Ödemeye Geç
+                {vendorCount > 1 ? `${vendorCount} Satıcı İçin Ödemeye Geç` : "Ödemeye Geç"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

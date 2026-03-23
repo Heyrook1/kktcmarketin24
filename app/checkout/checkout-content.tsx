@@ -6,9 +6,9 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
-  ShoppingBag, MapPin, Phone, User as UserIcon,
-  Banknote, Store, Loader2, AlertTriangle, ArrowRight,
-  MessageSquare, ChevronDown,
+  ShoppingBag, Truck, ShieldCheck,
+  Check, AlertTriangle, UserCircle, Info, Loader2, Tag,
+  Smartphone, RefreshCw, Lock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,7 +40,27 @@ type FieldErrors = Partial<Record<keyof FormState, string>>
 
 export function CheckoutContent({ user, profile }: CheckoutContentProps) {
   const router = useRouter()
-  const { items, cartId, clearCart, getItemsByVendor, getTotalPrice, getFinalPrice, getDiscountAmount, appliedCoupon } = useCartStore()
+  const { items, cartId, getTotalPrice, getDiscountAmount, getFinalPrice, appliedCoupon, applyCoupon, removeCoupon, clearCart, getItemsByVendor } = useCartStore()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [stockError, setStockError] = useState<string | null>(null)
+  const [paymentMethod] = useState("cod") // COD-only platform
+  const [errors, setErrors] = useState<FieldErrors>({})
+
+  // OTP modal state
+  const [otpOpen, setOtpOpen] = useState(false)
+  const [otpOrderId, setOtpOrderId] = useState<string | null>(null)
+  const [otpCode, setOtpCode] = useState("")
+  const [otpPhone, setOtpPhone] = useState<string>("")
+  const [otpDevCode, setOtpDevCode] = useState<string | null>(null)
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [otpResending, setOtpResending] = useState(false)
+  const [otpCountdown, setOtpCountdown] = useState(0)
+  const [sagaData, setSagaData] = useState<{ serverSubtotal?: number; serverTotal?: number; discountAmount?: number } | null>(null)
+
+  const { addOrder, coupons, gifts } = useAccountStore()
+
+  const { first, last } = splitName((profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? "")
 
   const profileName  = (profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? ""
   const profilePhone = (profile?.phone as string) ?? ""
@@ -113,11 +133,89 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         return
       }
 
-      clearCart()
-      router.push(`/order-confirmation/${data.orderId}`)
-    } catch {
-      setServerError("Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.")
-      setSubmitting(false)
+  const completeCheckout = (orderId: string) => {
+    const totalPrice = getTotalPrice()
+    const discountAmount = getDiscountAmount()
+    const finalPrice = getFinalPrice()
+    const newOrder: Order = {
+      id: orderId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: "pending",
+      items: items.map(({ product, quantity }) => ({
+        productId: product.id,
+        productName: product.name,
+        vendorName: product.vendorId,
+        imageUrl: product.images[0] ?? "",
+        quantity,
+        price: product.price,
+      })),
+      subtotal: sagaData?.serverSubtotal ?? totalPrice,
+      shippingFee: 0,
+      discount: sagaData?.discountAmount ?? discountAmount,
+      total: sagaData?.serverTotal ?? finalPrice,
+      customerName: `${form.firstName} ${form.lastName}`,
+      customerEmail: form.email,
+      customerPhone: form.phone,
+      deliveryAddress: {
+        fullName: `${form.firstName} ${form.lastName}`,
+        phone: form.phone,
+        line1: form.address,
+        city: form.city,
+        district: form.district,
+      },
+      paymentMethod: "cod",
+      coupon: appliedCoupon ? { code: appliedCoupon.code, description: appliedCoupon.description, discount: getDiscountAmount() } : undefined,
+      statusHistory: [{ status: "pending", timestamp: new Date().toISOString(), note: "Sipariş alındı" }],
+    }
+    addOrder(newOrder)
+    clearCart()
+    router.push(`/checkout/success?orderId=${orderId}`)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validate()) {
+      document.getElementById("contact-section")?.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
+    }
+
+    // Hard-block non-COD for unauthenticated users (defence-in-depth — UI already shows it)
+    if (!user) {
+      setStockError("Sipariş vermek için giriş yapmanız gerekiyor.")
+      return
+    }
+
+    setIsSubmitting(true)
+    setStockError(null)
+
+    // ── Multi-vendor Saga checkout ────────────────────────────────────────────
+    // Items and cartId are loaded from server_carts (keyed to user session).
+    // Never send prices or items[] from the client — the server is the source of truth.
+    const confirmRes = await fetch("/api/checkout/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerName: `${form.firstName} ${form.lastName}`,
+        customerEmail: form.email,
+        customerPhone: form.phone,
+        deliveryAddress: {
+          fullName: `${form.firstName} ${form.lastName}`,
+          phone: form.phone,
+          line1: form.address,
+          city: form.city,
+          district: form.district,
+        },
+        couponCode: appliedCoupon?.code ?? undefined,
+      }),
+    })
+
+    if (!confirmRes.ok) {
+      const data = await confirmRes.json()
+      const msg = (data.details as string[] | undefined)?.join(" ") ?? data.error ?? "Sipariş tamamlanamadı."
+      setStockError(msg)
+      setIsSubmitting(false)
+      return
     }
   }
 
@@ -252,8 +350,8 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
             </CardContent>
           </Card>
 
-          {/* Payment method — read-only COD */}
-          <Card className="border-emerald-200 dark:border-emerald-800">
+          {/* Payment Method — COD only */}
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Banknote className="h-4 w-4 text-emerald-600" />
@@ -261,18 +359,23 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-start gap-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900 flex-shrink-0">
-                  <Banknote className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
-                </div>
+              <div className="flex items-center gap-3 p-4 border border-primary rounded-xl bg-primary/5">
+                <Truck className="h-5 w-5 text-primary shrink-0" />
                 <div>
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-300 text-sm">Kapıda Ödeme</p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-500 mt-0.5 leading-relaxed">
-                    Kurye kapınıza geldiğinde nakit veya kredi kartıyla ödeme yapabilirsiniz.
+                  <p className="font-medium text-sm">Kapıda Ödeme (COD)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Siparişiniz teslim edildiğinde nakit veya kart ile ödeme yapabilirsiniz.
                   </p>
                 </div>
-                <Badge className="ml-auto shrink-0 bg-emerald-600 hover:bg-emerald-600 text-xs">Seçili</Badge>
+                <Check className="h-5 w-5 text-primary ml-auto shrink-0" />
               </div>
+              {!isLoggedIn && (
+                <p className="text-xs text-destructive font-medium mt-3 flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 shrink-0" />
+                  Kapıda ödeme için giriş yapmanız zorunludur.{" "}
+                  <a href="/auth/login?next=/checkout" className="underline">Giriş yap</a>
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
