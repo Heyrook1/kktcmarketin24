@@ -188,12 +188,6 @@ export default function SignUpPage() {
   )
 }
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { createClient } from "@/lib/supabase/client"
-
-export default function SignUpPage() {
   const router = useRouter()
   const [fullName, setFullName]       = useState("")
   const [email, setEmail]             = useState("")
