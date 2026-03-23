@@ -11,7 +11,7 @@ const ROLE_PROTECTED: Array<{ path: string; roles: string[] }> = [
   { path: '/account',      roles: ['admin', 'vendor', 'customer'] },
 ]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Build a mutable response that will carry refreshed session cookies
