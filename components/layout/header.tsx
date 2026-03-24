@@ -2,37 +2,6 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useRef, useEffect } from "react"
-import { usePathname } from "next/navigation"
-import {
-  Search, ShoppingCart, ChevronDown, ChevronRight,
-  Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
-  Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
-  LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag, LogIn,
-  Flame, Zap, PackagePlus,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { useCartStore } from "@/lib/store/cart-store"
-import { useWishlistStore } from "@/lib/store/wishlist-store"
-import { categories, type Category } from "@/lib/data/categories"
-import { SearchBar } from "@/components/shared/search-bar"
-import { CartDrawer } from "@/components/cart/cart-drawer"
-import { LanguageSelector } from "@/components/shared/language-selector"
-import { CurrencySelector } from "@/components/shared/currency-selector"
-import { cn } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
-import type { User } from "@supabase/supabase-js"
-
-const ICON_MAP: Record<string, React.ElementType> = {
-  Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby, Watch, ShoppingBasket, Heart, BookOpen,
-}
-
-import Link from "next/link"
-import Image from "next/image"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
