@@ -66,12 +66,13 @@ export function HeroSection() {
           <div className="relative hidden lg:block">
             <div className="relative aspect-square max-w-lg mx-auto">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-3xl transform rotate-3" />
-              <div className="absolute inset-0 bg-card rounded-3xl shadow-xl overflow-hidden">
+              <div className="absolute inset-0 bg-card rounded-3xl shadow-xl overflow-hidden flex items-center justify-center p-10">
                 <Image
-                  src="https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&h=600&fit=crop"
-                  alt="Alışveriş deneyimi"
-                  fill
-                  className="object-cover"
+                  src="/images/kktc-marketin24-logo.png"
+                  alt="KKTC Marketin24"
+                  width={480}
+                  height={480}
+                  className="object-contain w-full h-full drop-shadow-2xl"
                   priority
                 />
               </div>
