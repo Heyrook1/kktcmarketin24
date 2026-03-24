@@ -24,17 +24,17 @@ const ICON_MAP: Record<string, React.ElementType> = {
 // ---------------------------------------------------------------------------
 function DefaultPanel({ onClose }: { onClose: () => void }) {
   const trending = [
-    { label: "Cep Telefonları", href: "/category/electronics?sub=phones",   icon: Smartphone },
-    { label: "Kadın Giyim",     href: "/category/fashion?sub=womens",       icon: Shirt },
-    { label: "Cilt Bakımı",     href: "/category/beauty?sub=skincare",      icon: Sparkles },
-    { label: "Fitness",         href: "/category/sports?sub=fitness",       icon: Dumbbell },
-    { label: "Oyuncaklar",      href: "/category/kids-baby?sub=toys",       icon: Baby },
-    { label: "Saatler",         href: "/category/jewelry?sub=watches",      icon: Watch },
+    { label: "Cep Telefonları", href: "/products?category=electronics&sub=phones",    icon: Smartphone },
+    { label: "Kadın Giyim",     href: "/products?category=fashion&sub=womens",        icon: Shirt },
+    { label: "Cilt Bakımı",     href: "/products?category=beauty&sub=skincare",       icon: Sparkles },
+    { label: "Fitness",         href: "/products?category=sports&sub=fitness",        icon: Dumbbell },
+    { label: "Oyuncaklar",      href: "/products?category=kids-baby&sub=toys",        icon: Baby },
+    { label: "Saatler",         href: "/products?category=jewelry&sub=watches",       icon: Watch },
   ]
   const flashDeals = [
-    { label: "Kulaklıklar",   href: "/category/electronics?sub=audio",  badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
-    { label: "Spor Ayakkabı", href: "/category/sports?sub=running",     badge: "%30", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
-    { label: "Parfüm",        href: "/category/beauty?sub=fragrance",   badge: "%25", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
+    { label: "Kulaklıklar",   href: "/products?category=electronics&sub=audio",   badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
+    { label: "Spor Ayakkabı", href: "/products?category=sports&sub=running",      badge: "%30", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
+    { label: "Parfüm",        href: "/products?category=beauty&sub=fragrance",    badge: "%25", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
   ]
   const newArrivals = [
     { label: "Yeni Elektronik",  href: "/products?sort=newest&category=electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=80&h=80&fit=crop" },
@@ -118,8 +118,8 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <Link
-          href="/products?sort=newest"
-          onClick={onClose}
+            href="/products?sort=newest"
+            onClick={onClose}
           className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-semibold hover:underline"
         >
           Tüm yeni ürünler <ArrowRight className="h-3 w-3" />
@@ -139,7 +139,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
         <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
           <h3 className="font-semibold text-base text-foreground">{category.name}</h3>
           <Link
-            href={`/category/${category.slug}`}
+            href={`/products?category=${category.slug}`}
             onClick={onClose}
             className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
           >
@@ -152,7 +152,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
             {category.subcategories.map((sub) => (
               <Link
                 key={sub.id}
-                href={`/category/${category.slug}?sub=${sub.slug}`}
+                href={`/products?category=${category.slug}&sub=${sub.slug}`}
                 onClick={onClose}
                 className="flex items-center gap-2.5 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group"
               >
@@ -189,7 +189,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
             </div>
           </Link>
           <Link
-            href={`/category/${category.slug}`}
+            href={`/products?category=${category.slug}`}
             onClick={onClose}
             className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-150"
           >
@@ -225,7 +225,7 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
 
   const handleCatClick = useCallback((slug: string) => {
     onClose()
-    router.push(`/category/${slug}`)
+    router.push(`/products?category=${slug}`)
   }, [onClose, router])
 
   useEffect(() => {
