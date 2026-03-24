@@ -19,6 +19,16 @@ import { Product } from "@/lib/data/products"
 import { ProductCardSocialProof } from "@/components/social-proof"
 import { getProductReviews } from "@/lib/data/reviews"
 import { cn } from "@/lib/utils"
+import { getTagMeta } from "@/lib/tag-taxonomy"
+import { useRouter } from "next/navigation"
+
+const TAG_CHIP_COLORS: Record<string, string> = {
+  blue:   "bg-blue-50 text-blue-700 border-blue-200",
+  purple: "bg-purple-50 text-purple-700 border-purple-200",
+  green:  "bg-emerald-50 text-emerald-700 border-emerald-200",
+  orange: "bg-orange-50 text-orange-700 border-orange-200",
+  gray:   "bg-secondary text-muted-foreground border-border",
+}
 
 interface EnhancedProductCardProps {
   product: Product
@@ -44,6 +54,7 @@ export function EnhancedProductCard({
   const { toggleItem, isInWishlist } = useWishlistStore()
   const isFavorite = isInWishlist(product.id)
   const reviews = getProductReviews(product.id)
+  const router = useRouter()
 
   const hasDiscount     = product.originalPrice && product.originalPrice > product.price
   const discountPercent = hasDiscount
@@ -403,6 +414,37 @@ export function EnhancedProductCard({
                   {product.colors.length > 6 && (
                     <span className="text-xs text-muted-foreground">+{product.colors.length - 6}</span>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Tag chips — hover reveal, max 4 */}
+            {product.tags && product.tags.length > 0 && (
+              <div className={cn(
+                "overflow-hidden transition-all duration-300",
+                isHovered ? "max-h-16 opacity-100" : "max-h-0 opacity-0"
+              )}>
+                <div className="flex flex-wrap gap-1 pt-0.5">
+                  {product.tags.slice(0, 4).map((tag) => {
+                    const meta = getTagMeta(tag)
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          router.push(`/products?q=${encodeURIComponent(tag)}`)
+                        }}
+                        className={cn(
+                          "text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-opacity hover:opacity-80",
+                          TAG_CHIP_COLORS[meta.color]
+                        )}
+                      >
+                        {meta.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}

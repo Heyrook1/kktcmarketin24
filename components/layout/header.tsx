@@ -5,11 +5,10 @@ import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import {
-  Search, ShoppingCart, ChevronDown, ChevronRight,
+  Search, ShoppingCart, ChevronDown,
+  LayoutGrid, X, Store, UserCircle, LogIn, Heart,
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
-  Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
-  LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag, LogIn,
-  Flame, Zap, PackagePlus,
+  Watch, ShoppingBasket, BookOpen, ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -18,7 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useWishlistStore } from "@/lib/store/wishlist-store"
-import { categories, type Category } from "@/lib/data/categories"
+import { categories } from "@/lib/data/categories"
 import { SearchBar } from "@/components/shared/search-bar"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { LanguageSelector } from "@/components/shared/language-selector"
@@ -26,229 +25,15 @@ import { CurrencySelector } from "@/components/shared/currency-selector"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
+import { MegaMenu } from "@/components/layout/mega-menu"
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby, Watch, ShoppingBasket, Heart, BookOpen,
-}
-
-const MEGA_MENU_CATEGORIES = categories.slice(0, 8)
-
-// Default panel shown when no category is hovered
-function DefaultPanel({ onClose }: { onClose: () => void }) {
-  const trending = [
-    { label: "Cep Telefonları", href: "/category/electronics?sub=phones", icon: Smartphone },
-    { label: "Kadın Giyim", href: "/category/fashion?sub=womens", icon: Shirt },
-    { label: "Cilt Bakımı", href: "/category/beauty?sub=skincare", icon: Sparkles },
-    { label: "Fitness", href: "/category/sports?sub=fitness", icon: Dumbbell },
-    { label: "Oyuncaklar", href: "/category/kids-baby?sub=toys", icon: Baby },
-    { label: "Saatler", href: "/category/jewelry?sub=watches", icon: Watch },
-  ]
-  const flashDeals = [
-    { label: "Kulaklıklar", href: "/category/electronics?sub=audio", badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
-    { label: "Spor Ayakkabı", href: "/category/sports?sub=running", badge: "%30", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
-    { label: "Parfüm", href: "/category/beauty?sub=fragrance", badge: "%25", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
-  ]
-  const newArrivals = [
-    { label: "Yeni Elektronik", href: "/products?sort=newest&category=electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=80&h=80&fit=crop" },
-    { label: "Yeni Moda", href: "/products?sort=newest&category=fashion", image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=80&h=80&fit=crop" },
-    { label: "Yeni Ev Ürünleri", href: "/products?sort=newest&category=home-garden", image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=80&h=80&fit=crop" },
-  ]
-
-  return (
-    <div className="flex-1 py-5 px-6 grid grid-cols-3 gap-6">
-      {/* Trending */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-3">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Trend Kategoriler</h3>
-        </div>
-        <div className="space-y-1">
-          {trending.map((item) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors group"
-              >
-                <Icon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Flash Deals */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-3">
-          <Zap className="h-4 w-4 text-yellow-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Flaş İndirimler</h3>
-        </div>
-        <div className="space-y-2">
-          {flashDeals.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors group"
-            >
-              <div className="relative h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
-                <Image src={item.image} alt={item.label} fill className="object-cover" sizes="40px" />
-              </div>
-              <span className="flex-1 text-sm text-muted-foreground group-hover:text-foreground">{item.label}</span>
-              <span className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 rounded-md">{item.badge}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* New Arrivals */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-3">
-          <PackagePlus className="h-4 w-4 text-green-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Yeni Ürünler</h3>
-        </div>
-        <div className="space-y-2">
-          {newArrivals.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors group"
-            >
-              <div className="relative h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
-                <Image src={item.image} alt={item.label} fill className="object-cover" sizes="40px" />
-              </div>
-              <span className="flex-1 text-sm text-muted-foreground group-hover:text-foreground">{item.label}</span>
-              <span className="text-[10px] font-semibold text-green-600 bg-green-50 dark:bg-green-950/40 px-1.5 py-0.5 rounded-md">YENİ</span>
-            </Link>
-          ))}
-        </div>
-        <Link
-          href="/products?sort=newest"
-          onClick={onClose}
-          className="inline-flex items-center gap-1 mt-3 text-xs text-primary font-medium hover:underline"
-        >
-          Tümünü gör <ArrowRight className="h-3 w-3" />
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-function MegaMenu({ onClose }: { onClose: () => void }) {
-  const [activeCategory, setActiveCategory] = useState<Category | null>(null)
-
-  return (
-    <div
-      className="absolute top-full left-0 right-0 z-50 bg-background border-b shadow-2xl animate-mega-menu-in"
-      onMouseLeave={onClose}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex" style={{ minHeight: 340 }}>
-          {/* Category list */}
-          <div className="w-60 border-r py-3 flex-shrink-0">
-            {MEGA_MENU_CATEGORIES.map((cat) => {
-              const Icon = ICON_MAP[cat.icon] || Smartphone
-              const isActive = activeCategory?.id === cat.id
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/category/${cat.slug}`}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-all duration-150 group",
-                    isActive
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-foreground hover:bg-secondary"
-                  )}
-                  onMouseEnter={() => setActiveCategory(cat)}
-                  onClick={onClose}
-                >
-                  <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
-                  <span className="flex-1 truncate">{cat.name}</span>
-                  <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0", isActive ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
-                </Link>
-              )
-            })}
-            <Separator className="my-2" />
-            <Link
-              href="/categories"
-              className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary font-medium hover:underline"
-              onClick={onClose}
-            >
-              Tüm Kategoriler
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-
-          {/* Right panel: default or subcategory */}
-          {activeCategory === null ? (
-            <DefaultPanel onClose={onClose} />
-          ) : (
-            <div className="flex-1 py-5 px-6">
-              <div className="flex gap-8">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-foreground">{activeCategory.name}</h3>
-                    <Link
-                      href={`/category/${activeCategory.slug}`}
-                      className="text-xs text-primary hover:underline flex items-center gap-1"
-                      onClick={onClose}
-                    >
-                      Tümünü gör <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                  {activeCategory.subcategories && activeCategory.subcategories.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                      {activeCategory.subcategories.map((sub) => (
-                        <Link
-                          key={sub.id}
-                          href={`/category/${activeCategory.slug}?sub=${sub.slug}`}
-                          onClick={onClose}
-                          className="flex items-center gap-2 py-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
-                        >
-                          <span className="h-1 w-1 rounded-full bg-border group-hover:bg-primary transition-colors flex-shrink-0" />
-                          {sub.name}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{activeCategory.description}</p>
-                  )}
-                </div>
-
-                {activeCategory.featured && (
-                  <div className="w-44 flex-shrink-0">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
-                    <Link href={activeCategory.featured.href} onClick={onClose} className="block group">
-                      <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary">
-                        <Image
-                          src={activeCategory.featured.image}
-                          alt={activeCategory.featured.label}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <p className="text-white text-xs font-medium leading-tight">{activeCategory.featured.label}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+  Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
+  Watch, ShoppingBasket, Heart, BookOpen,
 }
 
 // ---------------------------------------------------------------------------
-// Dynamic cart button — shows item count, last-added thumbnail, bump on add
+// DynamicCartButton
 // ---------------------------------------------------------------------------
 function DynamicCartButton() {
   const { getTotalItems, items, openCart } = useCartStore()
@@ -258,374 +43,433 @@ function DynamicCartButton() {
   const [bumping, setBumping] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
-  // Trigger bump animation whenever an item is added
   useEffect(() => {
     if (totalItems > prevCount.current) {
       setBumping(true)
       setShowPreview(true)
-      const bumpTimer = setTimeout(() => setBumping(false), 400)
-      const previewTimer = setTimeout(() => setShowPreview(false), 2200)
+      const t1 = setTimeout(() => setBumping(false), 400)
+      const t2 = setTimeout(() => setShowPreview(false), 2200)
       prevCount.current = totalItems
-      return () => { clearTimeout(bumpTimer); clearTimeout(previewTimer) }
+      return () => { clearTimeout(t1); clearTimeout(t2) }
     }
     prevCount.current = totalItems
   }, [totalItems])
 
   return (
-    <button
-      onClick={openCart}
-      aria-label={`Sepet${totalItems > 0 ? ` — ${totalItems} ürün` : ""}`}
-      className={cn(
-        "relative flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-sm font-medium transition-all duration-200",
-        "hover:border-primary/40 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        bumping && "scale-110 border-primary/50 bg-primary/10",
-      )}
-    >
-      {/* Icon */}
-      <span className={cn("relative flex items-center justify-center", bumping && "animate-bounce")}>
-        <ShoppingCart className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn("relative transition-transform", bumping && "scale-125")}
+        onClick={openCart}
+        aria-label={`Sepet (${totalItems} ürün)`}
+      >
+        <ShoppingCart className="h-5 w-5" />
         {totalItems > 0 && (
-          <span className={cn(
-            "absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[10px] font-bold text-primary-foreground leading-none transition-transform",
-            bumping && "scale-125"
-          )}>
+          <Badge
+            variant="destructive"
+            className="absolute -top-1.5 -right-1.5 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-bold"
+          >
             {totalItems > 99 ? "99+" : totalItems}
-          </span>
+          </Badge>
         )}
-      </span>
+      </Button>
 
-      {/* Last-added product preview — slides in on add */}
-      {lastItem && showPreview && (
-        <span className="flex items-center gap-1.5 animate-slide-in-up overflow-hidden">
-          <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-md border border-border/60">
-            <Image
-              src={lastItem.product.images?.[0] ?? "/placeholder.svg"}
-              alt={lastItem.product.name}
-              fill
-              className="object-cover"
-              sizes="24px"
-            />
-          </span>
-          <span className="max-w-[80px] truncate text-xs text-foreground/80">
-            {lastItem.product.name}
-          </span>
-        </span>
+      {showPreview && lastItem && (
+        <div className="absolute top-full right-0 mt-2 w-64 bg-background rounded-xl shadow-xl border p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <p className="text-xs text-muted-foreground mb-2 font-medium">Sepete eklendi</p>
+          <div className="flex items-center gap-3">
+            {lastItem.image && (
+              <div className="relative h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-secondary">
+                <Image src={lastItem.image} alt={lastItem.name} fill className="object-cover" sizes="48px" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{lastItem.name}</p>
+              <p className="text-xs text-primary font-bold">
+                {lastItem.price.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="w-full mt-3 h-8 text-xs"
+            onClick={openCart}
+          >
+            Sepete git
+          </Button>
+        </div>
       )}
-
-      {/* Static label when nothing animating */}
-      {(!showPreview || !lastItem) && totalItems > 0 && (
-        <span className="hidden sm:inline text-xs text-muted-foreground">
-          Sepet
-        </span>
-      )}
-    </button>
+    </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// AuthButton — shows "Giriş Yap" for guests, account icon for logged-in users
+// WishlistButton
 // ---------------------------------------------------------------------------
-function AuthButton() {
-  const [user, setUser] = useState<User | null>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const supabase = createClient()
-    // Initial session check
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
-      setReady(true)
-    })
-    // Keep in sync with sign-in / sign-out events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  // Render nothing until we know auth state to avoid flash
-  if (!ready) return <div className="h-8 w-8" />
-
-  if (user) {
-    return (
-      <Link href="/account" className="hidden md:inline-flex">
-        <Button variant="ghost" size="icon" aria-label="Hesabım">
-          <UserCircle className="h-5 w-5" />
-        </Button>
-      </Link>
-    )
-  }
-
+function WishlistButton() {
+  const { items } = useWishlistStore()
   return (
-    <Link href="/auth/login" className="hidden md:inline-flex">
-      <Button variant="ghost" size="sm" aria-label="Giriş Yap" className="gap-1.5 text-sm font-medium">
-        <LogIn className="h-4 w-4" />
-        <span>Giriş Yap</span>
+    <Link href="/wishlist" aria-label={`Favoriler (${items.length} ürün)`}>
+      <Button variant="ghost" size="icon" className="relative">
+        <Heart className="h-5 w-5" />
+        {items.length > 0 && (
+          <Badge
+            variant="destructive"
+            className="absolute -top-1.5 -right-1.5 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-bold"
+          >
+            {items.length}
+          </Badge>
+        )}
       </Button>
     </Link>
   )
 }
 
-export function Header() {
-  const pathname = usePathname()
-  const { getTotalItems, openCart } = useCartStore()
-  const { items: wishlistItems } = useWishlistStore()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [megaMenuOpen, setMegaMenuOpen] = useState(false)
-  const [mobileCategoryOpen, setMobileCategoryOpen] = useState<string | null>(null)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const megaWrapRef = useRef<HTMLDivElement>(null)
-  const totalItems = getTotalItems()
+// ---------------------------------------------------------------------------
+// UserMenu
+// ---------------------------------------------------------------------------
+function UserMenu({ user }: { user: User | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (megaWrapRef.current && !megaWrapRef.current.contains(e.target as Node)) {
-        setMegaMenuOpen(false)
-      }
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
-  return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between gap-3">
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = "/"
+  }
 
-          {/* ── Logo ── */}
+  if (!user) {
+    return (
+      <div className="hidden lg:flex items-center gap-2">
+        <Link href="/auth/login">
+          <Button variant="ghost" size="sm" className="gap-1.5">
+            <LogIn className="h-4 w-4" />
+            Giriş
+          </Button>
+        </Link>
+        <Link href="/auth/sign-up">
+          <Button size="sm">Kayıt Ol</Button>
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative hidden lg:block" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-full px-3 py-1.5 hover:bg-secondary transition-colors text-sm font-medium"
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        <UserCircle className="h-5 w-5 text-muted-foreground" />
+        <span className="max-w-[100px] truncate">
+          {user.user_metadata?.full_name ?? user.email?.split("@")[0]}
+        </span>
+        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute top-full right-0 mt-2 w-52 bg-background rounded-xl shadow-xl border py-1 z-50"
+          role="menu"
+        >
+          <div className="px-3 py-2 border-b mb-1">
+            <p className="text-xs text-muted-foreground">Giriş yapıldı</p>
+            <p className="text-sm font-medium truncate">{user.email}</p>
+          </div>
+          {[
+            { href: "/account", label: "Hesabım", icon: UserCircle },
+            { href: "/account?tab=orders", label: "Siparişlerim", icon: ShoppingCart },
+            { href: "/wishlist", label: "Favorilerim", icon: Heart },
+            { href: "/vendor-panel", label: "Satıcı Paneli", icon: Store },
+          ].map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-secondary transition-colors"
+            >
+              <Icon className="h-4 w-4 text-muted-foreground" />
+              {label}
+            </Link>
+          ))}
+          <Separator className="my-1" />
+          <button
+            role="menuitem"
+            onClick={handleSignOut}
+            className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-secondary transition-colors w-full text-left text-destructive"
+          >
+            <LogIn className="h-4 w-4" />
+            Çıkış Yap
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+export function Header() {
+  const pathname = usePathname()
+  const [megaMenuOpen, setMegaMenuOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [expandedCat, setExpandedCat] = useState<string | null>(null)
+  const megaRef = useRef<HTMLDivElement>(null)
+  const megaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Close mega menu on route change
+  useEffect(() => {
+    setMegaMenuOpen(false)
+    setMobileMenuOpen(false)
+    setMobileSearchOpen(false)
+  }, [pathname])
+
+  // Auth state
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const openMegaMenu = () => {
+    if (megaTimerRef.current) clearTimeout(megaTimerRef.current)
+    setMegaMenuOpen(true)
+  }
+
+  const closeMegaMenu = () => {
+    megaTimerRef.current = setTimeout(() => setMegaMenuOpen(false), 80)
+  }
+
+  useEffect(() => {
+    return () => { if (megaTimerRef.current) clearTimeout(megaTimerRef.current) }
+  }, [])
+
+  return (
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Top bar */}
+      <div className="border-b bg-secondary/50">
+        <div className="container mx-auto px-4 h-8 flex items-center justify-between text-xs text-muted-foreground">
+          <span>KKTC&apos;nin En Büyük Online Pazaryeri</span>
+          <div className="flex items-center gap-4">
+            <LanguageSelector />
+            <CurrencySelector />
+            <Link href="/seller-application" className="hover:text-foreground transition-colors hidden sm:block">
+              Satıcı Ol
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main nav */}
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center gap-4">
+
+          {/* Mobile hamburger */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Menüyü aç">
+                <LayoutGrid className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-80 p-0 overflow-y-auto">
+              <SheetTitle asChild>
+                <VisuallyHidden.Root>Gezinme Menüsü</VisuallyHidden.Root>
+              </SheetTitle>
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-secondary/40">
+                <Image
+                  src="/images/kktc-marketin24-logo.png"
+                  alt="KKTC Marketin24"
+                  width={100}
+                  height={100}
+                  className="h-10 w-auto"
+                />
+                <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Mobile auth */}
+              <div className="px-4 py-3 border-b">
+                {user ? (
+                  <div className="flex items-center gap-3">
+                    <UserCircle className="h-8 w-8 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {user.user_metadata?.full_name ?? user.email?.split("@")[0]}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Link href="/auth/login" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full" size="sm">Giriş</Button>
+                    </Link>
+                    <Link href="/auth/sign-up" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
+                      <Button className="w-full" size="sm">Kayıt Ol</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile category list */}
+              <nav className="py-2" aria-label="Mobil kategori menüsü">
+                {categories.map((cat) => {
+                  const Icon = ICON_MAP[cat.icon] || Smartphone
+                  const isExpanded = expandedCat === cat.id
+                  return (
+                    <div key={cat.id}>
+                      <div className="flex items-center">
+                        <Link
+                          href={`/category/${cat.slug}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex flex-1 items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-secondary transition-colors"
+                        >
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          {cat.name}
+                        </Link>
+                        {cat.subcategories && cat.subcategories.length > 0 && (
+                          <button
+                            onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                            className="px-3 py-3 hover:bg-secondary transition-colors"
+                            aria-label={isExpanded ? "Kapat" : "Alt kategorileri göster"}
+                          >
+                            <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
+                          </button>
+                        )}
+                      </div>
+                      {isExpanded && cat.subcategories && (
+                        <div className="pl-11 pr-4 pb-1 bg-secondary/30">
+                          {cat.subcategories.map((sub) => (
+                            <Link
+                              key={sub.id}
+                              href={`/category/${cat.slug}?sub=${sub.slug}`}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors border-b border-border/30 last:border-0"
+                            >
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                <Separator className="my-2" />
+                <Link
+                  href="/categories"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary hover:bg-secondary transition-colors"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Tüm Kategoriler
+                </Link>
+              </nav>
+            </SheetContent>
+          </Sheet>
+
+          {/* Logo */}
           <Link href="/" className="flex-shrink-0">
-            <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={140} height={140} className="h-11 w-auto" priority />
+            <Image
+              src="/images/kktc-marketin24-logo.png"
+              alt="KKTC Marketin24"
+              width={140}
+              height={140}
+              className="h-11 w-auto"
+              priority
+            />
           </Link>
 
-          {/* ── Desktop nav ── */}
-          <nav className="hidden lg:flex items-center gap-0.5" ref={megaWrapRef}>
-
-            {/* Kategoriler mega-menu trigger — Fix 3: keyboard accessible via onFocus */}
+          {/* Desktop categories trigger */}
+          <div
+            className="hidden lg:block"
+            onMouseEnter={openMegaMenu}
+            onMouseLeave={closeMegaMenu}
+            ref={megaRef}
+          >
             <button
+              onClick={() => setMegaMenuOpen((o) => !o)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors",
-                megaMenuOpen
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground hover:bg-secondary"
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                megaMenuOpen ? "bg-primary text-primary-foreground" : "hover:bg-secondary text-foreground"
               )}
-              onMouseEnter={() => setMegaMenuOpen(true)}
-              onFocus={() => setMegaMenuOpen(true)}
-              onBlur={(e) => {
-                // only close if focus leaves the mega-menu wrapper entirely
-                if (!megaWrapRef.current?.contains(e.relatedTarget as Node)) {
-                  setMegaMenuOpen(false)
-                }
-              }}
-              onClick={() => setMegaMenuOpen((v) => !v)}
               aria-expanded={megaMenuOpen}
-              aria-haspopup="true"
+              aria-haspopup="menu"
             >
               <LayoutGrid className="h-4 w-4" />
               Kategoriler
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
             </button>
+          </div>
 
-            {/* Fix 1: active-state classes driven by pathname for each nav link */}
-            <Link
-              href="/products"
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                pathname === "/products" || pathname.startsWith("/products/")
-                  ? "bg-secondary text-foreground font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-            >
-              <Tag className="h-4 w-4" />
-              Ürünler
-            </Link>
-            <Link
-              href="/vendors"
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                pathname === "/vendors" || pathname.startsWith("/vendors/")
-                  ? "bg-secondary text-foreground font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-            >
-              <Store className="h-4 w-4" />
-              Satıcılar
-            </Link>
-            <Link
-              href="/compare"
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                pathname === "/compare"
-                  ? "bg-secondary text-foreground font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-            >
-              Karşılaştır
-            </Link>
-          </nav>
-
-          {/* ── Search bar — desktop ── */}
-          <div className="hidden lg:flex flex-1 max-w-sm xl:max-w-md mx-2">
+          {/* Search */}
+          <div className="flex-1 hidden md:block max-w-xl">
             <SearchBar />
           </div>
 
-          {/* ── Right actions ── */}
-          <div className="flex items-center gap-0.5">
+          {/* Right icons */}
+          <div className="ml-auto flex items-center gap-1">
+            {/* Mobile search toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileSearchOpen((o) => !o)}
+              aria-label="Arama"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
 
-            {/* Search icon — tablet only (md to lg) */}
-            <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden md:flex lg:hidden">
-                  <Search className="h-5 w-5" />
-                  <span className="sr-only">Ara</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="top" className="h-auto">
-                <VisuallyHidden.Root>
-                  <SheetTitle>Ara</SheetTitle>
-                </VisuallyHidden.Root>
-                <div className="pt-6 pb-4 px-2">
-                  <SearchBar autoFocus />
-                </div>
-              </SheetContent>
-            </Sheet>
+            <WishlistButton />
+            <DynamicCartButton />
+            <UserMenu user={user} />
 
-            {/* Language + Currency — visible on all sizes */}
-            <div className="flex items-center gap-1.5">
-              <CurrencySelector />
-              <LanguageSelector />
-            </div>
-
-            {/* Account — shows login button for guests, account icon for authenticated users */}
-            <AuthButton />
-
-            {/* Favorites — tablet + desktop (bottom nav handles mobile only) */}
-            <Link href="/wishlist" className="hidden md:inline-flex">
-              <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative overflow-visible">
-                <Heart className="h-5 w-5" />
-                {wishlistItems.length > 0 && (
-                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs pointer-events-none">
-                    {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
-                  </Badge>
-                )}
+            {/* Mobile user icon */}
+            <Link href={user ? "/account" : "/auth/login"} className="lg:hidden">
+              <Button variant="ghost" size="icon" aria-label="Hesap">
+                <UserCircle className="h-5 w-5" />
               </Button>
             </Link>
-
-            {/* Cart — tablet + desktop (bottom nav handles mobile only) */}
-            <div className="hidden md:flex">
-              <DynamicCartButton />
-            </div>
-
-            {/* Hamburger — mobile + tablet, opens category/nav sheet */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden md:flex lg:hidden">
-                  <LayoutGrid className="h-5 w-5" />
-                  <span className="sr-only">Menüyü aç</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[340px] p-0 overflow-y-auto">
-                <VisuallyHidden.Root>
-                  <SheetTitle>Menü</SheetTitle>
-                </VisuallyHidden.Root>
-                <div className="flex flex-col h-full">
-
-                  {/* Sheet header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b bg-secondary/40">
-                    <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={100} height={100} className="h-10 w-auto" />
-                    <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Quick nav links */}
-                  <div className="px-3 py-2 border-b flex gap-1">
-                    {[
-                      { href: "/products", label: "Tüm Ürünler", icon: Tag },
-                      { href: "/vendors", label: "Satıcılar", icon: Store },
-                      { href: "/wishlist", label: "Favoriler", icon: Heart },
-                      { href: "/compare", label: "Karşılaştır", icon: LayoutGrid },
-                    ].map(({ href, label, icon: Icon }) => (
-                      <Link
-                        key={href}
-                        href={href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-primary hover:bg-secondary transition-colors text-center"
-                      >
-                        <Icon className="h-4 w-4" />
-                        {label}
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Category list with collapsible subcats */}
-                  <div className="flex-1 overflow-y-auto px-3 py-2">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest px-1 py-2">
-                      Kategoriler
-                    </p>
-                    {categories.map((cat) => {
-                      const Icon = ICON_MAP[cat.icon] || Smartphone
-                      const isOpen = mobileCategoryOpen === cat.id
-                      return (
-                        <div key={cat.id} className="mb-0.5">
-                          <button
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors"
-                            onClick={() => setMobileCategoryOpen(isOpen ? null : cat.id)}
-                          >
-                            <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="flex-1 text-left font-medium">{cat.name}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums mr-1">{cat.productCount}</span>
-                            {cat.subcategories && (
-                              <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
-                            )}
-                          </button>
-                          {isOpen && cat.subcategories && (
-                            <div className="pl-10 pb-1 space-y-0.5">
-                              <Link
-                                href={`/category/${cat.slug}`}
-                                className="block py-1.5 text-xs text-primary font-semibold hover:underline"
-                                onClick={() => setMobileMenuOpen(false)}
-                              >
-                                Tümünü gör →
-                              </Link>
-                              {cat.subcategories.map((sub) => (
-                                <Link
-                                  key={sub.id}
-                                  href={sub.href}
-                                  className="block py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                  onClick={() => setMobileMenuOpen(false)}
-                                >
-                                  {sub.name}
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Sheet footer */}
-                  <div className="border-t px-4 py-3 flex items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">Dil &amp; Para Birimi</p>
-                    <div className="flex items-center gap-2">
-                      <CurrencySelector />
-                      <LanguageSelector />
-                    </div>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
+
+        {/* Mobile search bar */}
+        {mobileSearchOpen && (
+          <div className="pb-3 md:hidden">
+            <SearchBar autoFocus />
+          </div>
+        )}
       </div>
 
-      {/* Mega menu panel — outside container so it's full-width */}
+      {/* MegaMenu */}
       {megaMenuOpen && (
-        <div onMouseEnter={() => setMegaMenuOpen(true)}>
+        <div
+          onMouseEnter={openMegaMenu}
+          onMouseLeave={closeMegaMenu}
+        >
           <MegaMenu onClose={() => setMegaMenuOpen(false)} />
         </div>
       )}
 
+      {/* CartDrawer */}
       <CartDrawer />
     </header>
   )
