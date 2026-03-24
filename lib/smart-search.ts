@@ -368,5 +368,3 @@ export function getSearchSuggestions(query: string): SearchSuggestion[] {
 
   return suggestions.slice(0, 7)
 }
-
-}
