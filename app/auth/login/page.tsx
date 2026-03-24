@@ -79,11 +79,11 @@ export default function LoginPage() {
         <div>
           <Link href="/" className="inline-block">
             <Image
-              src="/images/marketin24-logo.png"
-              alt="Marketin24"
+              src="/images/kktc-marketin24-logo.png"
+              alt="KKTC Marketin24"
               width={180}
-              height={60}
-              className="h-14 w-auto brightness-0 invert"
+              height={180}
+              className="h-24 w-auto"
               priority
             />
           </Link>
@@ -126,7 +126,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="mb-8 text-center lg:hidden">
             <Link href="/">
-              <Image src="/images/marketin24-logo.png" alt="Marketin24" width={160} height={54} className="h-12 w-auto mx-auto" />
+              <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={120} height={120} className="h-20 w-auto mx-auto" />
             </Link>
           </div>
 

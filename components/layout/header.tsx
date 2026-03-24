@@ -287,7 +287,7 @@ export function Header() {
 
           {/* ── Logo ── */}
           <Link href="/" className="flex-shrink-0">
-            <Image src="/images/marketin24-logo.png" alt="Marketin24" width={150} height={50} className="h-9 w-auto" priority />
+            <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={140} height={140} className="h-11 w-auto" priority />
           </Link>
 
           {/* ── Desktop nav ── */}
@@ -424,7 +424,7 @@ export function Header() {
 
                   {/* Sheet header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b bg-secondary/40">
-                    <Image src="/images/marketin24-logo.png" alt="Marketin24" width={120} height={40} className="h-8 w-auto" />
+                    <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={100} height={100} className="h-10 w-auto" />
                     <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
                       <X className="h-4 w-4" />
                     </Button>
