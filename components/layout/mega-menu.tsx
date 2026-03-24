@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useRef, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import {
   ChevronRight, ArrowRight, LayoutGrid,
   Flame, Zap, PackagePlus,
@@ -207,10 +207,15 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
 export function MegaMenu({ onClose }: { onClose: () => void }) {
   const [activeCategory, setActiveCategory] = useState<Category | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const router = useRouter()
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pathname = usePathname()
+
+  // Auto-close when route changes (after a Link click navigates)
+  useEffect(() => { onClose() }, [pathname, onClose])
 
   const handleCatEnter = useCallback((cat: Category) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    if (closeTimer.current) clearTimeout(closeTimer.current)
     hoverTimer.current = setTimeout(() => setActiveCategory(cat), 80)
   }, [])
 
@@ -221,22 +226,31 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
 
   const handlePanelEnter = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    if (closeTimer.current) clearTimeout(closeTimer.current)
   }, [])
 
-  const handleCatClick = useCallback((slug: string) => {
-    onClose()
-    router.push(`/products?category=${slug}`)
-  }, [onClose, router])
+  // Delayed close so clicks can register before unmount
+  const handleMenuLeave = useCallback(() => {
+    closeTimer.current = setTimeout(() => onClose(), 150)
+  }, [onClose])
+
+  const handleMenuEnter = useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }, [])
 
   useEffect(() => {
-    return () => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }
+    return () => {
+      if (hoverTimer.current) clearTimeout(hoverTimer.current)
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+    }
   }, [])
 
   return (
     <div
       className="absolute top-full left-0 right-0 z-50 bg-background border-b shadow-2xl"
       style={{ animation: "megaMenuIn 0.15s ease-out both" }}
-      onMouseLeave={onClose}
+      onMouseLeave={handleMenuLeave}
+      onMouseEnter={handleMenuEnter}
     >
       <div className="container mx-auto px-4">
         <div className="flex" style={{ minHeight: 360 }}>
@@ -250,26 +264,19 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
               const Icon = ICON_MAP[cat.icon] || Smartphone
               const isActive = activeCategory?.id === cat.id
               return (
-                <div
+                <Link
                   key={cat.id}
-                  role="menuitem"
-                  tabIndex={0}
+                  href={`/products?category=${cat.slug}`}
                   aria-label={`${cat.name} kategorisi`}
                   className={cn(
-                    "relative flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg cursor-pointer select-none transition-all duration-100 group",
+                    "relative flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg select-none transition-all duration-100 group",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-foreground hover:bg-secondary"
                   )}
                   onMouseEnter={() => handleCatEnter(cat)}
                   onMouseLeave={handleLeave}
-                  onClick={() => handleCatClick(cat.slug)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault()
-                      handleCatClick(cat.slug)
-                    }
-                  }}
+                  onClick={onClose}
                 >
                   <Icon className={cn(
                     "h-4 w-4 flex-shrink-0 transition-colors",
@@ -290,7 +297,7 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
                   {isActive && (
                     <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary-foreground/60" />
                   )}
-                </div>
+                </Link>
               )
             })}
 
