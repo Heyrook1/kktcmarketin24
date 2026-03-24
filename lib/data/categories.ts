@@ -2,7 +2,7 @@ export interface Subcategory {
   id: string
   name: string
   slug: string
-  href: string
+  href: string // kept for backwards compat — prefer /category/[cat]?sub=[slug]
 }
 
 export interface Category {

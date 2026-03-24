@@ -9,6 +9,7 @@ import {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, Heart, BookOpen, ArrowRight,
   LayoutGrid, X, Tag, Store, UserCircle, ShoppingBag, LogIn,
+  Flame, Zap, PackagePlus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -30,10 +31,115 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby, Watch, ShoppingBasket, Heart, BookOpen,
 }
 
-const MEGA_MENU_CATEGORIES = categories.slice(0, 6)
+const MEGA_MENU_CATEGORIES = categories.slice(0, 8)
+
+// Default panel shown when no category is hovered
+function DefaultPanel({ onClose }: { onClose: () => void }) {
+  const trending = [
+    { label: "Cep Telefonları", href: "/category/electronics?sub=phones", icon: Smartphone },
+    { label: "Kadın Giyim", href: "/category/fashion?sub=womens", icon: Shirt },
+    { label: "Cilt Bakımı", href: "/category/beauty?sub=skincare", icon: Sparkles },
+    { label: "Fitness", href: "/category/sports?sub=fitness", icon: Dumbbell },
+    { label: "Oyuncaklar", href: "/category/kids-baby?sub=toys", icon: Baby },
+    { label: "Saatler", href: "/category/jewelry?sub=watches", icon: Watch },
+  ]
+  const flashDeals = [
+    { label: "Kulaklıklar", href: "/category/electronics?sub=audio", badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
+    { label: "Spor Ayakkabı", href: "/category/sports?sub=running", badge: "%30", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
+    { label: "Parfüm", href: "/category/beauty?sub=fragrance", badge: "%25", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
+  ]
+  const newArrivals = [
+    { label: "Yeni Elektronik", href: "/products?sort=newest&category=electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=80&h=80&fit=crop" },
+    { label: "Yeni Moda", href: "/products?sort=newest&category=fashion", image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=80&h=80&fit=crop" },
+    { label: "Yeni Ev Ürünleri", href: "/products?sort=newest&category=home-garden", image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=80&h=80&fit=crop" },
+  ]
+
+  return (
+    <div className="flex-1 py-5 px-6 grid grid-cols-3 gap-6">
+      {/* Trending */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <Flame className="h-4 w-4 text-orange-500" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Trend Kategoriler</h3>
+        </div>
+        <div className="space-y-1">
+          {trending.map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors group"
+              >
+                <Icon className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
+                {item.label}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Flash Deals */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <Zap className="h-4 w-4 text-yellow-500" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Flaş İndirimler</h3>
+        </div>
+        <div className="space-y-2">
+          {flashDeals.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors group"
+            >
+              <div className="relative h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                <Image src={item.image} alt={item.label} fill className="object-cover" sizes="40px" />
+              </div>
+              <span className="flex-1 text-sm text-muted-foreground group-hover:text-foreground">{item.label}</span>
+              <span className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 rounded-md">{item.badge}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* New Arrivals */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <PackagePlus className="h-4 w-4 text-green-500" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Yeni Ürünler</h3>
+        </div>
+        <div className="space-y-2">
+          {newArrivals.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors group"
+            >
+              <div className="relative h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                <Image src={item.image} alt={item.label} fill className="object-cover" sizes="40px" />
+              </div>
+              <span className="flex-1 text-sm text-muted-foreground group-hover:text-foreground">{item.label}</span>
+              <span className="text-[10px] font-semibold text-green-600 bg-green-50 dark:bg-green-950/40 px-1.5 py-0.5 rounded-md">YENİ</span>
+            </Link>
+          ))}
+        </div>
+        <Link
+          href="/products?sort=newest"
+          onClick={onClose}
+          className="inline-flex items-center gap-1 mt-3 text-xs text-primary font-medium hover:underline"
+        >
+          Tümünü gör <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </div>
+  )
+}
 
 function MegaMenu({ onClose }: { onClose: () => void }) {
-  const [activeCategory, setActiveCategory] = useState<Category>(MEGA_MENU_CATEGORIES[0])
+  const [activeCategory, setActiveCategory] = useState<Category | null>(null)
 
   return (
     <div
@@ -46,7 +152,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
           <div className="w-60 border-r py-3 flex-shrink-0">
             {MEGA_MENU_CATEGORIES.map((cat) => {
               const Icon = ICON_MAP[cat.icon] || Smartphone
-              const isActive = activeCategory.id === cat.id
+              const isActive = activeCategory?.id === cat.id
               return (
                 <Link
                   key={cat.id}
@@ -62,9 +168,6 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
                 >
                   <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
                   <span className="flex-1 truncate">{cat.name}</span>
-                  <span className={cn("text-xs tabular-nums", isActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                    {cat.productCount}
-                  </span>
                   <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0", isActive ? "text-primary-foreground/70" : "text-muted-foreground/50")} />
                 </Link>
               )
@@ -80,60 +183,64 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
             </Link>
           </div>
 
-          {/* Subcategory panel */}
-          <div className="flex-1 py-5 px-6">
-            <div className="flex gap-8">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-foreground">{activeCategory.name}</h3>
-                  <Link
-                    href={`/category/${activeCategory.slug}`}
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                    onClick={onClose}
-                  >
-                    Tümünü gör <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-                {activeCategory.subcategories && activeCategory.subcategories.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                    {activeCategory.subcategories.map((sub) => (
-                      <Link
-                        key={sub.id}
-                        href={sub.href}
-                        onClick={onClose}
-                        className="flex items-center gap-2 py-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
-                      >
-                        <span className="h-1 w-1 rounded-full bg-border group-hover:bg-primary transition-colors flex-shrink-0" />
-                        {sub.name}
-                      </Link>
-                    ))}
+          {/* Right panel: default or subcategory */}
+          {activeCategory === null ? (
+            <DefaultPanel onClose={onClose} />
+          ) : (
+            <div className="flex-1 py-5 px-6">
+              <div className="flex gap-8">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-foreground">{activeCategory.name}</h3>
+                    <Link
+                      href={`/category/${activeCategory.slug}`}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                      onClick={onClose}
+                    >
+                      Tümünü gör <ArrowRight className="h-3 w-3" />
+                    </Link>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{activeCategory.description}</p>
+                  {activeCategory.subcategories && activeCategory.subcategories.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                      {activeCategory.subcategories.map((sub) => (
+                        <Link
+                          key={sub.id}
+                          href={`/category/${activeCategory.slug}?sub=${sub.slug}`}
+                          onClick={onClose}
+                          className="flex items-center gap-2 py-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
+                        >
+                          <span className="h-1 w-1 rounded-full bg-border group-hover:bg-primary transition-colors flex-shrink-0" />
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{activeCategory.description}</p>
+                  )}
+                </div>
+
+                {activeCategory.featured && (
+                  <div className="w-44 flex-shrink-0">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
+                    <Link href={activeCategory.featured.href} onClick={onClose} className="block group">
+                      <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary">
+                        <Image
+                          src={activeCategory.featured.image}
+                          alt={activeCategory.featured.label}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
+                        <div className="absolute bottom-2 left-2 right-2">
+                          <p className="text-white text-xs font-medium leading-tight">{activeCategory.featured.label}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
                 )}
               </div>
-
-              {activeCategory.featured && (
-                <div className="w-44 flex-shrink-0">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
-                  <Link href={activeCategory.featured.href} onClick={onClose} className="block group">
-                    <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-secondary">
-                      <Image
-                        src={activeCategory.featured.image}
-                        alt={activeCategory.featured.label}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors" />
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <p className="text-white text-xs font-medium leading-tight">{activeCategory.featured.label}</p>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
