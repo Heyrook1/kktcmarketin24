@@ -1,5 +1,5 @@
 "use client"
-// dropdown mega-menu with category navigation
+// v4 — mega-menu, category + subcategory navigation
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useRef, useEffect, useCallback } from "react"
