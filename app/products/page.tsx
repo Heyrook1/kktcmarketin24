@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { ProductsContent, ProductsContentSkeleton } from "./products-content"
+import { buildSearchAliases } from "@/lib/smart-search"
 
 // ISR: re-render at most once every 10 minutes so Google always sees
 // fresh product data while keeping response times fast.
@@ -49,27 +50,32 @@ export default async function ProductsPage() {
     .eq("is_active", true)
 
   // Normalise to the shape ProductsContent already expects
+  // searchAliases: flat TR+EN+CY string so client-side search finds products
+  // in all three languages without a DB round-trip.
   const initialProducts = (rawProducts ?? []).map((p) => {
     const store = Array.isArray(p.vendor_stores)
       ? p.vendor_stores[0]
       : (p.vendor_stores as { id: string; name: string; slug: string } | null)
+    const tags = (p.tags as string[]) ?? []
+    const searchAliases = buildSearchAliases(p.category ?? "", tags)
     return {
-      id:           p.id,
-      name:         p.name,
-      description:  p.description ?? "",
-      price:        Number(p.price),
-      comparePrice: p.compare_price ? Number(p.compare_price) : undefined,
-      categoryId:   p.category ?? "",
-      image:        p.image_url ?? "/placeholder.svg",
-      images:       p.image_url ? [p.image_url] : [],
-      tags:         (p.tags as string[]) ?? [],
-      vendorId:     p.store_id,
-      vendorName:   store?.name ?? "",
-      stock:        p.stock ?? 0,
-      featured:     false,
-      rating:       0,
-      reviewCount:  0,
-      createdAt:    p.created_at,
+      id:             p.id,
+      name:           p.name,
+      description:    p.description ?? "",
+      price:          Number(p.price),
+      comparePrice:   p.compare_price ? Number(p.compare_price) : undefined,
+      categoryId:     p.category ?? "",
+      image:          p.image_url ?? "/placeholder.svg",
+      images:         p.image_url ? [p.image_url] : [],
+      tags,
+      vendorId:       p.store_id,
+      vendorName:     store?.name ?? "",
+      stock:          p.stock ?? 0,
+      featured:       false,
+      rating:         0,
+      reviewCount:    0,
+      createdAt:      p.created_at,
+      searchAliases,  // TR + EN + CY multilingual index string
     }
   })
 

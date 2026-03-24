@@ -290,13 +290,14 @@ function ProductsInner({
       })
     }
 
-    // Text search fallback (client-side) on name / description
+    // Text search — checks name, description AND multilingual aliases (TR/EN/CY)
     if (searchInput && !intent?.subcategory && !intent?.brand) {
       const lower = searchInput.toLowerCase()
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(lower) ||
-          p.description.toLowerCase().includes(lower)
+          p.description.toLowerCase().includes(lower) ||
+          ((p as Product & { searchAliases?: string }).searchAliases ?? "").toLowerCase().includes(lower)
       )
     }
 
