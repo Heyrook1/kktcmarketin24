@@ -34,19 +34,67 @@ function FlagEN({ className }: { className?: string }) {
 
 function FlagCY({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 60 40" className={className} aria-hidden="true">
-      <rect width="60" height="40" fill="#fff" />
-      {/* Cyprus island copper silhouette */}
+    <svg viewBox="0 0 60 40" className={className} aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      {/* White background */}
+      <rect width="60" height="40" fill="#FFFFFF" />
+
+      {/* Cyprus island — copper/orange silhouette, accurate outline */}
       <path
-        d="M14,14 Q20,10 30,12 Q40,10 46,14 Q48,18 44,22 Q40,26 30,27 Q20,26 16,22 Q12,18 14,14 Z"
-        fill="#E67E22"
-        opacity="0.9"
+        d="M11,17
+           C12,14 15,12 19,11
+           C22,10 25,10 27,11
+           C28,10 30,9.5 32,10
+           C35,9 38,9.5 41,11
+           C44,12 47,13 48,15
+           C49,17 48,19 46,21
+           C44,23 41,25 37,26
+           C34,27 31,27.5 28,27
+           C25,27.5 22,27 19,26
+           C16,25 13,23 11.5,21
+           C10,19 10,18 11,17 Z"
+        fill="#D27A22"
       />
-      {/* Olive branches below */}
-      <path d="M22,30 Q30,27 38,30" stroke="#27AE60" strokeWidth="1.5" fill="none" />
-      <path d="M24,32 Q30,29 36,32" stroke="#27AE60" strokeWidth="1.2" fill="none" />
-      <circle cx="22" cy="30" r="1" fill="#27AE60" />
-      <circle cx="38" cy="30" r="1" fill="#27AE60" />
+      {/* Shadow/depth on island */}
+      <path
+        d="M28,27 C31,27.5 34,27 37,26 C41,25 44,23 46,21 C47,19.5 47,18 46,16.5"
+        fill="none"
+        stroke="#B5621A"
+        strokeWidth="0.6"
+        opacity="0.5"
+      />
+
+      {/* Olive branch LEFT — stem curving down-left */}
+      <path
+        d="M18,30 Q21,28 24,30 Q27,28 30,29"
+        fill="none"
+        stroke="#4A7C3F"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      {/* Olive branch RIGHT — stem curving down-right */}
+      <path
+        d="M42,30 Q39,28 36,30 Q33,28 30,29"
+        fill="none"
+        stroke="#4A7C3F"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+
+      {/* Left branch leaves */}
+      <ellipse cx="19.5" cy="29.5" rx="1.8" ry="0.9" transform="rotate(-30 19.5 29.5)" fill="#4A7C3F" />
+      <ellipse cx="22"   cy="28.3" rx="1.8" ry="0.9" transform="rotate(-15 22 28.3)"   fill="#5A9C4F" />
+      <ellipse cx="25"   cy="29.2" rx="1.8" ry="0.9" transform="rotate(10 25 29.2)"    fill="#4A7C3F" />
+      <ellipse cx="27.5" cy="28"   rx="1.8" ry="0.9" transform="rotate(20 27.5 28)"    fill="#5A9C4F" />
+
+      {/* Right branch leaves */}
+      <ellipse cx="40.5" cy="29.5" rx="1.8" ry="0.9" transform="rotate(30 40.5 29.5)"  fill="#4A7C3F" />
+      <ellipse cx="38"   cy="28.3" rx="1.8" ry="0.9" transform="rotate(15 38 28.3)"    fill="#5A9C4F" />
+      <ellipse cx="35"   cy="29.2" rx="1.8" ry="0.9" transform="rotate(-10 35 29.2)"   fill="#4A7C3F" />
+      <ellipse cx="32.5" cy="28"   rx="1.8" ry="0.9" transform="rotate(-20 32.5 28)"   fill="#5A9C4F" />
+
+      {/* Berries at tips */}
+      <circle cx="18"   cy="30.2" r="0.9" fill="#4A7C3F" />
+      <circle cx="42"   cy="30.2" r="0.9" fill="#4A7C3F" />
     </svg>
   )
 }
