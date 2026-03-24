@@ -155,6 +155,21 @@
   animation: mega-menu-in 0.18s ease-out forwards;
 }
 
+/* Mega menu named keyframe for inline style use */
+@keyframes megaMenuIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade in for panel switch */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.14s ease-out both;
+}
+
 /* Smooth scale for product card image */
 .scale-108 { transform: scale(1.08); }
 
