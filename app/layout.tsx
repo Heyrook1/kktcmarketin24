@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   authors: [{ name: 'Marketin24' }],
   creator: 'Marketin24',
   icons: {
-    icon: '/images/marketin24-logo.png',
-    apple: '/images/marketin24-logo.png',
+    icon: '/images/kktc-marketin24-logo.png',
+    apple: '/images/kktc-marketin24-logo.png',
   },
   openGraph: {
     type: 'website',
