@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import { MegaMenu } from "@/components/layout/mega-menu"
+import { LanguageSelector } from "@/components/shared/language-selector"
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
@@ -238,7 +239,7 @@ export function Header() {
               <Link href="/seller-application" className="hover:text-primary transition-colors">Satıcı Ol</Link>
               <Link href="/about" className="hover:text-primary transition-colors">Hakkımızda</Link>
               <Link href="/contact" className="hover:text-primary transition-colors">İletişim</Link>
-              <span className="font-medium text-foreground">TR</span>
+              <LanguageSelector />
             </div>
           </div>
         </div>
