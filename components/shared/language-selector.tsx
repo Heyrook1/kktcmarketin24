@@ -5,115 +5,106 @@ import { Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const LANGUAGES = [
-  { code: "tr", label: "Türkçe",   flag: "🇹🇷", gtCode: null  },
-  { code: "en", label: "English",  flag: "🇬🇧", gtCode: "en"  },
-  { code: "el", label: "Ελληνικά", flag: "🇬🇷", gtCode: "el"  },
+  { code: "TR", label: "Türkçe",   sublabel: "Türkçe",    gtCode: null  },
+  { code: "EN", label: "English",  sublabel: "İngilizce", gtCode: "en"  },
+  { code: "CY", label: "Ελληνικά", sublabel: "Yunanca",   gtCode: "el"  },
 ] as const
 
 type LangCode = (typeof LANGUAGES)[number]["code"]
 
-// ─── Google Translate helpers ────────────────────────────────────────────────
-
-function setCookieForDomain(name: string, value: string) {
-  const host = window.location.hostname
-  document.cookie = `${name}=${value}; path=/`
-  document.cookie = `${name}=${value}; path=/; domain=${host}`
-  if (host.split(".").length > 1) {
-    const rootDomain = host.split(".").slice(-2).join(".")
-    document.cookie = `${name}=${value}; path=/; domain=.${rootDomain}`
+function setGTCookie(value: string) {
+  const hostname = window.location.hostname
+  document.cookie = `googtrans=${value}; path=/`
+  document.cookie = `googtrans=${value}; path=/; domain=${hostname}`
+  if (hostname.includes(".")) {
+    const root = hostname.split(".").slice(-2).join(".")
+    document.cookie = `googtrans=${value}; path=/; domain=.${root}`
   }
 }
 
-function waitForSelectAndChange(gtCode: string, attempts = 0) {
-  const select = document.querySelector<HTMLSelectElement>(".goog-te-combo")
-  if (select) {
-    select.value = gtCode
-    select.dispatchEvent(new Event("change"))
-    return
+function waitAndChange(gtCode: string, attempt = 0) {
+  const sel = document.querySelector<HTMLSelectElement>(".goog-te-combo")
+  if (sel) {
+    sel.value = gtCode
+    sel.dispatchEvent(new Event("change"))
+  } else if (attempt < 25) {
+    setTimeout(() => waitAndChange(gtCode, attempt + 1), 120)
+  } else {
+    window.location.reload()
   }
-  if (attempts < 20) setTimeout(() => waitForSelectAndChange(gtCode, attempts + 1), 150)
-  else window.location.reload()
 }
 
-function triggerTranslation(gtCode: string | null) {
+function applyLanguage(gtCode: string | null) {
   if (!gtCode) {
-    // Restore to original Turkish
-    setCookieForDomain("googtrans", "/auto/tr")
-    // Try the combo box first
-    const select = document.querySelector<HTMLSelectElement>(".goog-te-combo")
-    if (select) {
-      select.value = "tr"
-      select.dispatchEvent(new Event("change"))
-    } else {
-      window.location.reload()
-    }
+    setGTCookie("/auto/tr")
+    const sel = document.querySelector<HTMLSelectElement>(".goog-te-combo")
+    if (sel) { sel.value = "tr"; sel.dispatchEvent(new Event("change")) }
+    else window.location.reload()
     return
   }
-  setCookieForDomain("googtrans", `/tr/${gtCode}`)
-  waitForSelectAndChange(gtCode)
+  setGTCookie(`/tr/${gtCode}`)
+  waitAndChange(gtCode)
 }
 
-function detectCurrentLang(): LangCode {
-  if (typeof document === "undefined") return "tr"
+function getActiveLang(): LangCode {
+  if (typeof document === "undefined") return "TR"
   const m = document.cookie.match(/googtrans=\/(?:tr|auto)\/([a-z-]+)/)
-  if (!m || m[1] === "tr") return "tr"
-  const found = LANGUAGES.find((l) => l.gtCode === m[1])
-  return found?.code ?? "tr"
+  if (!m || m[1] === "tr") return "TR"
+  return LANGUAGES.find((l) => l.gtCode === m[1])?.code ?? "TR"
 }
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 export function LanguageSelector() {
-  const [current, setCurrent] = useState<LangCode>("tr")
+  const [current, setCurrent] = useState<LangCode>("TR")
   const [open, setOpen]       = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    setCurrent(detectCurrentLang())
-  }, [])
+  useEffect(() => { setCurrent(getActiveLang()) }, [])
 
   useEffect(() => {
-    function onOutside(e: MouseEvent) {
+    const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener("mousedown", onOutside)
-    return () => document.removeEventListener("mousedown", onOutside)
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
   }, [])
 
   const active = LANGUAGES.find((l) => l.code === current) ?? LANGUAGES[0]
 
-  function handleSelect(lang: (typeof LANGUAGES)[number]) {
+  function select(lang: (typeof LANGUAGES)[number]) {
     setOpen(false)
     if (lang.code === current) return
     setCurrent(lang.code)
-    triggerTranslation(lang.gtCode)
+    applyLanguage(lang.gtCode)
   }
 
   return (
     <div ref={ref} className="relative">
-      {/* Trigger button — shows FLAG + CODE only (no redundant globe text) */}
+      {/* Trigger — only code + chevron, no flag or duplicate text */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={`Dil: ${active.label}. Değiştir`}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold hover:bg-secondary/60 transition-colors"
+        aria-label={`Dil: ${active.label}`}
+        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold tracking-widest text-foreground hover:bg-secondary/60 transition-colors"
       >
-        <span className="text-sm leading-none" aria-hidden="true">{active.flag}</span>
-        <span className="text-foreground tracking-wide">{active.code.toUpperCase()}</span>
-        <ChevronDown className={cn(
-          "h-3 w-3 text-muted-foreground transition-transform duration-150",
-          open && "rotate-180"
-        )} />
+        {active.code}
+        <ChevronDown
+          className={cn(
+            "h-3 w-3 text-muted-foreground transition-transform duration-150",
+            open && "rotate-180"
+          )}
+        />
       </button>
 
       {/* Dropdown */}
       {open && (
         <div
           role="listbox"
-          aria-label="Dil seçin"
-          className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border bg-background shadow-2xl py-1.5 z-[200]"
-          style={{ animation: "fadeIn .1s ease-out both" }}
+          aria-label="Dil Seç"
+          className={cn(
+            "absolute right-0 top-full mt-2 w-56 z-[200]",
+            "rounded-2xl border border-border bg-background shadow-2xl overflow-hidden",
+          )}
         >
           {LANGUAGES.map((lang) => {
             const isActive = lang.code === current
@@ -122,36 +113,46 @@ export function LanguageSelector() {
                 key={lang.code}
                 role="option"
                 aria-selected={isActive}
-                onClick={() => handleSelect(lang)}
+                onClick={() => select(lang)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors",
+                  "w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors group",
                   isActive
-                    ? "bg-primary/8 text-primary font-semibold"
-                    : "text-foreground hover:bg-secondary"
+                    ? "bg-primary/5 text-primary"
+                    : "text-foreground hover:bg-secondary/60"
                 )}
               >
-                <span className="text-base leading-none w-5 text-center" aria-hidden="true">
-                  {lang.flag}
+                {/* Code badge */}
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center w-8 shrink-0",
+                    "rounded-md px-1.5 py-0.5 text-[11px] font-bold tracking-widest",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "bg-secondary text-muted-foreground group-hover:bg-border/70"
+                  )}
+                >
+                  {lang.code}
                 </span>
-                <span className="flex-1 text-left">{lang.label}</span>
-                <span className="text-[11px] font-bold text-muted-foreground/60 tracking-wider">
-                  {lang.code.toUpperCase()}
+
+                {/* Language name */}
+                <span className={cn("flex-1 text-left font-medium leading-tight", isActive && "text-primary")}>
+                  {lang.label}
                 </span>
+
+                {/* Sublabel */}
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-normal">
+                  {lang.sublabel}
+                </span>
+
+                {/* Active check */}
                 {isActive && (
-                  <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                 )}
               </button>
             )
           })}
-
-          <div className="mx-3 mt-1.5 pt-1.5 border-t border-border/50">
-            <p className="text-[10px] text-muted-foreground/60 leading-snug">
-              Google Translate ile çevrilir
-            </p>
-          </div>
         </div>
       )}
     </div>
   )
 }
-
