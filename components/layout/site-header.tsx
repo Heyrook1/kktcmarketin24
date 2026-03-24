@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   Search, ShoppingCart, ChevronDown,
@@ -202,6 +202,9 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
 
+  // Stable reference so MegaMenu's useEffect doesn't re-fire on every render
+  const closeMegaMenu = useCallback(() => setMegaMenuOpen(false), [])
+
   useEffect(() => {
     setMegaMenuOpen(false)
     setMobileMenuOpen(false)
@@ -358,10 +361,14 @@ export function Header() {
               />
             </Link>
 
-            {/* Desktop categories trigger */}
-            <div className="hidden lg:block relative">
+            {/* Desktop categories trigger — wraps both button and panel so
+                there's no hover gap between them */}
+            <div
+              className="hidden lg:block relative"
+              onMouseEnter={() => setMegaMenuOpen(true)}
+              onMouseLeave={() => setMegaMenuOpen(false)}
+            >
               <button
-                onMouseEnter={() => setMegaMenuOpen(true)}
                 onClick={() => setMegaMenuOpen((v) => !v)}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
@@ -376,6 +383,10 @@ export function Header() {
                 Kategoriler
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
               </button>
+
+              {megaMenuOpen && (
+                <MegaMenu onClose={closeMegaMenu} />
+              )}
             </div>
 
             {/* Search */}
@@ -393,9 +404,6 @@ export function Header() {
         </div>
 
         {/* Mega menu */}
-        {megaMenuOpen && (
-          <MegaMenu onClose={() => setMegaMenuOpen(false)} />
-        )}
       </header>
     </>
   )

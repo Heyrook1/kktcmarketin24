@@ -206,12 +206,18 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
 // ---------------------------------------------------------------------------
 export function MegaMenu({ onClose }: { onClose: () => void }) {
   const [activeCategory, setActiveCategory] = useState<Category | null>(null)
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pathname = usePathname()
+  const hoverTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pathname    = usePathname()
+  const prevPathRef = useRef(pathname)
 
-  // Auto-close when route changes (after a Link click navigates)
-  useEffect(() => { onClose() }, [pathname, onClose])
+  // Close only on real navigation (not on mount)
+  useEffect(() => {
+    if (prevPathRef.current !== pathname) {
+      prevPathRef.current = pathname
+      onClose()
+    }
+  }, [pathname, onClose])
 
   const handleCatEnter = useCallback((cat: Category) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
@@ -229,9 +235,11 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
     if (closeTimer.current) clearTimeout(closeTimer.current)
   }, [])
 
-  // Delayed close so clicks can register before unmount
+  // Give 200ms grace so the mouse can travel from the trigger button to the
+  // panel without the menu closing in the gap between them.
   const handleMenuLeave = useCallback(() => {
-    closeTimer.current = setTimeout(() => onClose(), 150)
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    closeTimer.current = setTimeout(() => onClose(), 200)
   }, [onClose])
 
   const handleMenuEnter = useCallback(() => {
