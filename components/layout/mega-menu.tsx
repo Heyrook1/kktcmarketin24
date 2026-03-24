@@ -1,17 +1,18 @@
 "use client"
 
+import Link from "next/link"
 import Image from "next/image"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
-  Watch, ShoppingBasket, Heart, BookOpen, ChevronRight,
-  ArrowRight, LayoutGrid,
+  ChevronRight, ArrowRight, LayoutGrid,
   Flame, Zap, PackagePlus,
+  Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
+  Watch, ShoppingBasket, Heart, BookOpen,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
-import { categories, type Category } from "@/lib/data/categories"
 import { cn } from "@/lib/utils"
+import { categories, type Category } from "@/lib/data/categories"
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
@@ -21,14 +22,14 @@ const ICON_MAP: Record<string, React.ElementType> = {
 // ---------------------------------------------------------------------------
 // DefaultPanel — shown when no category is hovered
 // ---------------------------------------------------------------------------
-function DefaultPanel({ onNavigate }: { onNavigate: (href: string) => void }) {
+function DefaultPanel({ onClose }: { onClose: () => void }) {
   const trending = [
-    { label: "Cep Telefonları", href: "/category/electronics?sub=phones",  icon: Smartphone },
-    { label: "Kadın Giyim",     href: "/category/fashion?sub=womens",      icon: Shirt },
-    { label: "Cilt Bakımı",     href: "/category/beauty?sub=skincare",     icon: Sparkles },
-    { label: "Fitness",         href: "/category/sports?sub=fitness",      icon: Dumbbell },
-    { label: "Oyuncaklar",      href: "/category/kids-baby?sub=toys",      icon: Baby },
-    { label: "Saatler",         href: "/category/jewelry?sub=watches",     icon: Watch },
+    { label: "Cep Telefonları", href: "/category/electronics?sub=phones",   icon: Smartphone },
+    { label: "Kadın Giyim",     href: "/category/fashion?sub=womens",       icon: Shirt },
+    { label: "Cilt Bakımı",     href: "/category/beauty?sub=skincare",      icon: Sparkles },
+    { label: "Fitness",         href: "/category/sports?sub=fitness",       icon: Dumbbell },
+    { label: "Oyuncaklar",      href: "/category/kids-baby?sub=toys",       icon: Baby },
+    { label: "Saatler",         href: "/category/jewelry?sub=watches",      icon: Watch },
   ]
   const flashDeals = [
     { label: "Kulaklıklar",   href: "/category/electronics?sub=audio",  badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
@@ -53,18 +54,18 @@ function DefaultPanel({ onNavigate }: { onNavigate: (href: string) => void }) {
           {trending.map((item) => {
             const Icon = item.icon
             return (
-              <button
+              <Link
                 key={item.href}
-                type="button"
-                onClick={() => onNavigate(item.href)}
-                className="w-full flex items-center gap-3 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group"
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-3 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group"
               >
                 <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-secondary group-hover:bg-primary/10 transition-colors">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
                 </span>
-                <span className="font-medium text-left flex-1">{item.label}</span>
-                <ArrowRight className="h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" />
-              </button>
+                <span className="font-medium">{item.label}</span>
+                <ArrowRight className="ml-auto h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" />
+              </Link>
             )
           })}
         </div>
@@ -78,18 +79,18 @@ function DefaultPanel({ onNavigate }: { onNavigate: (href: string) => void }) {
         </div>
         <div className="space-y-2">
           {flashDeals.map((item) => (
-            <button
+            <Link
               key={item.href}
-              type="button"
-              onClick={() => onNavigate(item.href)}
-              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group"
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group"
             >
               <div className="relative h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/40">
                 <Image src={item.image} alt={item.label} fill className="object-cover" sizes="44px" />
               </div>
-              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground text-left">{item.label}</span>
+              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground">{item.label}</span>
               <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-md">{item.badge}</span>
-            </button>
+            </Link>
           ))}
         </div>
       </div>
@@ -102,27 +103,27 @@ function DefaultPanel({ onNavigate }: { onNavigate: (href: string) => void }) {
         </div>
         <div className="space-y-2">
           {newArrivals.map((item) => (
-            <button
+            <Link
               key={item.href}
-              type="button"
-              onClick={() => onNavigate(item.href)}
-              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group"
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group"
             >
               <div className="relative h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/40">
                 <Image src={item.image} alt={item.label} fill className="object-cover" sizes="44px" />
               </div>
-              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground text-left">{item.label}</span>
+              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground">{item.label}</span>
               <span className="text-[10px] font-bold text-white bg-green-500 px-1.5 py-0.5 rounded-md">YENİ</span>
-            </button>
+            </Link>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => onNavigate("/products?sort=newest")}
+        <Link
+          href="/products?sort=newest"
+          onClick={onClose}
           className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-semibold hover:underline"
         >
           Tüm yeni ürünler <ArrowRight className="h-3 w-3" />
-        </button>
+        </Link>
       </div>
     </div>
   )
@@ -131,36 +132,33 @@ function DefaultPanel({ onNavigate }: { onNavigate: (href: string) => void }) {
 // ---------------------------------------------------------------------------
 // CategoryPanel — shown when a category is hovered
 // ---------------------------------------------------------------------------
-function CategoryPanel({ category, onNavigate }: { category: Category; onNavigate: (href: string) => void }) {
+function CategoryPanel({ category, onClose }: { category: Category; onClose: () => void }) {
   return (
-    <div
-      className="flex-1 py-6 px-6 flex gap-8 overflow-hidden"
-      style={{ animation: "fadeIn 0.12s ease-out both" }}
-    >
+    <div className="flex-1 py-6 px-6 flex gap-8 overflow-hidden">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
           <h3 className="font-semibold text-base text-foreground">{category.name}</h3>
-          <button
-            type="button"
-            onClick={() => onNavigate(`/category/${category.slug}`)}
+          <Link
+            href={`/category/${category.slug}`}
+            onClick={onClose}
             className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
           >
             Tümünü gör <ArrowRight className="h-3 w-3" />
-          </button>
+          </Link>
         </div>
 
         {category.subcategories && category.subcategories.length > 0 ? (
           <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-0.5">
             {category.subcategories.map((sub) => (
-              <button
+              <Link
                 key={sub.id}
-                type="button"
-                onClick={() => onNavigate(`/category/${category.slug}?sub=${sub.slug}`)}
-                className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group text-left"
+                href={`/category/${category.slug}?sub=${sub.slug}`}
+                onClick={onClose}
+                className="flex items-center gap-2.5 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-border group-hover:bg-primary transition-colors flex-shrink-0" />
                 <span className="font-medium">{sub.name}</span>
-              </button>
+              </Link>
             ))}
           </div>
         ) : (
@@ -171,10 +169,10 @@ function CategoryPanel({ category, onNavigate }: { category: Category; onNavigat
       {category.featured && (
         <div className="w-48 flex-shrink-0">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
-          <button
-            type="button"
-            onClick={() => onNavigate(category.featured!.href)}
-            className="block w-full group rounded-xl overflow-hidden ring-1 ring-border/40 hover:ring-primary/40 transition-all duration-200"
+          <Link
+            href={category.featured.href}
+            onClick={onClose}
+            className="block group rounded-xl overflow-hidden ring-1 ring-border/40 hover:ring-primary/40 transition-all duration-200"
           >
             <div className="relative aspect-[4/3] bg-secondary">
               <Image
@@ -186,17 +184,17 @@ function CategoryPanel({ category, onNavigate }: { category: Category; onNavigat
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-3">
-                <p className="text-white text-xs font-semibold leading-snug text-left">{category.featured.label}</p>
+                <p className="text-white text-xs font-semibold leading-snug">{category.featured.label}</p>
               </div>
             </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate(`/category/${category.slug}`)}
+          </Link>
+          <Link
+            href={`/category/${category.slug}`}
+            onClick={onClose}
             className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-150"
           >
             Kategoriye git <ChevronRight className="h-3.5 w-3.5" />
-          </button>
+          </Link>
         </div>
       )}
     </div>
@@ -204,37 +202,34 @@ function CategoryPanel({ category, onNavigate }: { category: Category; onNavigat
 }
 
 // ---------------------------------------------------------------------------
-// MegaMenu (exported)
+// MegaMenu — exported, used by Header
 // ---------------------------------------------------------------------------
 export function MegaMenu({ onClose }: { onClose: () => void }) {
-  const router = useRouter()
   const [activeCategory, setActiveCategory] = useState<Category | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Navigate: close first, then push — prevents menu blocking the route change
-  const onNavigate = useCallback((href: string) => {
-    onClose()
-    // Use setTimeout to allow the menu close state update to flush
-    // before the router push, ensuring no re-render race
-    setTimeout(() => router.push(href), 0)
-  }, [onClose, router])
+  const router = useRouter()
 
   const handleCatEnter = useCallback((cat: Category) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
     hoverTimer.current = setTimeout(() => setActiveCategory(cat), 80)
   }, [])
 
-  const handleCatLeave = useCallback(() => {
+  const handleLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
-    hoverTimer.current = setTimeout(() => setActiveCategory(null), 150)
+    hoverTimer.current = setTimeout(() => setActiveCategory(null), 120)
   }, [])
 
   const handlePanelEnter = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
   }, [])
 
-  useEffect(() => () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+  const handleCatClick = useCallback((slug: string) => {
+    onClose()
+    router.push(`/category/${slug}`)
+  }, [onClose, router])
+
+  useEffect(() => {
+    return () => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }
   }, [])
 
   return (
@@ -247,15 +242,19 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
         <div className="flex" style={{ minHeight: 360 }}>
 
           {/* Left: category list */}
-          <div className="w-56 border-r py-3 flex-shrink-0 bg-secondary/20">
+          <nav
+            className="w-56 border-r py-3 flex-shrink-0 bg-secondary/20"
+            aria-label="Kategori listesi"
+          >
             {categories.map((cat) => {
               const Icon = ICON_MAP[cat.icon] || Smartphone
               const isActive = activeCategory?.id === cat.id
               return (
                 <div
                   key={cat.id}
-                  role="button"
+                  role="menuitem"
                   tabIndex={0}
+                  aria-label={`${cat.name} kategorisi`}
                   className={cn(
                     "relative flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg cursor-pointer select-none transition-all duration-100 group",
                     isActive
@@ -263,12 +262,12 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
                       : "text-foreground hover:bg-secondary"
                   )}
                   onMouseEnter={() => handleCatEnter(cat)}
-                  onMouseLeave={handleCatLeave}
-                  onClick={() => onNavigate(`/category/${cat.slug}`)}
+                  onMouseLeave={handleLeave}
+                  onClick={() => handleCatClick(cat.slug)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault()
-                      onNavigate(`/category/${cat.slug}`)
+                      handleCatClick(cat.slug)
                     }
                   }}
                 >
@@ -296,23 +295,33 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
             })}
 
             <Separator className="my-2 mx-2" />
-            <button
-              type="button"
-              onClick={() => onNavigate("/categories")}
-              className="w-full flex items-center gap-2 px-4 py-2.5 mx-2 text-sm text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
+
+            <Link
+              href="/categories"
+              onClick={onClose}
+              className="flex items-center gap-2 px-4 py-2.5 mx-2 text-sm text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
             >
               <LayoutGrid className="h-4 w-4" />
               Tüm Kategoriler
               <ArrowRight className="h-3.5 w-3.5 ml-auto" />
-            </button>
-          </div>
+            </Link>
+          </nav>
 
           {/* Right: default or category panel */}
-          <div className="flex-1 overflow-hidden" onMouseEnter={handlePanelEnter}>
-            {activeCategory === null
-              ? <DefaultPanel onNavigate={onNavigate} />
-              : <CategoryPanel key={activeCategory.id} category={activeCategory} onNavigate={onNavigate} />
-            }
+          <div
+            className="flex-1 overflow-hidden"
+            onMouseEnter={handlePanelEnter}
+            onMouseLeave={handleLeave}
+          >
+            {activeCategory === null ? (
+              <DefaultPanel onClose={onClose} />
+            ) : (
+              <CategoryPanel
+                key={activeCategory.id}
+                category={activeCategory}
+                onClose={onClose}
+              />
+            )}
           </div>
 
         </div>
