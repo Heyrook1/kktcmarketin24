@@ -38,31 +38,28 @@ const MEGA_MENU_CATEGORIES = categories
 // ---------------------------------------------------------------------------
 function DefaultPanel({ onClose }: { onClose: () => void }) {
   const router = useRouter()
-  
+
   const trending = [
-    { label: "Cep Telefonları", href: "/category/electronics?sub=phones", icon: Smartphone },
-    { label: "Kadın Giyim",     href: "/category/fashion?sub=womens",     icon: Shirt },
-    { label: "Cilt Bakımı",     href: "/category/beauty?sub=skincare",    icon: Sparkles },
-    { label: "Fitness",         href: "/category/sports?sub=fitness",     icon: Dumbbell },
-    { label: "Oyuncaklar",      href: "/category/kids-baby?sub=toys",     icon: Baby },
-    { label: "Saatler",         href: "/category/jewelry?sub=watches",    icon: Watch },
+    { label: "Cep Telefonları", href: "/category/electronics?sub=phones",    icon: Smartphone },
+    { label: "Kadın Giyim",     href: "/category/fashion?sub=womens",        icon: Shirt },
+    { label: "Cilt Bakımı",     href: "/category/beauty?sub=skincare",       icon: Sparkles },
+    { label: "Fitness",         href: "/category/sports?sub=fitness",        icon: Dumbbell },
+    { label: "Oyuncaklar",      href: "/category/kids-baby?sub=toys",        icon: Baby },
+    { label: "Saatler",         href: "/category/jewelry?sub=watches",       icon: Watch },
   ]
   const flashDeals = [
-    { label: "Kulaklıklar",  href: "/category/electronics?sub=audio",    badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
-    { label: "Spor Ayakkabı",href: "/category/sports?sub=running",       badge: "%30", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
-    { label: "Parfüm",       href: "/category/beauty?sub=fragrance",     badge: "%25", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
+    { label: "Kulaklıklar",   href: "/category/electronics?sub=audio",  badge: "%40", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
+    { label: "Spor Ayakkabı", href: "/category/sports?sub=running",     badge: "%30", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
+    { label: "Parfüm",        href: "/category/beauty?sub=fragrance",   badge: "%25", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
   ]
   const newArrivals = [
-    { label: "Yeni Elektronik",   href: "/products?sort=newest&category=electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=80&h=80&fit=crop" },
-    { label: "Yeni Moda",         href: "/products?sort=newest&category=fashion",     image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=80&h=80&fit=crop" },
-    { label: "Yeni Ev Ürünleri",  href: "/products?sort=newest&category=home-garden", image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=80&h=80&fit=crop" },
+    { label: "Yeni Elektronik",  href: "/products?sort=newest&category=electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=80&h=80&fit=crop" },
+    { label: "Yeni Moda",        href: "/products?sort=newest&category=fashion",     image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=80&h=80&fit=crop" },
+    { label: "Yeni Ev Ürünleri", href: "/products?sort=newest&category=home-garden", image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=80&h=80&fit=crop" },
   ]
-  
-  const handleNavigate = (href: string) => {
-    onClose()
-    router.push(href)
-  }
-  
+
+  const go = (href: string) => { onClose(); router.push(href) }
+
   return (
     <div className="flex-1 py-6 px-6 grid grid-cols-3 gap-8 overflow-hidden">
       {/* Trending */}
@@ -77,13 +74,14 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
             return (
               <button
                 key={item.href}
-                onClick={() => handleNavigate(item.href)}
-                className="w-full flex items-center gap-3 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group">
+                onClick={() => go(item.href)}
+                className="w-full flex items-center gap-3 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group"
+              >
                 <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-secondary group-hover:bg-primary/10 transition-colors">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
                 </span>
-                <span className="font-medium text-left">{item.label}</span>
-                <ArrowRight className="ml-auto h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" />
+                <span className="font-medium text-left flex-1">{item.label}</span>
+                <ArrowRight className="h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" />
               </button>
             )
           })}
@@ -100,8 +98,9 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
           {flashDeals.map((item) => (
             <button
               key={item.href}
-              onClick={() => handleNavigate(item.href)}
-              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group">
+              onClick={() => go(item.href)}
+              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group"
+            >
               <div className="relative h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/40">
                 <Image src={item.image} alt={item.label} fill className="object-cover" sizes="44px" />
               </div>
@@ -122,8 +121,9 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
           {newArrivals.map((item) => (
             <button
               key={item.href}
-              onClick={() => handleNavigate(item.href)}
-              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group">
+              onClick={() => go(item.href)}
+              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group"
+            >
               <div className="relative h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/40">
                 <Image src={item.image} alt={item.label} fill className="object-cover" sizes="44px" />
               </div>
@@ -133,8 +133,9 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <button
-          onClick={() => handleNavigate("/products?sort=newest")}
-          className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-semibold hover:underline">
+          onClick={() => go("/products?sort=newest")}
+          className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-semibold hover:underline"
+        >
           Tüm yeni ürünler <ArrowRight className="h-3 w-3" />
         </button>
       </div>
@@ -147,20 +148,17 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
 // ---------------------------------------------------------------------------
 function CategoryPanel({ category, onClose }: { category: Category; onClose: () => void }) {
   const router = useRouter()
-  
-  const handleNavigate = (href: string) => {
-    onClose()
-    router.push(href)
-  }
-  
+  const go = (href: string) => { onClose(); router.push(href) }
+
   return (
-    <div className="flex-1 py-6 px-6 flex gap-8 overflow-hidden animate-fade-in">
+    <div className="flex-1 py-6 px-6 flex gap-8 overflow-hidden" style={{ animation: "fadeIn 0.12s ease-out both" }}>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
           <h3 className="font-semibold text-base text-foreground">{category.name}</h3>
           <button
-            onClick={() => handleNavigate(`/category/${category.slug}`)}
-            className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline">
+            onClick={() => go(`/category/${category.slug}`)}
+            className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+          >
             Tümünü gör <ArrowRight className="h-3 w-3" />
           </button>
         </div>
@@ -169,7 +167,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
             {category.subcategories.map((sub) => (
               <button
                 key={sub.id}
-                onClick={() => handleNavigate(`/category/${category.slug}?sub=${sub.slug}`)}
+                onClick={() => go(`/category/${category.slug}?sub=${sub.slug}`)}
                 className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group text-left"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-border group-hover:bg-primary transition-colors flex-shrink-0" />
@@ -181,15 +179,22 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
           <p className="text-sm text-muted-foreground">{category.description}</p>
         )}
       </div>
+
       {category.featured && (
         <div className="w-48 flex-shrink-0">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
           <button
-            onClick={() => handleNavigate(category.featured.href)}
-            className="block w-full group rounded-xl overflow-hidden ring-1 ring-border/40 hover:ring-primary/40 transition-all duration-200">
+            onClick={() => go(category.featured!.href)}
+            className="block w-full group rounded-xl overflow-hidden ring-1 ring-border/40 hover:ring-primary/40 transition-all duration-200"
+          >
             <div className="relative aspect-[4/3] bg-secondary">
-              <Image src={category.featured.image} alt={category.featured.label} fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="192px" />
+              <Image
+                src={category.featured.image}
+                alt={category.featured.label}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="192px"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-3">
                 <p className="text-white text-xs font-semibold leading-snug text-left">{category.featured.label}</p>
@@ -197,8 +202,9 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
             </div>
           </button>
           <button
-            onClick={() => handleNavigate(`/category/${category.slug}`)}
-            className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-150">
+            onClick={() => go(`/category/${category.slug}`)}
+            className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-150"
+          >
             Kategoriye git <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -220,19 +226,19 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
     hoverTimer.current = setTimeout(() => setActiveCategory(cat), 80)
   }, [])
 
-  const handleCatLeaveAll = useCallback(() => {
+  const handleCatLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
-    hoverTimer.current = setTimeout(() => setActiveCategory(null), 120)
+    hoverTimer.current = setTimeout(() => setActiveCategory(null), 150)
   }, [])
 
   const handlePanelEnter = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
   }, [])
 
-  const handleCategoryClick = (slug: string) => {
+  const handleCategoryClick = useCallback((slug: string) => {
     onClose()
     router.push(`/category/${slug}`)
-  }
+  }, [onClose, router])
 
   useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }, [])
 
@@ -244,6 +250,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
     >
       <div className="container mx-auto px-4">
         <div className="flex" style={{ minHeight: 360 }}>
+
           {/* Left: category list */}
           <div className="w-56 border-r py-3 flex-shrink-0 bg-secondary/20">
             {MEGA_MENU_CATEGORIES.map((cat) => {
@@ -252,6 +259,8 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
               return (
                 <div
                   key={cat.id}
+                  role="button"
+                  tabIndex={0}
                   className={cn(
                     "relative flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg cursor-pointer select-none transition-all duration-100 group",
                     isActive
@@ -259,28 +268,42 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
                       : "text-foreground hover:bg-secondary"
                   )}
                   onMouseEnter={() => handleCatEnter(cat)}
-                  onMouseLeave={handleCatLeaveAll}
+                  onMouseLeave={handleCatLeave}
                   onClick={() => handleCategoryClick(cat.slug)}
-                  role="button"
-                  tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCategoryClick(cat.slug)
-                    if (e.key === " ") { e.preventDefault(); handleCategoryClick(cat.slug) }
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      handleCategoryClick(cat.slug)
+                    }
                   }}
                 >
-                  <Icon className={cn("h-4 w-4 flex-shrink-0 transition-colors", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
-                  <span className={cn("flex-1 text-sm font-medium truncate", isActive ? "text-primary-foreground" : "")}>{cat.name}</span>
-                  <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0 transition-all duration-100",
-                    isActive ? "text-primary-foreground/80 translate-x-0.5" : "text-muted-foreground/40 group-hover:text-muted-foreground")} />
-                  {/* Active bar */}
-                  {isActive && <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary-foreground/60" />}
+                  <Icon className={cn(
+                    "h-4 w-4 flex-shrink-0 transition-colors",
+                    isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
+                  )} />
+                  <span className={cn(
+                    "flex-1 text-sm font-medium truncate",
+                    isActive ? "text-primary-foreground" : ""
+                  )}>
+                    {cat.name}
+                  </span>
+                  <ChevronRight className={cn(
+                    "h-3.5 w-3.5 flex-shrink-0 transition-all duration-100",
+                    isActive
+                      ? "text-primary-foreground/80 translate-x-0.5"
+                      : "text-muted-foreground/40 group-hover:text-muted-foreground"
+                  )} />
+                  {isActive && (
+                    <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary-foreground/60" />
+                  )}
                 </div>
               )
             })}
             <Separator className="my-2 mx-2" />
             <button
               onClick={() => { onClose(); router.push("/categories") }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 mx-2 text-sm text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors">
+              className="w-full flex items-center gap-2 px-4 py-2.5 mx-2 text-sm text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
+            >
               <LayoutGrid className="h-4 w-4" />
               Tüm Kategoriler
               <ArrowRight className="h-3.5 w-3.5 ml-auto" />
@@ -294,6 +317,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
               : <CategoryPanel key={activeCategory.id} category={activeCategory} onClose={onClose} />
             }
           </div>
+
         </div>
       </div>
     </div>
@@ -301,7 +325,7 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Dynamic cart button — shows item count, last-added thumbnail, bump on add
+// DynamicCartButton
 // ---------------------------------------------------------------------------
 function DynamicCartButton() {
   const { getTotalItems, items, openCart } = useCartStore()
@@ -311,15 +335,14 @@ function DynamicCartButton() {
   const [bumping, setBumping] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
-  // Trigger bump animation whenever an item is added
   useEffect(() => {
     if (totalItems > prevCount.current) {
       setBumping(true)
       setShowPreview(true)
-      const bumpTimer = setTimeout(() => setBumping(false), 400)
-      const previewTimer = setTimeout(() => setShowPreview(false), 2200)
+      const t1 = setTimeout(() => setBumping(false), 400)
+      const t2 = setTimeout(() => setShowPreview(false), 2200)
       prevCount.current = totalItems
-      return () => { clearTimeout(bumpTimer); clearTimeout(previewTimer) }
+      return () => { clearTimeout(t1); clearTimeout(t2) }
     }
     prevCount.current = totalItems
   }, [totalItems])
@@ -334,9 +357,8 @@ function DynamicCartButton() {
         bumping && "scale-110 border-primary/50 bg-primary/10",
       )}
     >
-      {/* Icon */}
       <span className={cn("relative flex items-center justify-center", bumping && "animate-bounce")}>
-        <ShoppingCart className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+        <ShoppingCart style={{ width: 18, height: 18 }} />
         {totalItems > 0 && (
           <span className={cn(
             "absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-0.5 text-[10px] font-bold text-primary-foreground leading-none transition-transform",
@@ -347,9 +369,8 @@ function DynamicCartButton() {
         )}
       </span>
 
-      {/* Last-added product preview — slides in on add */}
-      {lastItem && showPreview && (
-        <span className="flex items-center gap-1.5 animate-slide-in-up overflow-hidden">
+      {lastItem && showPreview ? (
+        <span className="flex items-center gap-1.5 overflow-hidden">
           <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded-md border border-border/60">
             <Image
               src={lastItem.product.images?.[0] ?? "/placeholder.svg"}
@@ -363,20 +384,15 @@ function DynamicCartButton() {
             {lastItem.product.name}
           </span>
         </span>
-      )}
-
-      {/* Static label when nothing animating */}
-      {(!showPreview || !lastItem) && totalItems > 0 && (
-        <span className="hidden sm:inline text-xs text-muted-foreground">
-          Sepet
-        </span>
-      )}
+      ) : totalItems > 0 ? (
+        <span className="hidden sm:inline text-xs text-muted-foreground">Sepet</span>
+      ) : null}
     </button>
   )
 }
 
 // ---------------------------------------------------------------------------
-// AuthButton — shows "Giriş Yap" for guests, account icon for logged-in users
+// AuthButton
 // ---------------------------------------------------------------------------
 function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
@@ -384,19 +400,16 @@ function AuthButton() {
 
   useEffect(() => {
     const supabase = createClient()
-    // Initial session check
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
       setReady(true)
     })
-    // Keep in sync with sign-in / sign-out events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
   }, [])
 
-  // Render nothing until we know auth state to avoid flash
   if (!ready) return <div className="h-8 w-8" />
 
   if (user) {
@@ -419,6 +432,9 @@ function AuthButton() {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Header (exported)
+// ---------------------------------------------------------------------------
 export function Header() {
   const pathname = usePathname()
   const { getTotalItems, openCart } = useCartStore()
@@ -430,6 +446,7 @@ export function Header() {
   const megaWrapRef = useRef<HTMLDivElement>(null)
   const totalItems = getTotalItems()
 
+  // Close mega-menu on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (megaWrapRef.current && !megaWrapRef.current.contains(e.target as Node)) {
@@ -440,19 +457,30 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
+  // Close mega-menu on route change
+  useEffect(() => {
+    setMegaMenuOpen(false)
+  }, [pathname])
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-3">
 
-          {/* ── Logo ── */}
+          {/* Logo */}
           <Link href="/" className="flex-shrink-0">
-            <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={140} height={140} className="h-11 w-auto" priority />
+            <Image
+              src="/images/kktc-marketin24-logo.png"
+              alt="KKTC Marketin24"
+              width={140}
+              height={140}
+              className="h-11 w-auto"
+              priority
+            />
           </Link>
 
-          {/* ── Desktop nav ── */}
+          {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-0.5" ref={megaWrapRef}>
-
             {/* Kategoriler mega-menu trigger */}
             <button
               className={cn(
@@ -462,13 +490,6 @@ export function Header() {
                   : "text-foreground hover:bg-secondary"
               )}
               onMouseEnter={() => setMegaMenuOpen(true)}
-              onFocus={() => setMegaMenuOpen(true)}
-              onBlur={(e) => {
-                // only close if focus leaves the mega-menu wrapper entirely
-                if (!megaWrapRef.current?.contains(e.relatedTarget as Node)) {
-                  setMegaMenuOpen(false)
-                }
-              }}
               onClick={() => setMegaMenuOpen((v) => !v)}
               aria-expanded={megaMenuOpen}
               aria-haspopup="true"
@@ -478,7 +499,6 @@ export function Header() {
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
             </button>
 
-            {/* Nav links with active states */}
             <Link
               href="/products"
               className={cn(
@@ -491,6 +511,7 @@ export function Header() {
               <Tag className="h-4 w-4" />
               Ürünler
             </Link>
+
             <Link
               href="/vendors"
               className={cn(
@@ -503,6 +524,7 @@ export function Header() {
               <Store className="h-4 w-4" />
               Satıcılar
             </Link>
+
             <Link
               href="/compare"
               className={cn(
@@ -516,15 +538,15 @@ export function Header() {
             </Link>
           </nav>
 
-          {/* ── Search bar — desktop ── */}
+          {/* Desktop search */}
           <div className="hidden lg:flex flex-1 max-w-sm xl:max-w-md mx-2">
             <SearchBar />
           </div>
 
-          {/* ── Right actions ── */}
+          {/* Right actions */}
           <div className="flex items-center gap-0.5">
 
-            {/* Search icon — tablet only (md to lg) */}
+            {/* Search — tablet only */}
             <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="hidden md:flex lg:hidden">
@@ -542,33 +564,35 @@ export function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Language + Currency — visible on all sizes */}
+            {/* Language + Currency */}
             <div className="flex items-center gap-1.5">
               <CurrencySelector />
               <LanguageSelector />
             </div>
 
-            {/* Account — shows login button for guests, account icon for authenticated users */}
             <AuthButton />
 
-            {/* Favorites — tablet + desktop (bottom nav handles mobile only) */}
+            {/* Wishlist */}
             <Link href="/wishlist" className="hidden md:inline-flex">
               <Button variant="ghost" size="icon" aria-label="Favorilerim" className="relative overflow-visible">
                 <Heart className="h-5 w-5" />
                 {wishlistItems.length > 0 && (
-                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs pointer-events-none">
+                  <Badge
+                    variant="default"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs pointer-events-none"
+                  >
                     {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
                   </Badge>
                 )}
               </Button>
             </Link>
 
-            {/* Cart — tablet + desktop (bottom nav handles mobile only) */}
+            {/* Cart */}
             <div className="hidden md:flex">
               <DynamicCartButton />
             </div>
 
-            {/* Hamburger — mobile + tablet, opens category/nav sheet */}
+            {/* Mobile hamburger */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="lg:hidden">
@@ -584,19 +608,25 @@ export function Header() {
 
                   {/* Sheet header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b bg-secondary/40">
-                    <Image src="/images/kktc-marketin24-logo.png" alt="KKTC Marketin24" width={100} height={100} className="h-10 w-auto" />
+                    <Image
+                      src="/images/kktc-marketin24-logo.png"
+                      alt="KKTC Marketin24"
+                      width={100}
+                      height={100}
+                      className="h-10 w-auto"
+                    />
                     <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  {/* Quick nav links */}
+                  {/* Quick nav */}
                   <div className="px-3 py-2 border-b flex gap-1">
                     {[
                       { href: "/products", label: "Tüm Ürünler", icon: Tag },
-                      { href: "/vendors", label: "Satıcılar", icon: Store },
-                      { href: "/wishlist", label: "Favoriler", icon: Heart },
-                      { href: "/compare", label: "Karşılaştır", icon: LayoutGrid },
+                      { href: "/vendors",  label: "Satıcılar",   icon: Store },
+                      { href: "/wishlist", label: "Favoriler",   icon: Heart },
+                      { href: "/compare",  label: "Karşılaştır", icon: LayoutGrid },
                     ].map(({ href, label, icon: Icon }) => (
                       <Link
                         key={href}
@@ -610,7 +640,7 @@ export function Header() {
                     ))}
                   </div>
 
-                  {/* Category list with collapsible subcats */}
+                  {/* Category list */}
                   <div className="flex-1 overflow-y-auto px-3 py-2">
                     <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest px-1 py-2">
                       Kategoriler
@@ -627,7 +657,10 @@ export function Header() {
                             <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="flex-1 text-left font-medium">{cat.name}</span>
                             {cat.subcategories && (
-                              <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+                              <ChevronDown className={cn(
+                                "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                                isOpen && "rotate-180"
+                              )} />
                             )}
                           </button>
                           {isOpen && cat.subcategories && (
@@ -671,7 +704,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mega menu panel — outside container so it's full-width */}
+      {/* Mega menu — full width below header */}
       {megaMenuOpen && (
         <div onMouseEnter={() => setMegaMenuOpen(true)}>
           <MegaMenu onClose={() => setMegaMenuOpen(false)} />
