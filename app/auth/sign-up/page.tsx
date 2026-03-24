@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Eye, EyeOff, Loader2, ShoppingBag, MailCheck } from "lucide-react"
+import Image from "next/image"
+import { Eye, EyeOff, Loader2, MailCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -90,9 +91,15 @@ export default function SignUpPage() {
     <div className="min-h-screen flex items-center justify-center bg-secondary/30 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2 font-bold text-xl text-primary">
-            <ShoppingBag className="h-6 w-6" />
-            KKTC Market
+          <Link href="/" className="inline-block">
+            <Image
+              src="/images/kktc-marketin24-logo.png"
+              alt="KKTC Marketin24"
+              width={120}
+              height={120}
+              className="h-20 w-auto mx-auto"
+              priority
+            />
           </Link>
           <h1 className="mt-4 text-2xl font-bold text-foreground">Hesap oluştur</h1>
           <p className="mt-1 text-sm text-muted-foreground">Hızlı ve güvenli alışverişe başla</p>
