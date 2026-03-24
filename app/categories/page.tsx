@@ -5,11 +5,10 @@ import {
   Baby, Watch, ShoppingBasket, Heart, BookOpen, type LucideIcon,
 } from "lucide-react"
 import { categories } from "@/lib/data/categories"
-import { products } from "@/lib/data/products"
 import { Card, CardContent } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/server"
 
-// ISR: product counts update with each revalidation cycle
-export const revalidate = 3600
+export const revalidate = 300
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell,
@@ -21,7 +20,24 @@ export const metadata: Metadata = {
   description: "Marketin24'te tüm kategorileri keşfedin. Elektronik, moda, ev & bahçe, güzellik, spor ve daha fazlası.",
 }
 
-export default function CategoriesPage() {
+export default async function CategoriesPage() {
+  // Fetch real product counts from Supabase grouped by category
+  const supabase = await createClient()
+  const { data: countRows } = await supabase
+    .from("vendor_products")
+    .select("category")
+    .eq("is_active", true)
+
+  // Build a slug → count map from real DB data
+  const countMap: Record<string, number> = {}
+  if (countRows) {
+    for (const row of countRows) {
+      if (row.category) {
+        countMap[row.category] = (countMap[row.category] ?? 0) + 1
+      }
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -35,12 +51,11 @@ export default function CategoriesPage() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {categories.map((category) => {
-          // COUNT is derived live — never read from a stored field
-          const count = products.filter(p => p.categoryId === category.id).length
+          const count = countMap[category.slug] ?? 0
           const IconComponent = ICON_MAP[category.icon] ?? Smartphone
 
           return (
-            <Link key={category.id} href={`/category/${category.slug}`}>
+            <Link key={category.id} href={`/products?category=${category.slug}`}>
               <Card className="group h-full cursor-pointer transition-all hover:border-primary hover:shadow-md">
                 <CardContent className="flex flex-col items-center p-6 text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
@@ -50,7 +65,7 @@ export default function CategoriesPage() {
                     {category.name}
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {count} {count === 1 ? "ürün" : "ürün"}
+                    {count > 0 ? `${count} ürün` : "Yakında"}
                   </p>
                 </CardContent>
               </Card>

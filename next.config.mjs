@@ -9,7 +9,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  turbopack: {},
+  // Force a unique build ID each run to invalidate any stale module cache
+  generateBuildId: async () => `build-${Date.now()}`,
 }
 
 export default nextConfig
