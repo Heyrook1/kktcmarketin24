@@ -37,6 +37,8 @@ const MEGA_MENU_CATEGORIES = categories
 // DefaultPanel — shown when no category is hovered
 // ---------------------------------------------------------------------------
 function DefaultPanel({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  
   const trending = [
     { label: "Cep Telefonları", href: "/category/electronics?sub=phones", icon: Smartphone },
     { label: "Kadın Giyim",     href: "/category/fashion?sub=womens",     icon: Shirt },
@@ -55,6 +57,12 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
     { label: "Yeni Moda",         href: "/products?sort=newest&category=fashion",     image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=80&h=80&fit=crop" },
     { label: "Yeni Ev Ürünleri",  href: "/products?sort=newest&category=home-garden", image: "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=80&h=80&fit=crop" },
   ]
+  
+  const handleNavigate = (href: string) => {
+    onClose()
+    router.push(href)
+  }
+  
   return (
     <div className="flex-1 py-6 px-6 grid grid-cols-3 gap-8 overflow-hidden">
       {/* Trending */}
@@ -67,14 +75,16 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
           {trending.map((item) => {
             const Icon = item.icon
             return (
-              <Link key={item.href} href={item.href} onClick={onClose}
-                className="flex items-center gap-3 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group">
+              <button
+                key={item.href}
+                onClick={() => handleNavigate(item.href)}
+                className="w-full flex items-center gap-3 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group">
                 <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-secondary group-hover:bg-primary/10 transition-colors">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
                 </span>
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium text-left">{item.label}</span>
                 <ArrowRight className="ml-auto h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" />
-              </Link>
+              </button>
             )
           })}
         </div>
@@ -88,14 +98,16 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-2">
           {flashDeals.map((item) => (
-            <Link key={item.href} href={item.href} onClick={onClose}
-              className="flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group">
+            <button
+              key={item.href}
+              onClick={() => handleNavigate(item.href)}
+              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group">
               <div className="relative h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/40">
                 <Image src={item.image} alt={item.label} fill className="object-cover" sizes="44px" />
               </div>
-              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground">{item.label}</span>
+              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground text-left">{item.label}</span>
               <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-md">{item.badge}</span>
-            </Link>
+            </button>
           ))}
         </div>
       </div>
@@ -108,20 +120,23 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-2">
           {newArrivals.map((item) => (
-            <Link key={item.href} href={item.href} onClick={onClose}
-              className="flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group">
+            <button
+              key={item.href}
+              onClick={() => handleNavigate(item.href)}
+              className="w-full flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-border hover:bg-secondary/60 transition-all duration-150 group">
               <div className="relative h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-border/40">
                 <Image src={item.image} alt={item.label} fill className="object-cover" sizes="44px" />
               </div>
-              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground">{item.label}</span>
+              <span className="flex-1 text-sm font-medium text-foreground/80 group-hover:text-foreground text-left">{item.label}</span>
               <span className="text-[10px] font-bold text-white bg-green-500 px-1.5 py-0.5 rounded-md">YENİ</span>
-            </Link>
+            </button>
           ))}
         </div>
-        <Link href="/products?sort=newest" onClick={onClose}
+        <button
+          onClick={() => handleNavigate("/products?sort=newest")}
           className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-semibold hover:underline">
           Tüm yeni ürünler <ArrowRight className="h-3 w-3" />
-        </Link>
+        </button>
       </div>
     </div>
   )
@@ -131,28 +146,35 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
 // CategoryPanel — shown when a category is hovered
 // ---------------------------------------------------------------------------
 function CategoryPanel({ category, onClose }: { category: Category; onClose: () => void }) {
+  const router = useRouter()
+  
+  const handleNavigate = (href: string) => {
+    onClose()
+    router.push(href)
+  }
+  
   return (
     <div className="flex-1 py-6 px-6 flex gap-8 overflow-hidden animate-fade-in">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
           <h3 className="font-semibold text-base text-foreground">{category.name}</h3>
-          <Link href={`/category/${category.slug}`} onClick={onClose}
+          <button
+            onClick={() => handleNavigate(`/category/${category.slug}`)}
             className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline">
             Tümünü gör <ArrowRight className="h-3 w-3" />
-          </Link>
+          </button>
         </div>
         {category.subcategories && category.subcategories.length > 0 ? (
           <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-0.5">
             {category.subcategories.map((sub) => (
-              <Link
+              <button
                 key={sub.id}
-                href={`/category/${category.slug}?sub=${sub.slug}`}
-                onClick={onClose}
-                className="flex items-center gap-2.5 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group"
+                onClick={() => handleNavigate(`/category/${category.slug}?sub=${sub.slug}`)}
+                className="w-full flex items-center gap-2.5 py-2 px-2 rounded-lg text-sm text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-150 group text-left"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-border group-hover:bg-primary transition-colors flex-shrink-0" />
                 <span className="font-medium">{sub.name}</span>
-              </Link>
+              </button>
             ))}
           </div>
         ) : (
@@ -162,20 +184,23 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
       {category.featured && (
         <div className="w-48 flex-shrink-0">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Öne Çıkan</p>
-          <Link href={category.featured.href} onClick={onClose} className="block group rounded-xl overflow-hidden ring-1 ring-border/40 hover:ring-primary/40 transition-all duration-200">
+          <button
+            onClick={() => handleNavigate(category.featured.href)}
+            className="block w-full group rounded-xl overflow-hidden ring-1 ring-border/40 hover:ring-primary/40 transition-all duration-200">
             <div className="relative aspect-[4/3] bg-secondary">
               <Image src={category.featured.image} alt={category.featured.label} fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="192px" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-3">
-                <p className="text-white text-xs font-semibold leading-snug">{category.featured.label}</p>
+                <p className="text-white text-xs font-semibold leading-snug text-left">{category.featured.label}</p>
               </div>
             </div>
-          </Link>
-          <Link href={`/category/${category.slug}`} onClick={onClose}
+          </button>
+          <button
+            onClick={() => handleNavigate(`/category/${category.slug}`)}
             className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-150">
             Kategoriye git <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
+          </button>
         </div>
       )}
     </div>
@@ -186,6 +211,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
 // MegaMenu
 // ---------------------------------------------------------------------------
 function MegaMenu({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
   const [activeCategory, setActiveCategory] = useState<Category | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -202,6 +228,11 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
   const handlePanelEnter = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
   }, [])
+
+  const handleCategoryClick = (slug: string) => {
+    onClose()
+    router.push(`/category/${slug}`)
+  }
 
   useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }, [])
 
@@ -229,10 +260,13 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
                   )}
                   onMouseEnter={() => handleCatEnter(cat)}
                   onMouseLeave={handleCatLeaveAll}
-                  onClick={() => onClose()}
+                  onClick={() => handleCategoryClick(cat.slug)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && onClose()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCategoryClick(cat.slug)
+                    if (e.key === " ") { e.preventDefault(); handleCategoryClick(cat.slug) }
+                  }}
                 >
                   <Icon className={cn("h-4 w-4 flex-shrink-0 transition-colors", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
                   <span className={cn("flex-1 text-sm font-medium truncate", isActive ? "text-primary-foreground" : "")}>{cat.name}</span>
@@ -244,12 +278,13 @@ function MegaMenu({ onClose }: { onClose: () => void }) {
               )
             })}
             <Separator className="my-2 mx-2" />
-            <Link href="/categories" onClick={onClose}
-              className="flex items-center gap-2 px-4 py-2.5 mx-2 text-sm text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors">
+            <button
+              onClick={() => { onClose(); router.push("/categories") }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 mx-2 text-sm text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors">
               <LayoutGrid className="h-4 w-4" />
               Tüm Kategoriler
               <ArrowRight className="h-3.5 w-3.5 ml-auto" />
-            </Link>
+            </button>
           </div>
 
           {/* Right: default or category panel */}
@@ -418,7 +453,7 @@ export function Header() {
           {/* ── Desktop nav ── */}
           <nav className="hidden lg:flex items-center gap-0.5" ref={megaWrapRef}>
 
-            {/* Kategoriler mega-menu trigger — Fix 3: keyboard accessible via onFocus */}
+            {/* Kategoriler mega-menu trigger */}
             <button
               className={cn(
                 "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors",
@@ -443,7 +478,7 @@ export function Header() {
               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
             </button>
 
-            {/* Fix 1: active-state classes driven by pathname for each nav link */}
+            {/* Nav links with active states */}
             <Link
               href="/products"
               className={cn(
@@ -536,7 +571,7 @@ export function Header() {
             {/* Hamburger — mobile + tablet, opens category/nav sheet */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden md:flex lg:hidden">
+                <Button variant="ghost" size="icon" className="lg:hidden">
                   <LayoutGrid className="h-5 w-5" />
                   <span className="sr-only">Menüyü aç</span>
                 </Button>
@@ -591,7 +626,6 @@ export function Header() {
                           >
                             <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="flex-1 text-left font-medium">{cat.name}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums mr-1">{cat.productCount}</span>
                             {cat.subcategories && (
                               <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
                             )}
