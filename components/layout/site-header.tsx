@@ -205,6 +205,18 @@ export function Header() {
   // Stable reference so MegaMenu's useEffect doesn't re-fire on every render
   const closeMegaMenu = useCallback(() => setMegaMenuOpen(false), [])
 
+  // Delayed close — gives the cursor time to travel from the trigger button
+  // down into the absolute-positioned MegaMenu panel without it closing.
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleMenuWrapperEnter = useCallback(() => {
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
+    setMegaMenuOpen(true)
+  }, [])
+  const handleMenuWrapperLeave = useCallback(() => {
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
+    menuCloseTimer.current = setTimeout(() => setMegaMenuOpen(false), 180)
+  }, [])
+
   useEffect(() => {
     setMegaMenuOpen(false)
     setMobileMenuOpen(false)
@@ -365,8 +377,8 @@ export function Header() {
                 there's no hover gap between them */}
             <div
               className="hidden lg:block relative"
-              onMouseEnter={() => setMegaMenuOpen(true)}
-              onMouseLeave={() => setMegaMenuOpen(false)}
+              onMouseEnter={handleMenuWrapperEnter}
+              onMouseLeave={handleMenuWrapperLeave}
             >
               <button
                 onClick={() => setMegaMenuOpen((v) => !v)}
