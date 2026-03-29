@@ -239,7 +239,7 @@ function ProductsInner({
     [searchInput]
   )
 
-  // Debounce URL sync + search analytics
+  // Debounce URL sync only
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -249,26 +249,9 @@ function ProductsInner({
       if (selectedCategories.length === 1) params.set("category", selectedCategories[0])
       if (sortBy !== "newest") params.set("sort", sortBy)
       router.replace(`/products${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
-
-      // Index search event for analytics (fire-and-forget)
-      if (searchInput.trim().length >= 2) {
-        const parsedIntent = parseSearchIntent(searchInput)
-        fetch("/api/search/analytics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query:        searchInput.trim(),
-            category:     parsedIntent.category ?? selectedCategories[0] ?? null,
-            subcategory:  parsedIntent.subcategory ?? null,
-            brand:        parsedIntent.brand ?? null,
-            result_count: filteredProducts.length,
-            source:       "products_page",
-          }),
-        }).catch(() => {/* non-critical */})
-      }
     }, 350)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [searchInput, selectedCategories, sortBy, router, filteredProducts.length])
+  }, [searchInput, selectedCategories, sortBy, router])
 
   // Sync URL → state when navigating from navbar
   useEffect(() => {
@@ -353,6 +336,29 @@ function ProductsInner({
 
     return result
   }, [initialProducts, initialCategories, selectedCategories, selectedVendors, showFeaturedOnly, sortBy, searchInput, intent])
+
+  // ── Search analytics — runs after filteredProducts is defined ────────────
+  const analyticsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (analyticsTimer.current) clearTimeout(analyticsTimer.current)
+    if (searchInput.trim().length < 2) return
+    analyticsTimer.current = setTimeout(() => {
+      const parsedIntent = parseSearchIntent(searchInput)
+      fetch("/api/search/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query:        searchInput.trim(),
+          category:     parsedIntent.category ?? selectedCategories[0] ?? null,
+          subcategory:  parsedIntent.subcategory ?? null,
+          brand:        parsedIntent.brand ?? null,
+          result_count: filteredProducts.length,
+          source:       "products_page",
+        }),
+      }).catch(() => {/* non-critical */})
+    }, 800)
+    return () => { if (analyticsTimer.current) clearTimeout(analyticsTimer.current) }
+  }, [searchInput, selectedCategories, filteredProducts.length])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleCategory = useCallback((catId: string) => {
