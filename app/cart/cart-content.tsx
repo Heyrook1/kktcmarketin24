@@ -63,8 +63,7 @@ export function CartContent() {
         <h2 className="text-xl font-semibold mb-2">Sepetiniz boş</h2>
         <p className="text-muted-foreground mb-6">Henüz sepetinize ürün eklemediniz</p>
         <Button asChild size="lg">
-          <Link href="/products">
-            Alışverişe Başla
+          <Link href="/urunler">
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
@@ -286,7 +285,7 @@ export function CartContent() {
               </Link>
             </Button>
             <Button variant="outline" className="w-full h-9 text-sm rounded-xl" asChild>
-              <Link href="/products">Alışverişe Devam Et</Link>
+              <Link href="/urunler">Alışverişe Devam Et</Link>
             </Button>
           </CardFooter>
         </Card>

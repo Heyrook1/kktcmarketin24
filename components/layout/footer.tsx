@@ -59,7 +59,7 @@ export function Footer() {
               {categories.slice(0, 6).map((category) => (
                 <li key={category.id}>
                   <Link
-                    href={`/products?category=${category.slug}`}
+                    href={`/urunler?category=${category.slug}`}
                     className="text-sm text-muted-foreground transition-colors hover:text-primary"
                   >
                     {category.name}
@@ -75,7 +75,7 @@ export function Footer() {
             <ul className="flex flex-col gap-2">
               <li>
                 <Link
-                  href="/products"
+                  href="/urunler"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Tüm Ürünler

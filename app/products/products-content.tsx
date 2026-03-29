@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProductGrid } from "@/components/product/product-grid"
 import { cn } from "@/lib/utils"
-import { parseSearchIntent, getSearchSuggestions, type SearchSuggestion } from "@/lib/smart-search"
+import { parseSearchIntent, getSearchSuggestions, buildSearchAliases, type SearchSuggestion } from "@/lib/smart-search"
 import { getTagMeta, TAG_TAXONOMY } from "@/lib/tag-taxonomy"
 import type { Product } from "@/lib/data/products"
 import type { Category } from "@/lib/data/categories"
@@ -239,7 +239,7 @@ function ProductsInner({
     [searchInput]
   )
 
-  // Debounce URL sync
+  // Debounce URL sync only
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -248,7 +248,7 @@ function ProductsInner({
       if (searchInput) params.set("q", searchInput)
       if (selectedCategories.length === 1) params.set("category", selectedCategories[0])
       if (sortBy !== "newest") params.set("sort", sortBy)
-      router.replace(`/products${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+      router.replace(`/urunler${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
     }, 350)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [searchInput, selectedCategories, sortBy, router])
@@ -264,10 +264,10 @@ function ProductsInner({
   const filteredProducts = useMemo(() => {
     let result = [...initialProducts]
 
-    // Category filter (URL category OR intent category)
-    const activeCatSlug = selectedCategories[0] || intent?.categorySlug
-    if (activeCatSlug) {
-      result = result.filter((p) => p.categoryId === activeCatSlug)
+    const activeCat = selectedCategories[0] || intent?.categorySlug || ""
+
+    if (activeCat) {
+      result = result.filter((p) => (p.categoryId ?? "") === activeCat)
     }
 
     // Vendor filter
@@ -280,24 +280,37 @@ function ProductsInner({
       result = result.filter((p) => p.featured)
     }
 
-    // Smart tag filters from intent
-    if (intent?.subcategory || intent?.brand || intent?.attributes.length) {
+    // Smart tag filters from intent (subcategory, brand, attributes)
+    if (intent?.subcategory || intent?.brand || (intent?.attributes?.length ?? 0) > 0) {
       result = result.filter((p) => {
-        const tags = (p.tags ?? []).map(t => t.toLowerCase())
-        if (intent.subcategory && !tags.includes(intent.subcategory)) return false
-        if (intent.brand       && !tags.includes(intent.brand))       return false
+        const tags = (p.tags ?? []).map((t: string) => t.toLowerCase())
+        if (intent?.subcategory && !tags.includes(intent.subcategory)) return false
+        if (intent?.brand       && !tags.includes(intent.brand))       return false
         return true
       })
     }
 
-    // Text search fallback (client-side) on name / description
+    // Full text search — matches every typed character across:
+    //   name, description, tags (array), and the multilingual aliases string
+    //   (covers product type/kind, color, brand, model in TR/EN/CY)
     if (searchInput && !intent?.subcategory && !intent?.brand) {
-      const lower = searchInput.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lower) ||
-          p.description.toLowerCase().includes(lower)
-      )
+      const lower = searchInput.toLowerCase().trim()
+      // Split into tokens so "kırmızı nike" matches products with both terms
+      const tokens = lower.split(/\s+/).filter(Boolean)
+      result = result.filter((p) => {
+        const haystack = [
+          p.name,
+          p.description,
+          ...(p.tags ?? []),
+          (p as Product & { searchAliases?: string }).searchAliases ?? "",
+          // Also include category name & vendor name for broader matching
+          p.categoryId ?? "",
+          p.vendorName ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+        return tokens.every((tok) => haystack.includes(tok))
+      })
     }
 
     // Sort
@@ -313,6 +326,29 @@ function ProductsInner({
 
     return result
   }, [initialProducts, selectedCategories, selectedVendors, showFeaturedOnly, sortBy, searchInput, intent])
+
+  // ── Search analytics — runs after filteredProducts is defined ────────────
+  const analyticsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (analyticsTimer.current) clearTimeout(analyticsTimer.current)
+    if (searchInput.trim().length < 2) return
+    analyticsTimer.current = setTimeout(() => {
+      const parsedIntent = parseSearchIntent(searchInput)
+      fetch("/api/search/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query:        searchInput.trim(),
+          category:     parsedIntent.category ?? selectedCategories[0] ?? null,
+          subcategory:  parsedIntent.subcategory ?? null,
+          brand:        parsedIntent.brand ?? null,
+          result_count: filteredProducts.length,
+          source:       "products_page",
+        }),
+      }).catch(() => {/* non-critical */})
+    }, 800)
+    return () => { if (analyticsTimer.current) clearTimeout(analyticsTimer.current) }
+  }, [searchInput, selectedCategories, filteredProducts.length])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleCategory = useCallback((catId: string) => {

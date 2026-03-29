@@ -47,7 +47,7 @@ export function CartDrawer() {
               </p>
             </div>
             <Button onClick={closeCart} asChild>
-              <Link href="/products">Ürünleri İncele</Link>
+              <Link href="/urunler">Ürünleri İncele</Link>
             </Button>
           </div>
         ) : (

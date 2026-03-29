@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   Search, ShoppingCart, ChevronDown,
@@ -202,6 +202,21 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
 
+  // Stable reference so MegaMenu's useEffect doesn't re-fire on every render
+  const closeMegaMenu = useCallback(() => setMegaMenuOpen(false), [])
+
+  // Single shared close timer for the whole header zone.
+  // The MegaMenu is a sibling of the trigger button (both inside <header>)
+  // so we track "is cursor somewhere inside the header + menu area" with one ref.
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scheduleClose  = useCallback(() => {
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
+    menuCloseTimer.current = setTimeout(() => setMegaMenuOpen(false), 200)
+  }, [])
+  const cancelClose = useCallback(() => {
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
+  }, [])
+
   useEffect(() => {
     setMegaMenuOpen(false)
     setMobileMenuOpen(false)
@@ -303,7 +318,7 @@ export function Header() {
                           {isExpanded && cat.subcategories && (
                             <div className="pl-11 pr-4 pb-1 bg-secondary/30">
                               <Link
-                                href={`/products?category=${cat.slug}`}
+                                href={`/urunler?category=${cat.slug}`}
                                 className="block py-1.5 text-sm font-semibold text-primary"
                                 onClick={() => setMobileMenuOpen(false)}
                               >
@@ -312,7 +327,7 @@ export function Header() {
                               {cat.subcategories.map((sub) => (
                                 <Link
                                   key={sub.id}
-                                  href={`/products?category=${cat.slug}&sub=${sub.slug}`}
+                                  href={`/urunler?category=${cat.slug}&sub=${sub.slug}`}
                                   className="block py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                   onClick={() => setMobileMenuOpen(false)}
                                 >
@@ -358,10 +373,16 @@ export function Header() {
               />
             </Link>
 
-            {/* Desktop categories trigger */}
-            <div className="hidden lg:block relative">
+            {/* Desktop categories trigger — button only.
+                MegaMenu is rendered as a sibling of the main nav row
+                inside <header> so cursor travel from button → panel
+                never crosses a mouseLeave boundary. */}
+            <div
+              className="hidden lg:block relative"
+              onMouseEnter={() => { cancelClose(); setMegaMenuOpen(true) }}
+              onMouseLeave={scheduleClose}
+            >
               <button
-                onMouseEnter={() => setMegaMenuOpen(true)}
                 onClick={() => setMegaMenuOpen((v) => !v)}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
@@ -370,7 +391,8 @@ export function Header() {
                     : "text-foreground hover:bg-secondary"
                 )}
                 aria-expanded={megaMenuOpen}
-                aria-label="Kategoriler"
+                aria-haspopup="true"
+                aria-label="Kategoriler menüsü"
               >
                 <LayoutGrid className="h-4 w-4" />
                 Kategoriler
@@ -392,9 +414,17 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mega menu */}
+        {/* Mega menu — direct child of <header> so absolute positioning
+            is relative to the sticky header, not the button wrapper.
+            onMouseEnter/Leave share the same timer as the trigger button. */}
         {megaMenuOpen && (
-          <MegaMenu onClose={() => setMegaMenuOpen(false)} />
+          <div
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+            className="hidden lg:block"
+          >
+            <MegaMenu onClose={closeMegaMenu} />
+          </div>
         )}
       </header>
     </>

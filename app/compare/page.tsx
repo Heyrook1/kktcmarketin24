@@ -573,7 +573,7 @@ export default function ComparePage() {
             {/* CTA */}
             <div className="mt-10 text-center">
               <Button size="lg" asChild>
-                <Link href="/products">
+                <Link href="/urunler">
                   Hemen Alışverişe Başla
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

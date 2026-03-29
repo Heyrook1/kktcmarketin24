@@ -96,7 +96,7 @@ export default async function CheckoutSuccessPage({
               </Link>
             </Button>
             <Button variant="outline" asChild className="flex-1">
-              <Link href="/products">
+              <Link href="/urunler">
                 <ShoppingBag className="mr-2 h-4 w-4" />
                 Alışverişe Devam
               </Link>

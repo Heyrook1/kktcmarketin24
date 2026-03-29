@@ -5,9 +5,9 @@ import { Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const LANGUAGES = [
-  { code: "TR", label: "Türkçe",   sublabel: "TÜRKÇE",    flag: "/flags/tr.jpg", gtCode: null  },
-  { code: "EN", label: "English",  sublabel: "İNGİLİZCE", flag: "/flags/en.jpg", gtCode: "en"  },
-  { code: "CY", label: "Ελληνικά", sublabel: "YUNANCA",   flag: "/flags/cy.jpg", gtCode: "el"  },
+  { code: "TR", label: "Türkçe",   sublabel: "TÜRKÇE",    flag: "/flags/tr.jpg", gtCode: null },
+  { code: "EN", label: "English",  sublabel: "İNGİLİZCE", flag: "/flags/en.jpg", gtCode: "en" },
+  { code: "CY", label: "Ελληνικά", sublabel: "YUNANCA",   flag: "/flags/cy.jpg", gtCode: "el" },
 ] as const
 
 type LangCode = (typeof LANGUAGES)[number]["code"]
@@ -52,38 +52,21 @@ function getActiveLang(): LangCode {
   return LANGUAGES.find((l) => l.gtCode === m[1])?.code ?? "TR"
 }
 
-function FlagImg({
-  src,
-  alt,
-  width,
-  height,
-}: {
-  src: string
-  alt: string
-  width: number
-  height: number
-}) {
+function FlagImg({ src, alt, size }: { src: string; alt: string; size: number }) {
   return (
     <span
-      className="overflow-hidden rounded-[3px] shadow-sm shrink-0 inline-flex border border-black/10"
-      style={{ width, height }}
+      className="overflow-hidden rounded-[3px] shadow-sm shrink-0 inline-flex"
+      style={{ width: size * 1.5, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        className="w-full h-full object-cover"
-        loading="eager"
-      />
+      <img src={src} alt={alt} width={size * 1.5} height={size} className="w-full h-full object-cover" loading="eager" />
     </span>
   )
 }
 
 export function LanguageSelector() {
   const [current, setCurrent] = useState<LangCode>("TR")
-  const [open, setOpen]       = useState(false)
+  const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => { setCurrent(getActiveLang()) }, [])
@@ -114,16 +97,9 @@ export function LanguageSelector() {
         aria-label={`Dil: ${active.label}`}
         className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-secondary/60 transition-colors"
       >
-        <FlagImg src={active.flag} alt={active.label} width={21} height={14} />
-        <span className="text-[11px] font-bold tracking-widest text-foreground leading-none">
-          {active.code}
-        </span>
-        <ChevronDown
-          className={cn(
-            "h-3 w-3 text-muted-foreground transition-transform duration-150",
-            open && "rotate-180"
-          )}
-        />
+        <FlagImg src={active.flag} alt={active.label} size={14} />
+        <span className="text-[11px] font-bold tracking-widest text-foreground leading-none">{active.code}</span>
+        <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform duration-150", open && "rotate-180")} />
       </button>
 
       {open && (
@@ -145,13 +121,9 @@ export function LanguageSelector() {
                   isActive ? "bg-primary/5 text-primary" : "text-foreground hover:bg-secondary/60"
                 )}
               >
-                <FlagImg src={lang.flag} alt={lang.label} width={27} height={18} />
-                <span className={cn("flex-1 text-left font-medium", isActive && "text-primary")}>
-                  {lang.label}
-                </span>
-                <span className="text-[10px] tracking-widest text-muted-foreground/50">
-                  {lang.sublabel}
-                </span>
+                <FlagImg src={lang.flag} alt={lang.label} size={18} />
+                <span className={cn("flex-1 text-left font-medium text-sm", isActive && "text-primary")}>{lang.label}</span>
+                <span className="text-[10px] tracking-widest text-muted-foreground/50">{lang.sublabel}</span>
                 {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
               </button>
             )

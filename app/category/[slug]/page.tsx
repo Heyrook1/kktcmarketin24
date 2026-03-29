@@ -92,7 +92,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                 Anasayfa
               </Link>
               <ChevronRight className="h-4 w-4" />
-              <Link href="/products" className="hover:text-white transition-colors">
+              <Link href="/urunler" className="hover:text-white transition-colors">
                 Ürünler
               </Link>
               <ChevronRight className="h-4 w-4" />
@@ -153,7 +153,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             <p className="text-muted-foreground">
               Bu kategoride henüz ürün bulunmuyor.
             </p>
-            <Link href="/products" className="text-primary hover:underline mt-2 inline-block">
+            <Link href="/urunler" className="text-primary hover:underline mt-2 inline-block">
               Tüm ürünlere göz at
             </Link>
           </div>

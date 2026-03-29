@@ -83,7 +83,7 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6 flex-wrap">
         <Link href="/" className="hover:text-foreground transition-colors">Ana Sayfa</Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/products" className="hover:text-foreground transition-colors">Ürünler</Link>
+        <Link href="/urunler" className="hover:text-foreground transition-colors">Ürünler</Link>
         {category && (
           <>
             <ChevronRight className="h-3.5 w-3.5" />

@@ -55,7 +55,7 @@ export default async function CategoriesPage() {
           const IconComponent = ICON_MAP[category.icon] ?? Smartphone
 
           return (
-            <Link key={category.id} href={`/products?category=${category.slug}`}>
+            <Link key={category.id} href={`/urunler?category=${category.slug}`}>
               <Card className="group h-full cursor-pointer transition-all hover:border-primary hover:shadow-md">
                 <CardContent className="flex flex-col items-center p-6 text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
