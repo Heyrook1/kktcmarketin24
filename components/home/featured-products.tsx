@@ -132,7 +132,7 @@ export function PromoBanner() {
               className="mt-6"
               asChild
             >
-              <Link href="/products">Hemen Alışveriş Yap</Link>
+              <Link href="/urunler">Hemen Alışveriş Yap</Link>
             </Button>
           </div>
           {/* Decorative elements */}

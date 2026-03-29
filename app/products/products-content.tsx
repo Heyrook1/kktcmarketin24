@@ -248,7 +248,7 @@ function ProductsInner({
       if (searchInput) params.set("q", searchInput)
       if (selectedCategories.length === 1) params.set("category", selectedCategories[0])
       if (sortBy !== "newest") params.set("sort", sortBy)
-      router.replace(`/products${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+      router.replace(`/urunler${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
     }, 350)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [searchInput, selectedCategories, sortBy, router])

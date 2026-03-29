@@ -9,8 +9,21 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Force a unique build ID each run to invalidate any stale module cache
-  generateBuildId: async () => `build-${Date.now()}`,
+  async redirects() {
+    return [
+      {
+        source: "/products",
+        destination: "/urunler",
+        permanent: false,
+      },
+      {
+        source: "/products/:path*",
+        destination: "/urunler/:path*",
+        permanent: false,
+      },
+    ]
+  },
 }
 
 export default nextConfig
+

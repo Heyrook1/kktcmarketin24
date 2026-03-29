@@ -142,7 +142,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         <h2 className="text-xl font-semibold mb-2">Sepetiniz boş</h2>
         <p className="text-muted-foreground mb-6">Ödeme yapabilmek için sepetinize ürün ekleyin.</p>
         <Button asChild size="lg">
-          <Link href="/products">
+          <Link href="/urunler">
             Alışverişe Başla
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

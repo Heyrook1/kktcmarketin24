@@ -131,7 +131,7 @@ export default function SellerApplicationPage() {
               <Link href="/">Ana Sayfaya Dön</Link>
             </Button>
             <Button asChild className="flex-1 rounded-xl">
-              <Link href="/products">Alışverişe Devam Et</Link>
+              <Link href="/urunler">Alışverişe Devam Et</Link>
             </Button>
           </div>
         </div>

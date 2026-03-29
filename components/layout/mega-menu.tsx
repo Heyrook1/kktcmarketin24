@@ -39,20 +39,20 @@ const DEFAULT_COLOR = { bg:"bg-secondary",text:"text-foreground",dot:"bg-primary
 // ── DefaultPanel ──────────────────────────────────────────────────────────────
 function DefaultPanel({ onClose }: { onClose: () => void }) {
   const quickLinks = [
-    { label:"Cep Telefonları", href:"/products?category=electronics&sub=phones",   icon:Smartphone,     color:"text-blue-500"   },
-    { label:"Kadın Giyim",     href:"/products?category=fashion&sub=womens",       icon:Shirt,          color:"text-rose-500"   },
-    { label:"Cilt Bakımı",     href:"/products?category=beauty&sub=skincare",      icon:Sparkles,       color:"text-purple-500" },
-    { label:"Fitness",         href:"/products?category=sports&sub=fitness",       icon:Dumbbell,       color:"text-green-500"  },
-    { label:"Oyuncaklar",      href:"/products?category=kids-baby&sub=toys",       icon:Baby,           color:"text-sky-500"    },
-    { label:"Saatler",         href:"/products?category=jewelry&sub=watches",      icon:Watch,          color:"text-yellow-600" },
-    { label:"Taze Gıda",       href:"/products?category=groceries&sub=fresh",      icon:ShoppingBasket, color:"text-lime-600"   },
-    { label:"Vitaminler",      href:"/products?category=health&sub=vitamins",      icon:Heart,          color:"text-red-500"    },
+    { label:"Cep Telefonları", href:"/urunler?category=electronics&sub=phones",   icon:Smartphone,     color:"text-blue-500"   },
+    { label:"Kadın Giyim",     href:"/urunler?category=fashion&sub=womens",       icon:Shirt,          color:"text-rose-500"   },
+    { label:"Cilt Bakımı",     href:"/urunler?category=beauty&sub=skincare",      icon:Sparkles,       color:"text-purple-500" },
+    { label:"Fitness",         href:"/urunler?category=sports&sub=fitness",       icon:Dumbbell,       color:"text-green-500"  },
+    { label:"Oyuncaklar",      href:"/urunler?category=kids-baby&sub=toys",       icon:Baby,           color:"text-sky-500"    },
+    { label:"Saatler",         href:"/urunler?category=jewelry&sub=watches",      icon:Watch,          color:"text-yellow-600" },
+    { label:"Taze Gıda",       href:"/urunler?category=groceries&sub=fresh",      icon:ShoppingBasket, color:"text-lime-600"   },
+    { label:"Vitaminler",      href:"/urunler?category=health&sub=vitamins",      icon:Heart,          color:"text-red-500"    },
   ]
   const deals = [
-    { label:"Kulaklıklar",  href:"/products?category=electronics&sub=audio",     badge:"%40", img:"https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
-    { label:"Spor Ayakkabı",href:"/products?category=sports&sub=running",        badge:"%30", img:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
-    { label:"Parfüm",       href:"/products?category=beauty&sub=fragrance",      badge:"%25", img:"https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
-    { label:"Akıllı Saat",  href:"/products?category=electronics&sub=wearables", badge:"%20", img:"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=80&h=80&fit=crop" },
+    { label:"Kulaklıklar",  href:"/urunler?category=electronics&sub=audio",     badge:"%40", img:"https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=80&h=80&fit=crop" },
+    { label:"Spor Ayakkabı",href:"/urunler?category=sports&sub=running",        badge:"%30", img:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop" },
+    { label:"Parfüm",       href:"/urunler?category=beauty&sub=fragrance",      badge:"%25", img:"https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=80&h=80&fit=crop" },
+    { label:"Akıllı Saat",  href:"/urunler?category=electronics&sub=wearables", badge:"%20", img:"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=80&h=80&fit=crop" },
   ]
   return (
     <div className="flex h-full">
@@ -113,7 +113,7 @@ function DefaultPanel({ onClose }: { onClose: () => void }) {
             </Link>
           ))}
         </div>
-        <Link href="/products?sort=price-low" onClick={onClose}
+        <Link href="/urunler?sort=price-low" onClick={onClose}
           className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-900 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
           <Zap className="h-3 w-3" />
           {"Tüm İndirimler"}
@@ -140,7 +140,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
           </span>
         </div>
         <Link
-          href={`/products?category=${category.slug}`}
+          href={`/urunler?category=${category.slug}`}
           onClick={onClose}
           className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
         >
@@ -159,7 +159,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
               {subs.map((sub) => (
                 <Link
                   key={sub.id}
-                  href={`/products?category=${category.slug}&sub=${sub.slug}`}
+                  href={`/urunler?category=${category.slug}&sub=${sub.slug}`}
                   onClick={onClose}
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all duration-100 group"
                 >
@@ -177,7 +177,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
           {/* View-all CTA */}
           <div className="mt-4 pt-3 border-t border-border/50">
             <Link
-              href={`/products?category=${category.slug}`}
+              href={`/urunler?category=${category.slug}`}
               onClick={onClose}
               className={cn(
                 "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all",
@@ -217,7 +217,7 @@ function CategoryPanel({ category, onClose }: { category: Category; onClose: () 
               </div>
             </Link>
             <Link
-              href={`/products?category=${category.slug}`}
+              href={`/urunler?category=${category.slug}`}
               onClick={onClose}
               className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all"
             >
@@ -305,7 +305,7 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
                     onFocus={() => setActiveId(cat.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
-                        window.location.href = `/products?category=${cat.slug}`
+                        window.location.href = `/urunler?category=${cat.slug}`
                         onClose()
                       }
                     }}
@@ -356,7 +356,7 @@ export function MegaMenu({ onClose }: { onClose: () => void }) {
               <div className="mx-4 my-2 border-t border-border/50" />
 
               <Link
-                href="/products"
+                href="/urunler"
                 onClick={onClose}
                 className="flex items-center gap-2.5 px-3 py-2.5 mx-2 rounded-xl hover:bg-primary/5 transition-colors group"
               >

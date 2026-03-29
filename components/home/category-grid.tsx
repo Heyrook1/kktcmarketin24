@@ -35,7 +35,7 @@ export function CategoryGrid() {
             return (
               <Link
                 key={cat.id}
-                href={`/products?category=${cat.slug}`}
+                href={`/urunler?category=${cat.slug}`}
                 className={cn(
                   "group flex-shrink-0 flex items-center gap-2 rounded-full border px-3 py-1.5",
                   "text-sm font-medium transition-all duration-150 whitespace-nowrap",
@@ -59,7 +59,7 @@ export function CategoryGrid() {
             )
           })}
           <Link
-            href="/products"
+            href="/urunler"
             className="flex-shrink-0 flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-4 py-1.5 text-sm font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-150 whitespace-nowrap ml-1"
           >
             {"Tüm Kategoriler"}

@@ -359,7 +359,7 @@ export function OrderConfirmationClient({ order, storeMap, formatPrice, formatDa
             </Button>
           )}
           <Button asChild size="lg" className="rounded-xl gap-2">
-            <Link href="/products">
+            <Link href="/urunler">
               Alışverişe Devam Et
               <ArrowRight className="h-4 w-4" />
             </Link>

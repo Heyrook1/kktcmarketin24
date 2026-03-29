@@ -318,7 +318,7 @@ export function Header() {
                           {isExpanded && cat.subcategories && (
                             <div className="pl-11 pr-4 pb-1 bg-secondary/30">
                               <Link
-                                href={`/products?category=${cat.slug}`}
+                                href={`/urunler?category=${cat.slug}`}
                                 className="block py-1.5 text-sm font-semibold text-primary"
                                 onClick={() => setMobileMenuOpen(false)}
                               >
@@ -327,7 +327,7 @@ export function Header() {
                               {cat.subcategories.map((sub) => (
                                 <Link
                                   key={sub.id}
-                                  href={`/products?category=${cat.slug}&sub=${sub.slug}`}
+                                  href={`/urunler?category=${cat.slug}&sub=${sub.slug}`}
                                   className="block py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                   onClick={() => setMobileMenuOpen(false)}
                                 >

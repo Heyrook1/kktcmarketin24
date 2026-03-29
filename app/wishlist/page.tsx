@@ -25,8 +25,7 @@ export default function WishlistPage() {
           Beğendiğiniz ürünleri favorilere ekleyerek daha sonra kolayca bulabilirsiniz.
         </p>
         <Button asChild size="lg">
-          <Link href="/products">
-            Ürünleri Keşfet
+          <Link href="/urunler">
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
@@ -146,8 +145,7 @@ export default function WishlistPage() {
       {/* Continue shopping */}
       <div className="mt-10 flex justify-center">
         <Button variant="outline" asChild>
-          <Link href="/products">
-            <PackageOpen className="h-4 w-4 mr-2" />
+          <Link href="/urunler">
             Alışverişe Devam Et
           </Link>
         </Button>
