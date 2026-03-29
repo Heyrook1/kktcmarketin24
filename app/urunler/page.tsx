@@ -39,7 +39,7 @@ const CAT_MAP: Record<string, string> = {
   kitap: "books",                   kırtasiye: "books",
 }
 
-function normalizeCat(raw: string | null | undefined): string {
+export function normalizeCat(raw: string | null | undefined): string {
   if (!raw) return ""
   const lower = raw.toLowerCase().trim()
   if (CAT_MAP[lower]) return CAT_MAP[lower]
