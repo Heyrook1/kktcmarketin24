@@ -264,12 +264,15 @@ function ProductsInner({
   const filteredProducts = useMemo(() => {
     let result = [...initialProducts]
 
-    // Category filter — both URL param and DB categoryId are now canonical
-    // slugs ("electronics", "fashion", etc.) thanks to the DB migration,
-    // so a direct string comparison always works.
     const activeCat = selectedCategories[0] || intent?.categorySlug || ""
+
+    console.log("[v0] filter — activeCat:", activeCat,
+      "| total products:", initialProducts.length,
+      "| sample categoryIds:", initialProducts.slice(0, 5).map(p => p.categoryId))
+
     if (activeCat) {
       result = result.filter((p) => (p.categoryId ?? "") === activeCat)
+      console.log("[v0] after category filter:", result.length, "products match", activeCat)
     }
 
     // Vendor filter

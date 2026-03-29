@@ -1,4 +1,4 @@
-// app/products/page.tsx — v16
+// app/products/page.tsx — v17 (definitive clean)
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
@@ -44,7 +44,7 @@ export default async function ProductsPage() {
     .from("vendor_products")
     .select(`
       id, name, description, price, compare_price,
-      category, image_url, tags, is_active, stock, created_at, store_id,
+      category, image_url, tags, search_tags, is_active, stock, created_at, store_id,
       vendor_stores ( id, name, slug )
     `)
     .eq("is_active", true)
@@ -60,9 +60,12 @@ export default async function ProductsPage() {
     const store = Array.isArray(p.vendor_stores)
       ? p.vendor_stores[0]
       : (p.vendor_stores as { id: string; name: string; slug: string } | null)
-    const tags       = (p.tags as string[]) ?? []
-    const categoryId = normalizeCategoryId(p.category)
-    const searchAliases = buildSearchAliases(categoryId, tags)
+    const tags        = (p.tags as string[]) ?? []
+    const dbSearchTags = (p.search_tags as string) ?? ""
+    // normalizeCategoryId is a last-resort guard; after migration category should already be canonical
+    const categoryId  = normalizeCategoryId(p.category)
+    // Combine DB-generated search_tags with runtime-built aliases for full coverage
+    const searchAliases = [dbSearchTags, buildSearchAliases(categoryId, tags)].filter(Boolean).join(" ")
     return {
       id:           p.id,
       name:         p.name,
