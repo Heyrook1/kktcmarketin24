@@ -1,4 +1,3 @@
-// app/products/page.tsx — v17 (definitive clean)
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
@@ -18,54 +17,59 @@ export const metadata: Metadata = {
   },
 }
 
-// Canonical slugs that match URL params, category data IDs, and DB values
-// after the 016_normalize_product_categories migration.
-const VALID_SLUGS = new Set([
-  "electronics","fashion","home-garden","beauty","sports",
-  "kids-baby","jewelry","groceries","health","books",
-])
+// Maps every possible DB value → canonical slug used by URL params & filter logic
+const CAT_MAP: Record<string, string> = {
+  elektronik: "electronics",       electronics: "electronics",
+  moda: "fashion",                 fashion: "fashion",         giyim: "fashion",
+  "ev & bahçe": "home-garden",     "ev ve bahçe": "home-garden",
+  "home-garden": "home-garden",    ev: "home-garden",          bahçe: "home-garden",
+  güzellik: "beauty",              beauty: "beauty",           kozmetik: "beauty",
+  spor: "sports",                  sports: "sports",           "spor & outdoor": "sports",
+  "çocuk & bebek": "kids-baby",    "kids-baby": "kids-baby",   bebek: "kids-baby",     çocuk: "kids-baby",
+  "takı & aksesuar": "jewelry",    jewelry: "jewelry",         takı: "jewelry",        aksesuar: "jewelry",
+  "market & gıda": "groceries",    groceries: "groceries",     market: "groceries",    gıda: "groceries",
+  "sağlık & wellness": "health",   health: "health",           sağlık: "health",       wellness: "health",
+  "kitap & kırtasiye": "books",    books: "books",             kitap: "books",         kırtasiye: "books",
+}
 
-/** Last-resort normalizer — handles any values the DB migration didn't catch */
-function normalizeCategoryId(raw: string | null | undefined): string {
+function normalizeCat(raw: string | null | undefined): string {
   if (!raw) return ""
-  const v = raw.toLowerCase().trim()
-  if (VALID_SLUGS.has(v)) return v
-  // Try matching against category list by name
-  const cat = categories.find(
-    (c) => c.id === v || c.slug === v || c.name.toLowerCase() === v
+  const lower = raw.toLowerCase().trim()
+  if (CAT_MAP[lower]) return CAT_MAP[lower]
+  const match = categories.find(
+    (c) => c.id === lower || c.slug === lower || c.name.toLowerCase() === lower
   )
-  return cat?.id ?? v
+  return match?.id ?? lower
 }
 
 export default async function ProductsPage() {
   const supabase = await createClient()
 
-  const { data: rawProducts } = await supabase
-    .from("vendor_products")
-    .select(`
-      id, name, description, price, compare_price,
-      category, image_url, tags, search_tags, is_active, stock, created_at, store_id,
-      vendor_stores ( id, name, slug )
-    `)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(200)
+  const [{ data: rawProducts, error: prodErr }, { data: rawStores }] = await Promise.all([
+    supabase
+      .from("vendor_products")
+      .select(`
+        id, name, description, price, compare_price,
+        category, image_url, tags, is_active, stock, created_at, store_id,
+        vendor_stores ( id, name, slug )
+      `)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("vendor_stores")
+      .select("id, name, slug")
+      .eq("is_active", true),
+  ])
 
-  const { data: rawStores } = await supabase
-    .from("vendor_stores")
-    .select("id, name, slug")
-    .eq("is_active", true)
+  if (prodErr) console.error("[products/page] DB error:", prodErr.message)
 
   const initialProducts = (rawProducts ?? []).map((p) => {
     const store = Array.isArray(p.vendor_stores)
       ? p.vendor_stores[0]
       : (p.vendor_stores as { id: string; name: string; slug: string } | null)
-    const tags        = (p.tags as string[]) ?? []
-    const dbSearchTags = (p.search_tags as string) ?? ""
-    // normalizeCategoryId is a last-resort guard; after migration category should already be canonical
-    const categoryId  = normalizeCategoryId(p.category)
-    // Combine DB-generated search_tags with runtime-built aliases for full coverage
-    const searchAliases = [dbSearchTags, buildSearchAliases(categoryId, tags)].filter(Boolean).join(" ")
+    const tags       = (p.tags as string[]) ?? []
+    const categoryId = normalizeCat(p.category)
     return {
       id:           p.id,
       name:         p.name,
@@ -83,11 +87,10 @@ export default async function ProductsPage() {
       rating:       0,
       reviewCount:  0,
       createdAt:    p.created_at,
-      searchAliases,
+      searchAliases: buildSearchAliases(categoryId, tags),
     }
   })
 
-  // Sidebar category list — only categories that have at least one product
   const usedCatIds = [...new Set(initialProducts.map((p) => p.categoryId).filter(Boolean))]
   const initialCategories = usedCatIds.map((id) => {
     const cat = categories.find((c) => c.id === id)

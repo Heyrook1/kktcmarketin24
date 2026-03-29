@@ -266,13 +266,8 @@ function ProductsInner({
 
     const activeCat = selectedCategories[0] || intent?.categorySlug || ""
 
-    console.log("[v0] filter — activeCat:", activeCat,
-      "| total products:", initialProducts.length,
-      "| sample categoryIds:", initialProducts.slice(0, 5).map(p => p.categoryId))
-
     if (activeCat) {
       result = result.filter((p) => (p.categoryId ?? "") === activeCat)
-      console.log("[v0] after category filter:", result.length, "products match", activeCat)
     }
 
     // Vendor filter
