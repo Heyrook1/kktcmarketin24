@@ -39,18 +39,17 @@ interface FormState {
   category_id: string
   subcategory: string
   specs: Record<SpecKey, string>
-  sku: string
   stock: string
   is_active: boolean
   extraTags: string[]
-  images: string[]            // uploaded blob URLs
+  images: string[]
 }
 
 const INITIAL: FormState = {
   name: "", description: "", price: "", compare_price: "",
   category_id: "", subcategory: "",
   specs: { brand: "", model: "", color: "", storage: "", material: "", gender: "" },
-  sku: "", stock: "0", is_active: true,
+  stock: "0", is_active: true,
   extraTags: [], images: [],
 }
 
@@ -262,11 +261,9 @@ export default function VendorProductNewPage() {
           price:           Number(form.price),
           compare_price:   form.compare_price ? Number(form.compare_price) : null,
           category_id:     form.category_id,
-          sku:             form.sku.trim() || null,
           stock:           Number(form.stock),
           is_active:       form.is_active,
           tags,
-          // first image as image_url (backwards compat), all images as array
           image_url:       form.images[0] ?? null,
           images:          form.images,
         }),
@@ -380,13 +377,6 @@ export default function VendorProductNewPage() {
                 <Input
                   id="stock" type="number" min="0" placeholder="0"
                   value={form.stock} onChange={(e) => set("stock", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="sku">SKU / Barkod</Label>
-                <Input
-                  id="sku" placeholder="Ürün kodu"
-                  value={form.sku} onChange={(e) => set("sku", e.target.value)}
                 />
               </div>
             </div>

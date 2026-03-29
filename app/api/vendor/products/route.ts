@@ -18,11 +18,11 @@ function adminClient() {
   )
 }
 
-// Allowed fields from the request body — store_id is ALWAYS injected server-side
+// Exact columns that exist in vendor_products (schema-verified)
 const ALLOWED_FIELDS = [
   'name', 'description', 'price', 'compare_price',
-  'category_id', 'image_url', 'images', 'tags', 'sku', 'stock',
-  'is_active',
+  'category_id', 'category', 'image_url', 'images', 'tags',
+  'stock', 'is_active',
 ] as const
 type AllowedField = typeof ALLOWED_FIELDS[number]
 
@@ -80,12 +80,16 @@ export async function POST(req: NextRequest) {
 
   const allowed = pickAllowed(body)
 
+  // Keep `category` (text) in sync with `category_id` for the filter/search pipeline
+  const categoryValue = (body.category_id as string) ?? null
+
   const admin = adminClient()
   const { data, error } = await admin
     .from('vendor_products')
     .insert({
       ...allowed,
-      store_id: auth.session.storeId,  // always server-injected — never client-supplied
+      category:  categoryValue,   // text column used by search/filter
+      store_id:  auth.session.storeId,
       price,
     })
     .select('id')
