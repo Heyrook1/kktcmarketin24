@@ -39,7 +39,7 @@ const CAT_MAP: Record<string, string> = {
   kitap: "books",                   kırtasiye: "books",
 }
 
-function normalizeCat(raw: string | null | undefined): string {
+export function normalizeCat(raw: string | null | undefined): string {
   if (!raw) return ""
   const lower = raw.toLowerCase().trim()
   if (CAT_MAP[lower]) return CAT_MAP[lower]
@@ -57,7 +57,7 @@ export default async function UrunlerPage() {
       supabase
         .from("vendor_products")
         .select(
-          "id, name, description, price, compare_price, category, image_url, tags, is_active, stock, created_at, store_id, vendor_stores(id, name, slug)"
+          "id, name, description, price, compare_price, category, image_url, images, tags, is_active, stock, created_at, store_id, vendor_stores(id, name, slug)"
         )
         .eq("is_active", true)
         .order("created_at", { ascending: false })
@@ -76,19 +76,26 @@ export default async function UrunlerPage() {
       : (p.vendor_stores as { id: string; name: string; slug: string } | null)
     const tags       = (p.tags as string[]) ?? []
     const categoryId = normalizeCat(p.category)
+    const stockCount = typeof p.stock === "number" ? p.stock : 0
+    const dbImages   = (p.images as string[] | null) ?? []
+    const allImages  = dbImages.length > 0
+      ? dbImages
+      : p.image_url ? [p.image_url] : ["/placeholder.svg"]
     return {
       id:           p.id,
       name:         p.name,
+      slug:         p.id,
       description:  p.description ?? "",
       price:        Number(p.price),
-      comparePrice: p.compare_price ? Number(p.compare_price) : undefined,
+      originalPrice: p.compare_price ? Number(p.compare_price) : undefined,
       categoryId,
-      image:        p.image_url ?? "/placeholder.svg",
-      images:       p.image_url ? [p.image_url] : [],
+      images:       allImages,
       tags,
       vendorId:     p.store_id,
       vendorName:   store?.name ?? "",
-      stock:        p.stock ?? 0,
+      inStock:      stockCount > 0,
+      stockCount,
+      stock:        stockCount,
       featured:     false,
       rating:       0,
       reviewCount:  0,

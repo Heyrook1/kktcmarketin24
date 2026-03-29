@@ -99,6 +99,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/vendor-login"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
+                  Satıcı Girişi
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/seller-application"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >

@@ -3,17 +3,20 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { TrendingUp, ShoppingBag, Package, BarChart2 } from "lucide-react"
+import { TrendingUp, ShoppingBag, Package, BarChart2, Eye } from "lucide-react"
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
 
 type Order = { status: string; total: number; items_count: number; created_at: string }
+type ProductView = { name: string; view_count: number }
 
 export default function VendorAnalyticsPage() {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [orders, setOrders]           = useState<Order[]>([])
+  const [topProducts, setTopProducts] = useState<ProductView[]>([])
+  const [totalViews, setTotalViews]   = useState(0)
+  const [loading, setLoading]         = useState(true)
 
   useEffect(() => {
     async function load() {
@@ -25,12 +28,24 @@ export default function VendorAnalyticsPage() {
         .from("vendor_stores").select("id").eq("owner_id", user.id).single()
       if (!store) { window.location.href = "/vendor-panel"; return }
 
-      const { data } = await supabase
-        .from("vendor_orders")
-        .select("status, total, items_count, created_at")
-        .eq("store_id", store.id)
+      const [{ data: orderData }, { data: productData }] = await Promise.all([
+        supabase
+          .from("vendor_orders")
+          .select("status, total, items_count, created_at")
+          .eq("store_id", store.id),
+        supabase
+          .from("vendor_products")
+          .select("name, view_count")
+          .eq("store_id", store.id)
+          .eq("is_active", true)
+          .order("view_count", { ascending: false })
+          .limit(10),
+      ])
 
-      setOrders((data ?? []).map(o => ({ ...o, total: Number(o.total) })))
+      setOrders((orderData ?? []).map(o => ({ ...o, total: Number(o.total) })))
+      const views = (productData ?? []) as ProductView[]
+      setTopProducts(views)
+      setTotalViews(views.reduce((s, p) => s + (p.view_count ?? 0), 0))
       setLoading(false)
     }
     load()
@@ -80,12 +95,13 @@ export default function VendorAnalyticsPage() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: "Toplam Gelir", value: `₺${totalRevenue.toLocaleString("tr-TR")}`, icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Toplam Sipariş", value: totalOrders, icon: ShoppingBag, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Ort. Sipariş", value: totalOrders ? `₺${Math.round(totalRevenue / totalOrders).toLocaleString("tr-TR")}` : "—", icon: Package, color: "text-violet-600", bg: "bg-violet-50" },
-          { label: "Teslim Oranı", value: `%${convRate}`, icon: BarChart2, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Toplam Gelir",    value: `₺${totalRevenue.toLocaleString("tr-TR")}`,                                     icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Toplam Sipariş",  value: totalOrders,                                                                     icon: ShoppingBag, color: "text-blue-600",    bg: "bg-blue-50"    },
+          { label: "Ort. Sipariş",    value: totalOrders ? `₺${Math.round(totalRevenue/totalOrders).toLocaleString("tr-TR")}` : "—", icon: Package, color: "text-violet-600", bg: "bg-violet-50" },
+          { label: "Teslim Oranı",    value: `%${convRate}`,                                                                  icon: BarChart2, color: "text-amber-600",    bg: "bg-amber-50"   },
+          { label: "Toplam Görüntülenme", value: totalViews.toLocaleString("tr-TR"),                                          icon: Eye,       color: "text-rose-600",     bg: "bg-rose-50"    },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <Card key={label} className="shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
@@ -162,7 +178,7 @@ export default function VendorAnalyticsPage() {
           </Card>
 
           {/* Monthly orders bar */}
-          <Card className="lg:col-span-3 shadow-sm">
+          <Card className="lg:col-span-2 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Aylık Sipariş Sayısı</CardTitle>
             </CardHeader>
@@ -178,6 +194,29 @@ export default function VendorAnalyticsPage() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          {/* Top viewed products */}
+          {topProducts.length > 0 && (
+            <Card className="lg:col-span-1 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">En Çok Görüntülenen</CardTitle>
+                <CardDescription className="text-xs">Ürün bazında tıklanma</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {topProducts.slice(0, 6).map((p) => (
+                    <div key={p.name} className="flex items-center justify-between gap-2">
+                      <p className="text-xs truncate flex-1 text-muted-foreground">{p.name}</p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Eye className="h-3 w-3 text-rose-500" />
+                        <span className="text-xs font-semibold">{(p.view_count ?? 0).toLocaleString("tr-TR")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>

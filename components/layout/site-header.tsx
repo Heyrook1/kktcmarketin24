@@ -252,6 +252,10 @@ export function Header() {
             <span>KKTC&apos;nin #1 Online Alışveriş Platformu</span>
             <div className="flex items-center gap-4">
               <Link href="/seller-application" className="hover:text-primary transition-colors">Satıcı Ol</Link>
+              <Link href="/vendor-login" className="flex items-center gap-1 hover:text-primary transition-colors font-medium">
+                <Store className="h-3 w-3" />
+                Satıcı Girişi
+              </Link>
               <Link href="/about" className="hover:text-primary transition-colors">Hakkımızda</Link>
               <Link href="/contact" className="hover:text-primary transition-colors">İletişim</Link>
               <LanguageSelector />
@@ -343,6 +347,7 @@ export function Header() {
 
                   <div className="border-t py-2">
                     {[
+                      { href: "/vendor-login", label: "Satıcı Girişi", icon: Store },
                       { href: "/seller-application", label: "Satıcı Ol", icon: Store },
                       { href: "/account", label: "Hesabım", icon: UserCircle },
                     ].map(({ href, label, icon: Icon }) => (
