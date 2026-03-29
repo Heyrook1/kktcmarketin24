@@ -11,16 +11,9 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      {
-        source: "/products",
-        destination: "/urunler",
-        permanent: false,
-      },
-      {
-        source: "/products/:path*",
-        destination: "/urunler/:path*",
-        permanent: false,
-      },
+      // Catch /products with any query string → /urunler (query is preserved automatically)
+      { source: "/products",      destination: "/urunler",      permanent: false },
+      { source: "/products/:path*", destination: "/urunler/:path*", permanent: false },
     ]
   },
 }
