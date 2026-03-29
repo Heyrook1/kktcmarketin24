@@ -7,7 +7,6 @@ import { categories } from "@/lib/data/categories"
 
 // ISR: re-render at most once every 10 minutes
 export const revalidate = 600
-
 export const metadata: Metadata = {
   title: "Tüm Ürünler | Marketin24",
   description:

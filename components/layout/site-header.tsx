@@ -205,16 +205,16 @@ export function Header() {
   // Stable reference so MegaMenu's useEffect doesn't re-fire on every render
   const closeMegaMenu = useCallback(() => setMegaMenuOpen(false), [])
 
-  // Delayed close — gives the cursor time to travel from the trigger button
-  // down into the absolute-positioned MegaMenu panel without it closing.
+  // Single shared close timer for the whole header zone.
+  // The MegaMenu is a sibling of the trigger button (both inside <header>)
+  // so we track "is cursor somewhere inside the header + menu area" with one ref.
   const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const handleMenuWrapperEnter = useCallback(() => {
+  const scheduleClose  = useCallback(() => {
     if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
-    setMegaMenuOpen(true)
+    menuCloseTimer.current = setTimeout(() => setMegaMenuOpen(false), 200)
   }, [])
-  const handleMenuWrapperLeave = useCallback(() => {
+  const cancelClose = useCallback(() => {
     if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current)
-    menuCloseTimer.current = setTimeout(() => setMegaMenuOpen(false), 180)
   }, [])
 
   useEffect(() => {
@@ -373,12 +373,14 @@ export function Header() {
               />
             </Link>
 
-            {/* Desktop categories trigger — wraps both button and panel so
-                there's no hover gap between them */}
+            {/* Desktop categories trigger — button only.
+                MegaMenu is rendered as a sibling of the main nav row
+                inside <header> so cursor travel from button → panel
+                never crosses a mouseLeave boundary. */}
             <div
               className="hidden lg:block relative"
-              onMouseEnter={handleMenuWrapperEnter}
-              onMouseLeave={handleMenuWrapperLeave}
+              onMouseEnter={() => { cancelClose(); setMegaMenuOpen(true) }}
+              onMouseLeave={scheduleClose}
             >
               <button
                 onClick={() => setMegaMenuOpen((v) => !v)}
@@ -389,16 +391,13 @@ export function Header() {
                     : "text-foreground hover:bg-secondary"
                 )}
                 aria-expanded={megaMenuOpen}
-                aria-label="Kategoriler"
+                aria-haspopup="true"
+                aria-label="Kategoriler menüsü"
               >
                 <LayoutGrid className="h-4 w-4" />
                 Kategoriler
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", megaMenuOpen && "rotate-180")} />
               </button>
-
-              {megaMenuOpen && (
-                <MegaMenu onClose={closeMegaMenu} />
-              )}
             </div>
 
             {/* Search */}
@@ -415,7 +414,18 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mega menu */}
+        {/* Mega menu — direct child of <header> so absolute positioning
+            is relative to the sticky header, not the button wrapper.
+            onMouseEnter/Leave share the same timer as the trigger button. */}
+        {megaMenuOpen && (
+          <div
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+            className="hidden lg:block"
+          >
+            <MegaMenu onClose={closeMegaMenu} />
+          </div>
+        )}
       </header>
     </>
   )
