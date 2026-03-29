@@ -20,9 +20,9 @@ function adminClient() {
 
 // Allowed fields from the request body — store_id is ALWAYS injected server-side
 const ALLOWED_FIELDS = [
-  'name', 'description', 'price', 'compare_at_price',
-  'category_id', 'images', 'tags', 'sku', 'stock_quantity',
-  'is_active', 'weight_grams',
+  'name', 'description', 'price', 'compare_price',
+  'category_id', 'image_url', 'images', 'tags', 'sku', 'stock',
+  'is_active',
 ] as const
 type AllowedField = typeof ALLOWED_FIELDS[number]
 
