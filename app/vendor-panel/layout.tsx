@@ -12,7 +12,7 @@ export default async function VendorPanelLayout({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect("/auth/login?next=/vendor-panel")
+  if (!user) redirect("/vendor-login")
 
   return (
     <div className="flex min-h-screen bg-background">

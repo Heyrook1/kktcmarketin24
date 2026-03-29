@@ -6,6 +6,7 @@ import Script from "next/script"
 import {
   Store, ChevronRight, CheckCircle2, Mail, Clock,
   Loader2, ShieldCheck, TrendingUp, Users, Globe,
+  LayoutDashboard, ArrowRight, LogIn,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -142,6 +143,48 @@ export default function SellerApplicationPage() {
   return (
     <div className="min-h-screen bg-background">
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="lazyOnload" />
+
+      {/* ── Vendor Login Banner ── */}
+      <div className="border-b bg-primary text-primary-foreground">
+        <div className="container mx-auto max-w-5xl px-4 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 shrink-0">
+                <LayoutDashboard className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm leading-tight">Zaten satıcı mısınız?</p>
+                <p className="text-xs text-primary-foreground/70 mt-0.5">
+                  Satıcı panelinize giriş yaparak ürün, sipariş ve analizlerinizi yönetin.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                asChild
+                size="sm"
+                className="gap-2 bg-white text-primary hover:bg-white/90 font-semibold shadow-sm"
+              >
+                <Link href="/auth/login?next=/vendor-panel">
+                  <LogIn className="h-4 w-4" />
+                  Satıcı Girişi
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="sm"
+                variant="ghost"
+                className="gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
+              >
+                <Link href="/vendor-login">
+                  Daha fazla
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b bg-primary px-4 py-14 text-primary-foreground md:py-20">
@@ -304,7 +347,7 @@ export default function SellerApplicationPage() {
 
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
 
