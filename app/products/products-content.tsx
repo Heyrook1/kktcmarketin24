@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProductGrid } from "@/components/product/product-grid"
 import { cn } from "@/lib/utils"
-import { parseSearchIntent, getSearchSuggestions, type SearchSuggestion } from "@/lib/smart-search"
+import { parseSearchIntent, getSearchSuggestions, buildSearchAliases, type SearchSuggestion } from "@/lib/smart-search"
 import { getTagMeta, TAG_TAXONOMY } from "@/lib/tag-taxonomy"
 import type { Product } from "@/lib/data/products"
 import type { Category } from "@/lib/data/categories"
@@ -239,7 +239,7 @@ function ProductsInner({
     [searchInput]
   )
 
-  // Debounce URL sync
+  // Debounce URL sync + search analytics
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -249,9 +249,26 @@ function ProductsInner({
       if (selectedCategories.length === 1) params.set("category", selectedCategories[0])
       if (sortBy !== "newest") params.set("sort", sortBy)
       router.replace(`/products${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
+
+      // Index search event for analytics (fire-and-forget)
+      if (searchInput.trim().length >= 2) {
+        const parsedIntent = parseSearchIntent(searchInput)
+        fetch("/api/search/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query:        searchInput.trim(),
+            category:     parsedIntent.category ?? selectedCategories[0] ?? null,
+            subcategory:  parsedIntent.subcategory ?? null,
+            brand:        parsedIntent.brand ?? null,
+            result_count: filteredProducts.length,
+            source:       "products_page",
+          }),
+        }).catch(() => {/* non-critical */})
+      }
     }, 350)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [searchInput, selectedCategories, sortBy, router])
+  }, [searchInput, selectedCategories, sortBy, router, filteredProducts.length])
 
   // Sync URL → state when navigating from navbar
   useEffect(() => {
@@ -264,10 +281,20 @@ function ProductsInner({
   const filteredProducts = useMemo(() => {
     let result = [...initialProducts]
 
-    // Category filter (URL category OR intent category)
-    const activeCatSlug = selectedCategories[0] || intent?.categorySlug
-    if (activeCatSlug) {
-      result = result.filter((p) => p.categoryId === activeCatSlug)
+    // Category filter — match against categoryId, its slug, OR the URL param
+    // Handles both "electronics" (slug==id) and legacy "elektronik" (key) values.
+    const activeCatParam = selectedCategories[0] || intent?.categorySlug || ""
+    if (activeCatParam) {
+      result = result.filter((p) => {
+        const cid = (p.categoryId ?? "").toLowerCase()
+        const param = activeCatParam.toLowerCase()
+        // Direct match on whatever is stored in the DB
+        if (cid === param) return true
+        // Also match if the category id maps to this slug via categories data
+        const cat = initialCategories.find((c) => c.id === cid || c.slug === cid)
+        if (cat && (cat.slug === param || cat.id === param)) return true
+        return false
+      })
     }
 
     // Vendor filter
@@ -280,25 +307,37 @@ function ProductsInner({
       result = result.filter((p) => p.featured)
     }
 
-    // Smart tag filters from intent
-    if (intent?.subcategory || intent?.brand || intent?.attributes.length) {
+    // Smart tag filters from intent (subcategory, brand, attributes)
+    if (intent?.subcategory || intent?.brand || (intent?.attributes?.length ?? 0) > 0) {
       result = result.filter((p) => {
-        const tags = (p.tags ?? []).map(t => t.toLowerCase())
-        if (intent.subcategory && !tags.includes(intent.subcategory)) return false
-        if (intent.brand       && !tags.includes(intent.brand))       return false
+        const tags = (p.tags ?? []).map((t: string) => t.toLowerCase())
+        if (intent?.subcategory && !tags.includes(intent.subcategory)) return false
+        if (intent?.brand       && !tags.includes(intent.brand))       return false
         return true
       })
     }
 
-    // Text search — checks name, description AND multilingual aliases (TR/EN/CY)
+    // Full text search — matches every typed character across:
+    //   name, description, tags (array), and the multilingual aliases string
+    //   (covers product type/kind, color, brand, model in TR/EN/CY)
     if (searchInput && !intent?.subcategory && !intent?.brand) {
-      const lower = searchInput.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lower) ||
-          p.description.toLowerCase().includes(lower) ||
-          ((p as Product & { searchAliases?: string }).searchAliases ?? "").toLowerCase().includes(lower)
-      )
+      const lower = searchInput.toLowerCase().trim()
+      // Split into tokens so "kırmızı nike" matches products with both terms
+      const tokens = lower.split(/\s+/).filter(Boolean)
+      result = result.filter((p) => {
+        const haystack = [
+          p.name,
+          p.description,
+          ...(p.tags ?? []),
+          (p as Product & { searchAliases?: string }).searchAliases ?? "",
+          // Also include category name & vendor name for broader matching
+          p.categoryId ?? "",
+          p.vendorName ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+        return tokens.every((tok) => haystack.includes(tok))
+      })
     }
 
     // Sort
@@ -313,7 +352,7 @@ function ProductsInner({
     }
 
     return result
-  }, [initialProducts, selectedCategories, selectedVendors, showFeaturedOnly, sortBy, searchInput, intent])
+  }, [initialProducts, initialCategories, selectedCategories, selectedVendors, showFeaturedOnly, sortBy, searchInput, intent])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const toggleCategory = useCallback((catId: string) => {

@@ -25,7 +25,6 @@ export function CategoryGrid() {
     <section className="border-b bg-background">
       <div className="container mx-auto px-3 md:px-4">
         <div className="flex items-center gap-2 overflow-x-auto py-3 scrollbar-hide">
-
           {categories.map((cat) => {
             const meta = ICON_META[cat.id] ?? {
               Icon: Sparkles,
@@ -59,7 +58,6 @@ export function CategoryGrid() {
               </Link>
             )
           })}
-
           <Link
             href="/products"
             className="flex-shrink-0 flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-4 py-1.5 text-sm font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-150 whitespace-nowrap ml-1"
@@ -67,7 +65,6 @@ export function CategoryGrid() {
             {"Tüm Kategoriler"}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
-
         </div>
       </div>
     </section>

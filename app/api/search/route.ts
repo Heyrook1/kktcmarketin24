@@ -136,4 +136,8 @@ export async function GET(req: NextRequest) {
     pageSize:   PAGE_SIZE,
     intent,
   })
+
+  // Note: analytics for this route are handled client-side by products-content.tsx
+  // to avoid edge-function latency. The /api/search/analytics POST endpoint handles
+  // the analytics writes via service role.
 }

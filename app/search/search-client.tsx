@@ -139,6 +139,21 @@ export function SearchPageClient() {
       const data: SearchResponse = await res.json()
       if (data.error) throw new Error(data.error)
       setResults(data)
+
+      // Index search event for analytics (fire-and-forget)
+      if (params.get("q") && (params.get("q")?.length ?? 0) >= 2) {
+        fetch("/api/search/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query:        params.get("q")!.trim(),
+            category:     params.get("category") ?? null,
+            result_count: data.total,
+            source:       "search_page",
+            page:         Number(params.get("page") ?? 1),
+          }),
+        }).catch(() => {/* non-critical */})
+      }
     } catch (err: any) {
       if (err.name !== "AbortError") {
         setError(err.message ?? "Arama sırasında bir hata oluştu.")
