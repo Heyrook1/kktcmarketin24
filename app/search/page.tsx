@@ -1,14 +1,26 @@
-"use client"
+import type { Metadata } from "next"
+import { Suspense } from "react"
+import { SearchPageClient } from "./search-client"
+import { SearchSkeleton } from "./search-client"
 
-import { useSearchParams, useRouter } from "next/navigation"
-import { Suspense, useState, useRef, useEffect } from "react"
-import { products } from "@/lib/data/products"
-import { ProductGrid } from "@/components/product/product-grid"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Search, X, SlidersHorizontal } from "lucide-react"
+export const metadata: Metadata = {
+  title: "Ürün Ara | Marketin24",
+  description:
+    "Marketin24'te binlerce ürün arasında arama yapın. Elektronik, moda, güzellik ve daha fazlası.",
+  openGraph: {
+    title: "Ürün Ara | Marketin24",
+    description: "Onaylı satıcılardan ürün arayın.",
+  },
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchSkeleton />}>
+      <SearchPageClient />
+    </Suspense>
+  )
+}
+
 
 function matchesQuery(product: (typeof products)[number], q: string): boolean {
   const s = q.toLowerCase()
