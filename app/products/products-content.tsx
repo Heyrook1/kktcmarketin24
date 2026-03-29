@@ -264,20 +264,12 @@ function ProductsInner({
   const filteredProducts = useMemo(() => {
     let result = [...initialProducts]
 
-    // Category filter — match against categoryId, its slug, OR the URL param
-    // Handles both "electronics" (slug==id) and legacy "elektronik" (key) values.
-    const activeCatParam = selectedCategories[0] || intent?.categorySlug || ""
-    if (activeCatParam) {
-      result = result.filter((p) => {
-        const cid = (p.categoryId ?? "").toLowerCase()
-        const param = activeCatParam.toLowerCase()
-        // Direct match on whatever is stored in the DB
-        if (cid === param) return true
-        // Also match if the category id maps to this slug via categories data
-        const cat = initialCategories.find((c) => c.id === cid || c.slug === cid)
-        if (cat && (cat.slug === param || cat.id === param)) return true
-        return false
-      })
+    // Category filter — both URL param and DB categoryId are now canonical
+    // slugs ("electronics", "fashion", etc.) thanks to the DB migration,
+    // so a direct string comparison always works.
+    const activeCat = selectedCategories[0] || intent?.categorySlug || ""
+    if (activeCat) {
+      result = result.filter((p) => (p.categoryId ?? "") === activeCat)
     }
 
     // Vendor filter
@@ -335,7 +327,7 @@ function ProductsInner({
     }
 
     return result
-  }, [initialProducts, initialCategories, selectedCategories, selectedVendors, showFeaturedOnly, sortBy, searchInput, intent])
+  }, [initialProducts, selectedCategories, selectedVendors, showFeaturedOnly, sortBy, searchInput, intent])
 
   // ── Search analytics — runs after filteredProducts is defined ────────────
   const analyticsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)

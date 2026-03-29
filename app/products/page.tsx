@@ -1,3 +1,4 @@
+// app/products/page.tsx — v16
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
@@ -5,8 +6,8 @@ import { ProductsContent, ProductsContentSkeleton } from "./products-content"
 import { buildSearchAliases } from "@/lib/smart-search"
 import { categories } from "@/lib/data/categories"
 
-// ISR: re-render at most once every 10 minutes
 export const revalidate = 600
+
 export const metadata: Metadata = {
   title: "Tüm Ürünler | Marketin24",
   description:
@@ -17,60 +18,23 @@ export const metadata: Metadata = {
   },
 }
 
-// ── Category normalization ────────────────────────────────────────────────────
-// Maps every possible DB value (Turkish names, English names, slugs, mixed
-// case, typos) to the canonical slug used by URL params and category data.
-const CAT_NORMALIZE: Record<string, string> = {
-  // Turkish names
-  "elektronik":           "electronics",
-  "moda":                 "fashion",
-  "giyim":                "fashion",
-  "ev":                   "home-garden",
-  "ev & bahçe":           "home-garden",
-  "ev ve bahçe":          "home-garden",
-  "bahçe":                "home-garden",
-  "güzellik":             "beauty",
-  "kozmetik":             "beauty",
-  "spor":                 "sports",
-  "spor & outdoor":       "sports",
-  "spor ve outdoor":      "sports",
-  "çocuk":                "kids-baby",
-  "çocuk & bebek":        "kids-baby",
-  "bebek":                "kids-baby",
-  "takı":                 "jewelry",
-  "takı & aksesuar":      "jewelry",
-  "aksesuar":             "jewelry",
-  "market":               "groceries",
-  "market & gıda":        "groceries",
-  "gıda":                 "groceries",
-  "sağlık":               "health",
-  "sağlık & wellness":    "health",
-  "wellness":             "health",
-  "kitap":                "books",
-  "kitap & kırtasiye":    "books",
-  "kırtasiye":            "books",
-  // Canonical slugs (identity)
-  "electronics":          "electronics",
-  "fashion":              "fashion",
-  "home-garden":          "home-garden",
-  "beauty":               "beauty",
-  "sports":               "sports",
-  "kids-baby":            "kids-baby",
-  "jewelry":              "jewelry",
-  "groceries":            "groceries",
-  "health":               "health",
-  "books":                "books",
-}
+// Canonical slugs that match URL params, category data IDs, and DB values
+// after the 016_normalize_product_categories migration.
+const VALID_SLUGS = new Set([
+  "electronics","fashion","home-garden","beauty","sports",
+  "kids-baby","jewelry","groceries","health","books",
+])
 
+/** Last-resort normalizer — handles any values the DB migration didn't catch */
 function normalizeCategoryId(raw: string | null | undefined): string {
   if (!raw) return ""
-  const lower = raw.toLowerCase().trim()
-  if (CAT_NORMALIZE[lower]) return CAT_NORMALIZE[lower]
+  const v = raw.toLowerCase().trim()
+  if (VALID_SLUGS.has(v)) return v
+  // Try matching against category list by name
   const cat = categories.find(
-    (c) => c.id === lower || c.slug === lower || c.name.toLowerCase() === lower
+    (c) => c.id === v || c.slug === v || c.name.toLowerCase() === v
   )
-  if (cat) return cat.id
-  return lower
+  return cat?.id ?? v
 }
 
 export default async function ProductsPage() {
@@ -96,7 +60,7 @@ export default async function ProductsPage() {
     const store = Array.isArray(p.vendor_stores)
       ? p.vendor_stores[0]
       : (p.vendor_stores as { id: string; name: string; slug: string } | null)
-    const tags = (p.tags as string[]) ?? []
+    const tags       = (p.tags as string[]) ?? []
     const categoryId = normalizeCategoryId(p.category)
     const searchAliases = buildSearchAliases(categoryId, tags)
     return {
@@ -120,7 +84,7 @@ export default async function ProductsPage() {
     }
   })
 
-  // Build sidebar category list using canonical names from categories data
+  // Sidebar category list — only categories that have at least one product
   const usedCatIds = [...new Set(initialProducts.map((p) => p.categoryId).filter(Boolean))]
   const initialCategories = usedCatIds.map((id) => {
     const cat = categories.find((c) => c.id === id)
