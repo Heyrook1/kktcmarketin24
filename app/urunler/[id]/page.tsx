@@ -4,16 +4,15 @@ import { createClient } from "@/lib/supabase/server"
 import { ProductDetail } from "@/app/products/[id]/product-detail"
 import { ProductGrid } from "@/components/product/product-grid"
 import { normalizeCat } from "@/app/urunler/page"
+import { getVendorById } from "@/lib/data/vendors"
+import { getCategoryById } from "@/lib/data/categories"
 import type { Product } from "@/lib/data/products"
-import type { Vendor } from "@/lib/data/vendors"
-import type { Category } from "@/lib/data/categories"
-import { categories } from "@/lib/data/categories"
 
 interface Props {
   params: Promise<{ id: string }>
 }
 
-export const revalidate = 3600
+export const revalidate = 60
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
@@ -23,7 +22,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .select("name, description, image_url")
     .eq("id", id)
     .single()
-
   if (!data) return { title: "Ürün Bulunamadı | Marketin24" }
   return {
     title: `${data.name} | Marketin24`,
@@ -36,6 +34,48 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+/** Map a DB row → Product shape that ProductDetail / ProductGrid accept */
+function toProduct(p: {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  compare_price: number | null
+  category: string | null
+  image_url: string | null
+  images: string[] | null
+  tags: string[] | null
+  stock: number | null
+  created_at: string
+  store_id: string
+}): Product {
+  const dbImages: string[] = p.images?.length ? p.images : []
+  const allImages = dbImages.length > 0
+    ? dbImages
+    : p.image_url
+      ? [p.image_url]
+      : ["/placeholder.svg"]
+
+  return {
+    id:           p.id,
+    name:         p.name,
+    slug:         p.id,                            // use UUID as slug for DB products
+    description:  p.description ?? "",
+    price:        Number(p.price),
+    originalPrice: p.compare_price ? Number(p.compare_price) : undefined,
+    images:       allImages,
+    categoryId:   normalizeCat(p.category),
+    vendorId:     p.store_id,
+    rating:       0,
+    reviewCount:  0,
+    inStock:      (p.stock ?? 0) > 0,
+    stockCount:   p.stock ?? 0,
+    tags:         p.tags ?? [],
+    featured:     false,
+    createdAt:    p.created_at,
+  }
+}
+
 export default async function UrunlerDetailPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
@@ -44,7 +84,8 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .from("vendor_products")
     .select(`
       id, name, description, price, compare_price,
-      category, image_url, tags, is_active, stock, created_at, store_id,
+      category, image_url, images, tags, stock,
+      is_active, created_at, store_id,
       vendor_stores ( id, name, slug, description, logo_url, is_verified )
     `)
     .eq("id", id)
@@ -53,82 +94,50 @@ export default async function UrunlerDetailPage({ params }: Props) {
 
   if (error || !raw) notFound()
 
-  const storeRaw = Array.isArray(raw.vendor_stores) ? raw.vendor_stores[0] : raw.vendor_stores
-  const categoryId = normalizeCat(raw.category)
-  const catMeta = categories.find((c) => c.id === categoryId)
+  // Increment view count (fire-and-forget)
+  supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
 
-  const product: Product = {
-    id:           raw.id,
-    name:         raw.name,
-    description:  raw.description ?? "",
-    price:        Number(raw.price),
-    comparePrice: raw.compare_price ? Number(raw.compare_price) : undefined,
-    categoryId,
-    image:        raw.image_url ?? "/placeholder.svg",
-    images:       raw.image_url ? [raw.image_url] : [],
-    tags:         (raw.tags as string[]) ?? [],
-    vendorId:     raw.store_id,
-    vendorName:   storeRaw?.name ?? "",
-    stock:        raw.stock ?? 0,
-    featured:     false,
+  const storeRaw = Array.isArray(raw.vendor_stores) ? raw.vendor_stores[0] : raw.vendor_stores
+
+  const product = toProduct(raw as Parameters<typeof toProduct>[0])
+
+  // Try to get vendor from static data first (has more detail); fall back to DB row
+  const vendor = getVendorById(raw.store_id) ?? (storeRaw ? {
+    id:           storeRaw.id,
+    name:         storeRaw.name,
+    slug:         storeRaw.slug,
+    description:  storeRaw.description ?? "",
+    logo:         storeRaw.logo_url ?? "",
     rating:       0,
     reviewCount:  0,
-    createdAt:    raw.created_at,
-    searchAliases:"",
-  }
+    productCount: 0,
+    isVerified:   storeRaw.is_verified ?? false,
+    createdAt:    "",
+  } : undefined)
 
-  const vendor: Vendor | undefined = storeRaw
-    ? {
-        id:           storeRaw.id,
-        name:         storeRaw.name,
-        slug:         storeRaw.slug,
-        description:  storeRaw.description ?? "",
-        logo:         storeRaw.logo_url ?? "",
-        rating:       0,
-        reviewCount:  0,
-        productCount: 0,
-        isVerified:   storeRaw.is_verified ?? false,
-        createdAt:    "",
-      }
-    : undefined
+  const category = getCategoryById(product.categoryId)
 
-  const category: Category | undefined = catMeta
-
-  // Related products — same category, same store first
+  // Related products — same category, exclude current
   const { data: relatedRaw } = await supabase
     .from("vendor_products")
-    .select("id, name, price, compare_price, category, image_url, tags, stock, created_at, store_id")
+    .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
-    .neq("id", id)
     .eq("category", raw.category)
-    .limit(8)
+    .neq("id", id)
+    .limit(4)
 
-  const related: Product[] = (relatedRaw ?? []).map((p) => ({
-    id:           p.id,
-    name:         p.name,
-    description:  "",
-    price:        Number(p.price),
-    comparePrice: p.compare_price ? Number(p.compare_price) : undefined,
-    categoryId:   normalizeCat(p.category),
-    image:        p.image_url ?? "/placeholder.svg",
-    images:       p.image_url ? [p.image_url] : [],
-    tags:         (p.tags as string[]) ?? [],
-    vendorId:     p.store_id,
-    vendorName:   "",
-    stock:        p.stock ?? 0,
-    featured:     false,
-    rating:       0,
-    reviewCount:  0,
-    createdAt:    p.created_at,
-    searchAliases:"",
-  }))
+  const related: Product[] = (relatedRaw ?? []).map((r) =>
+    toProduct(r as Parameters<typeof toProduct>[0])
+  )
 
   return (
     <div className="container mx-auto px-4 py-8">
       <ProductDetail product={product} vendor={vendor} category={category} />
       {related.length > 0 && (
         <section className="mt-16">
-          <h2 className="text-xl font-bold mb-6">Benzer Ürünler</h2>
+          <h2 className="text-xl font-bold mb-6">
+            {storeRaw?.name ? `${storeRaw.name} Mağazasından Daha Fazlası` : "Benzer Ürünler"}
+          </h2>
           <ProductGrid products={related} columns={4} />
         </section>
       )}

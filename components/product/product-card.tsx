@@ -19,6 +19,13 @@ interface ProductCardProps {
 export function ProductCard({ product, className }: ProductCardProps) {
   const { addItem, openCart } = useCartStore()
 
+  // Support both static mock data (inStock boolean) and DB products (stock number)
+  const isInStock = typeof product.inStock === "boolean"
+    ? product.inStock
+    : (typeof (product as { stock?: number }).stock === "number"
+        ? (product as { stock: number }).stock > 0
+        : true)
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -44,7 +51,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               İndirim
             </div>
           )}
-          {!product.inStock && (
+          {!isInStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <span className="text-sm font-medium text-muted-foreground">Stokta Yok</span>
             </div>
@@ -83,7 +90,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
             variant="secondary"
             className="h-8 w-8 flex-shrink-0"
             onClick={handleAddToCart}
-            disabled={!product.inStock}
+            disabled={!isInStock}
           >
             <ShoppingCart className="h-4 w-4" />
             <span className="sr-only">Sepete ekle</span>
