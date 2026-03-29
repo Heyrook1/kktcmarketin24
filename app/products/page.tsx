@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation"
 
-// /products is permanently redirected to /urunler.
-// This file exists only to satisfy Next.js App Router routing for the
-// /products path — all real logic lives in app/urunler/page.tsx.
-export default function ProductsRedirectPage({
+// In Next.js 16, searchParams is a Promise — must be awaited before use.
+export const revalidate = 0
+
+export default async function ProductsRedirectPage({
   searchParams,
 }: {
-  searchParams: Record<string, string>
+  searchParams: Promise<Record<string, string>>
 }) {
-  const qs = new URLSearchParams(searchParams).toString()
+  const params = await searchParams
+  const qs = new URLSearchParams(params).toString()
   redirect(qs ? `/urunler?${qs}` : "/urunler")
 }
