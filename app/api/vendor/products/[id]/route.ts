@@ -21,9 +21,9 @@ function adminClient() {
 
 // Fields that are safe to update — store_id and id are excluded permanently
 const PATCHABLE = [
-  'name', 'description', 'price', 'compare_at_price',
-  'category_id', 'images', 'tags', 'sku', 'stock_quantity',
-  'is_active', 'weight_grams',
+  'name', 'description', 'price', 'compare_price',
+  'category', 'image_url', 'images', 'tags', 'stock',
+  'is_active',
 ] as const
 type PatchableField = typeof PATCHABLE[number]
 
