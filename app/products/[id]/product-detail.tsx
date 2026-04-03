@@ -409,11 +409,18 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
 
 // ── Inline vendor profile card ──────────────────────────────────────────────
 function VendorProfileCard({ vendor }: { vendor: NonNullable<ProductDetailProps["vendor"]> }) {
+  const coverSrc = vendor.coverImage?.trim()
+  const logoSrc = vendor.logo?.trim()
+
   return (
     <div className="rounded-2xl border overflow-hidden">
       {/* Cover */}
       <div className="relative h-32 w-full">
-        <Image src={vendor.coverImage} alt={vendor.name} fill className="object-cover" />
+        {coverSrc ? (
+          <Image src={coverSrc} alt={vendor.name} fill className="object-cover" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-r from-muted to-secondary" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       </div>
 
@@ -421,7 +428,13 @@ function VendorProfileCard({ vendor }: { vendor: NonNullable<ProductDetailProps[
         {/* Logo + name */}
         <div className="flex items-end gap-4 -mt-10 relative z-10 mb-4">
           <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg">
-            <Image src={vendor.logo} alt={vendor.name} fill className="object-cover" />
+            {logoSrc ? (
+              <Image src={logoSrc} alt={vendor.name} fill className="object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                {vendor.name.slice(0, 1)}
+              </div>
+            )}
           </div>
           <div className="pb-1">
             <div className="flex items-center gap-2">
@@ -449,7 +462,7 @@ function VendorProfileCard({ vendor }: { vendor: NonNullable<ProductDetailProps[
             <span className="text-xs text-muted-foreground mt-0.5">Ürün</span>
           </div>
           <div className="flex flex-col items-center p-3 rounded-xl bg-secondary/50 text-center">
-            <span className="font-bold text-sm">{vendor.joinedDate.slice(0, 7)}</span>
+            <span className="font-bold text-sm">{vendor.joinedDate ? vendor.joinedDate.slice(0, 7) : "—"}</span>
             <span className="text-xs text-muted-foreground mt-0.5">Katılım</span>
           </div>
         </div>

@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Store, MapPin, Calendar, CheckCircle } from "lucide-react"
+import { VendorProfileEditor } from "@/components/vendor/vendor-profile-editor"
 
 export default async function VendorSettingsPage() {
   const supabase = await createClient()
@@ -22,6 +23,8 @@ export default async function VendorSettingsPage() {
         <h1 className="text-2xl font-bold">Mağaza Ayarları</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Mağaza bilgileri ve durum</p>
       </div>
+
+      <VendorProfileEditor store={store} />
 
       <Card className="shadow-sm">
         <CardHeader>

@@ -52,6 +52,15 @@ const INITIAL: FormState = {
   extraTags: [], images: [],
 }
 
+async function parseJsonResponse<T>(res: Response, context: string): Promise<T> {
+  const contentType = res.headers.get("content-type") ?? ""
+  if (contentType.includes("application/json")) return (await res.json()) as T
+
+  const text = await res.text()
+  const snippet = text.replace(/\s+/g, " ").slice(0, 220)
+  throw new Error(`${context}. JSON bekleniyordu ama HTML/başka bir içerik geldi: ${snippet}`)
+}
+
 function ImageUploader({
   images,
   onAdd,
@@ -74,10 +83,18 @@ function ImageUploader({
     for (const file of Array.from(files)) {
       const fd = new FormData()
       fd.append("file", file)
-      const res = await fetch("/api/upload/product-image", { method: "POST", body: fd })
-      const json = await res.json()
-      if (!res.ok) { setUploadError(json.error ?? "Yükleme başarısız."); break }
-      onAdd(json.url)
+      try {
+        const res = await fetch("/api/upload/product-image", { method: "POST", body: fd, credentials: "include" })
+        const json = await parseJsonResponse<{ url?: string; error?: string }>(res, "Yükleme başarısız")
+
+        if (!res.ok) { setUploadError(json.error ?? "Yükleme başarısız."); break }
+        if (!json.url) { setUploadError("Yüklenen görsel için URL oluşturulamadı."); break }
+
+        onAdd(json.url)
+      } catch (err) {
+        setUploadError(err instanceof Error ? err.message : "Yükleme başarısız.")
+        break
+      }
     }
     setUploadingLocal(false)
   }, [onAdd])
@@ -187,8 +204,8 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetch(`/api/vendor/products/${id}`)
-        const json = await res.json()
+        const res = await fetch(`/api/vendor/products/${id}`, { credentials: "include", cache: "no-store" })
+        const json = await parseJsonResponse<{ product?: any; error?: string }>(res, "Ürün yüklenemedi")
         if (!res.ok) throw new Error(json.error ?? "Ürün yüklenemedi")
         
         const p = json.product
@@ -273,27 +290,32 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
     const tags = buildTags()
 
     startTx(async () => {
-      const res = await fetch(`/api/vendor/products/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name:            form.name.trim(),
-          description:     form.description.trim(),
-          price:           Number(form.price),
-          compare_price:   form.compare_price ? Number(form.compare_price) : null,
-          category:        form.category_id,
-          stock:           Number(form.stock),
-          is_active:       form.is_active,
-          tags,
-          image_url:       form.images[0] ?? null,
-          images:          form.images,
-        }),
-      })
+      try {
+        const res = await fetch(`/api/vendor/products/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name:            form.name.trim(),
+            description:     form.description.trim(),
+            price:           Number(form.price),
+            compare_price:   form.compare_price ? Number(form.compare_price) : null,
+            category:        form.category_id,
+            stock:           Number(form.stock),
+            is_active:       form.is_active,
+            tags,
+            image_url:       form.images[0] ?? null,
+            images:          form.images,
+          }),
+          credentials: "include",
+        })
 
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? "Ürün güncellenemedi."); return }
-      router.push("/vendor-panel/products")
-      router.refresh()
+        const json = await parseJsonResponse<{ error?: string }>(res, "Ürün güncellenemedi")
+        if (!res.ok) { setError(json.error ?? "Ürün güncellenemedi."); return }
+        router.push("/vendor-panel/products")
+        router.refresh()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Ürün güncellenemedi.")
+      }
     })
   }
 

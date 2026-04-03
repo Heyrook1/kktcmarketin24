@@ -47,12 +47,18 @@ export function VendorBadge({
               size === "sm" ? "h-5 w-5" : "h-6 w-6"
             )}
           >
-            <Image
-              src={vendor.logo}
-              alt={vendor.name}
-              fill
-              className="object-cover"
-            />
+            {vendor.logo?.trim() ? (
+              <Image
+                src={vendor.logo}
+                alt={vendor.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                {vendor.name.slice(0, 1)}
+              </div>
+            )}
           </div>
         )}
         <span className={cn("font-medium", size === "sm" ? "text-xs" : "text-sm")}>

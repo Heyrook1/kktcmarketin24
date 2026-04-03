@@ -67,12 +67,18 @@ export default function VendorsPage() {
                   {/* Logo */}
                   <div className="relative -mt-10 mb-3 flex justify-center">
                     <div className="relative h-20 w-20 overflow-hidden rounded-full border-4 border-background bg-background shadow-md">
-                      <Image
-                        src={vendor.logo}
-                        alt={vendor.name}
-                        fill
-                        className="object-cover"
-                      />
+                      {vendor.logo?.trim() ? (
+                        <Image
+                          src={vendor.logo}
+                          alt={vendor.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                          {vendor.name.slice(0, 1)}
+                        </div>
+                      )}
                     </div>
                   </div>
 

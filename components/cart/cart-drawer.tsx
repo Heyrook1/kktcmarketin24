@@ -63,12 +63,18 @@ export function CartDrawer() {
                         {vendor && (
                           <>
                             <div className="relative h-6 w-6 rounded-full overflow-hidden bg-secondary">
-                              <Image
-                                src={vendor.logo}
-                                alt={vendor.name}
-                                fill
-                                className="object-cover"
-                              />
+                              {vendor.logo?.trim() ? (
+                                <Image
+                                  src={vendor.logo}
+                                  alt={vendor.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                                  {vendor.name.slice(0, 1)}
+                                </div>
+                              )}
                             </div>
                             <span className="text-sm font-medium">{vendor.name}</span>
                           </>

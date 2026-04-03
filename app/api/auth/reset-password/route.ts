@@ -46,14 +46,12 @@ export async function POST(req: NextRequest) {
     const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SUPABASE_URL
     const redirectTo = `${origin}/auth/update-password`
 
-    const { error: resetErr } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email: normalised,
-      options: { redirectTo },
+    const { error: resetErr } = await admin.auth.resetPasswordForEmail(normalised, {
+      redirectTo,
     })
 
     if (resetErr) {
-      console.error("[reset-password] generateLink error:", resetErr)
+      console.error("[reset-password] resetPasswordForEmail error:", resetErr)
       return NextResponse.json(
         { error: "Sıfırlama bağlantısı gönderilemedi. Lütfen daha sonra tekrar deneyin." },
         { status: 500 }

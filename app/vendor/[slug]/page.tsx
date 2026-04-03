@@ -11,17 +11,39 @@ import { ShareButtons } from "@/components/shared/share-buttons"
 import { getVendorBySlug, vendors } from "@/lib/data/vendors"
 import { getProductsByVendor } from "@/lib/data/products"
 import { getVendorReviews, getVendorAverageRating } from "@/lib/data/vendor-reviews"
+import { createClient } from "@/lib/supabase/server"
+import type { Product } from "@/lib/data/products"
+import { normalizeCat } from "@/app/urunler/page"
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>
 }
+
+export const dynamicParams = true
 
 export async function generateMetadata({ params }: VendorPageProps): Promise<Metadata> {
   const { slug } = await params
   const vendor = getVendorBySlug(slug)
 
   if (!vendor) {
-    return { title: "Vendor Not Found" }
+    const supabase = await createClient()
+    const { data: storeRaw } = await supabase
+      .from("vendor_stores")
+      .select("name, description, cover_url")
+      .eq("slug", slug)
+      .maybeSingle()
+
+    if (!storeRaw) return { title: "Vendor Not Found" }
+
+    return {
+      title: `${storeRaw.name} - Marketin24`,
+      description: storeRaw.description ?? undefined,
+      openGraph: {
+        title: storeRaw.name,
+        description: storeRaw.description ?? undefined,
+        images: storeRaw.cover_url ? [storeRaw.cover_url] : [],
+      },
+    }
   }
 
   return {
@@ -43,25 +65,189 @@ export function generateStaticParams() {
 
 export default async function VendorPage({ params }: VendorPageProps) {
   const { slug } = await params
-  const vendor = getVendorBySlug(slug)
+  const staticVendor = getVendorBySlug(slug)
 
-  if (!vendor) {
-    notFound()
+  const toDbProduct = (p: {
+    id: string
+    name: string
+    description: string | null
+    price: number
+    compare_price: number | null
+    category: string | null
+    image_url: string | null
+    images: string[] | null
+    tags: string[] | null
+    stock: number | null
+    created_at: string
+    store_id: string
+  }): Product => {
+    const dbImages: string[] = p.images?.length ? p.images : []
+    const allImages =
+      dbImages.length > 0
+        ? dbImages
+        : p.image_url
+          ? [p.image_url]
+          : ["/placeholder.jpg"]
+
+    return {
+      id: p.id,
+      name: p.name,
+      slug: p.id,
+      description: p.description ?? "",
+      price: Number(p.price),
+      originalPrice: p.compare_price ? Number(p.compare_price) : undefined,
+      images: allImages,
+      categoryId: normalizeCat(p.category),
+      vendorId: p.store_id,
+      rating: 0,
+      reviewCount: 0,
+      inStock: (p.stock ?? 0) > 0,
+      stockCount: p.stock ?? 0,
+      tags: p.tags ?? [],
+      featured: false,
+      createdAt: p.created_at,
+    }
   }
 
-  const products = getProductsByVendor(vendor.id)
+  type ReviewForUi = {
+    id: string
+    userName: string
+    userAvatar?: string
+    rating: number
+    title: string
+    comment: string
+    date: string
+    verified: boolean
+    helpful: number
+    images?: string[]
+    vendorReply?: any
+  }
+
+  let products: Product[] = []
+  let vendorReviews: ReviewForUi[] = []
+  let vendorAvgRating = 0
+  let vendorReviewCount = 0
+  let vendorProductCount = 0
+
+  let vendorForUi =
+    (staticVendor
+      ? (() => {
+          const staticProducts = getProductsByVendor(staticVendor.id)
+          const staticReviewsRaw = getVendorReviews(staticVendor.id)
+          const staticReviews: ReviewForUi[] = staticReviewsRaw.map((r) => ({
+            id: r.id,
+            userName: r.userName,
+            userAvatar: r.userAvatar,
+            rating: r.rating,
+            title: r.title,
+            comment: r.comment,
+            date: r.date,
+            verified: r.verified,
+            helpful: r.helpful,
+          }))
+
+          products = staticProducts
+          vendorReviews = staticReviews
+          vendorReviewCount = staticReviews.length
+          vendorProductCount = staticProducts.length
+          vendorAvgRating = getVendorAverageRating(staticVendor.id) || staticVendor.rating
+
+          return {
+            ...(staticVendor as any),
+            rating: vendorAvgRating,
+            reviewCount: vendorReviewCount,
+            productCount: vendorProductCount,
+          }
+        })()
+      : null) as any
+
+  if (!vendorForUi) {
+    const supabase = await createClient()
+
+    const { data: storeRaw } = await supabase
+      .from("vendor_stores")
+      .select("id, name, slug, description, logo_url, cover_url, location, is_active, is_verified, created_at")
+      .eq("slug", slug)
+      .maybeSingle()
+
+    if (!storeRaw) notFound()
+
+    const [{ data: productsRaw }, { data: reviewsRaw }] = await Promise.all([
+      supabase
+        .from("vendor_products")
+        .select(
+          "id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id",
+        )
+        .eq("store_id", storeRaw.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("vendor_reviews")
+        .select("id, reviewer_name, rating, comment, is_published, created_at")
+        .eq("store_id", storeRaw.id)
+        .eq("is_published", true)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ])
+
+    const safeProducts = (productsRaw ?? []).map((r) => toDbProduct(r as any))
+    products = safeProducts
+    vendorProductCount = safeProducts.length
+
+    const safeReviews: ReviewForUi[] = (reviewsRaw ?? []).map((r) => ({
+      id: r.id,
+      userName: r.reviewer_name,
+      rating: r.rating,
+      title: "",
+      comment: r.comment ?? "",
+      date: r.created_at,
+      verified: true,
+      helpful: 0,
+    }))
+    vendorReviews = safeReviews
+    vendorReviewCount = safeReviews.length
+
+    vendorAvgRating =
+      vendorReviewCount === 0
+        ? 0
+        : Math.round((safeReviews.reduce((s, rev) => s + rev.rating, 0) / vendorReviewCount) * 10) / 10
+
+    const joinedDate = storeRaw.created_at ? String(storeRaw.created_at).slice(0, 7) : ""
+
+    vendorForUi = {
+      id: storeRaw.id,
+      name: storeRaw.name,
+      slug: storeRaw.slug,
+      description: storeRaw.description ?? "",
+      logo: storeRaw.logo_url ?? "",
+      coverImage: storeRaw.cover_url ?? "",
+      rating: vendorAvgRating,
+      joinedDate,
+      location: storeRaw.location ?? "",
+      categories: [],
+      socialLinks: {},
+      verified: storeRaw.is_verified,
+      productCount: vendorProductCount,
+      reviewCount: vendorReviewCount,
+    } as any
+  }
 
   return (
     <div>
       {/* Cover Image */}
       <div className="relative h-48 md:h-64 w-full">
-        <Image
-          src={vendor.coverImage}
-          alt={vendor.name}
-          fill
-          className="object-cover"
-          priority
-        />
+        {vendorForUi.coverImage?.trim() ? (
+          <Image
+            src={vendorForUi.coverImage}
+            alt={vendorForUi.name}
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-r from-muted to-secondary" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
       </div>
 
@@ -71,12 +257,18 @@ export default async function VendorPage({ params }: VendorPageProps) {
           <div className="flex flex-col md:flex-row gap-6 items-start">
             {/* Logo */}
             <div className="relative h-28 w-28 md:h-36 md:w-36 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg">
-              <Image
-                src={vendor.logo}
-                alt={vendor.name}
-                fill
-                className="object-cover"
-              />
+              {vendorForUi.logo?.trim() ? (
+                <Image
+                  src={vendorForUi.logo}
+                  alt={vendorForUi.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                  {vendorForUi.name.slice(0, 1)}
+                </div>
+              )}
             </div>
 
             {/* Details */}
@@ -84,21 +276,21 @@ export default async function VendorPage({ params }: VendorPageProps) {
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-2xl md:text-3xl font-bold">{vendor.name}</h1>
-                    {vendor.verified && (
+                    <h1 className="text-2xl md:text-3xl font-bold">{vendorForUi.name}</h1>
+                    {vendorForUi.verified && (
                       <BadgeCheck className="h-6 w-6 text-primary" />
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground mt-1">
                     <MapPin className="h-4 w-4" />
-                    <span>{vendor.location}</span>
+                    <span>{vendorForUi.location}</span>
                   </div>
                 </div>
 
                 <ShareButtons
-                  url={`/vendor/${vendor.slug}`}
-                  title={`Check out ${vendor.name} on Marketin24`}
-                  description={vendor.description}
+                  url={`/vendor/${vendorForUi.slug}`}
+                  title={`Check out ${vendorForUi.name} on Marketin24`}
+                  description={vendorForUi.description}
                 />
               </div>
 
@@ -106,35 +298,35 @@ export default async function VendorPage({ params }: VendorPageProps) {
               <div className="flex flex-wrap items-center gap-4 md:gap-6 mt-4">
                 <div className="flex items-center gap-1.5">
                   <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold">{vendor.rating}</span>
+                  <span className="font-semibold">{vendorForUi.rating}</span>
                   <span className="text-muted-foreground">
-                    ({vendor.reviewCount} reviews)
+                    ({vendorReviewCount} reviews)
                   </span>
                 </div>
                 <Separator orientation="vertical" className="h-5 hidden sm:block" />
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Package className="h-4 w-4" />
-                  <span>{vendor.productCount} products</span>
+                  <span>{vendorProductCount} products</span>
                 </div>
                 <Separator orientation="vertical" className="h-5 hidden sm:block" />
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>Joined {vendor.joinedDate}</span>
+                  <span>Joined {vendorForUi.joinedDate}</span>
                 </div>
               </div>
 
               {/* Description */}
               <p className="mt-4 text-muted-foreground leading-relaxed max-w-2xl">
-                {vendor.description}
+                {vendorForUi.description}
               </p>
 
               {/* Social Links */}
-              {Object.values(vendor.socialLinks).some(Boolean) && (
+              {Object.values(vendorForUi.socialLinks).some(Boolean) && (
                 <div className="flex flex-wrap gap-2 mt-4">
-                  {vendor.socialLinks.instagram && (
+                  {vendorForUi.socialLinks.instagram && (
                     <Badge variant="secondary" asChild>
                       <a
-                        href={vendor.socialLinks.instagram}
+                        href={vendorForUi.socialLinks.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -142,10 +334,10 @@ export default async function VendorPage({ params }: VendorPageProps) {
                       </a>
                     </Badge>
                   )}
-                  {vendor.socialLinks.facebook && (
+                  {vendorForUi.socialLinks.facebook && (
                     <Badge variant="secondary" asChild>
                       <a
-                        href={vendor.socialLinks.facebook}
+                        href={vendorForUi.socialLinks.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -153,10 +345,10 @@ export default async function VendorPage({ params }: VendorPageProps) {
                       </a>
                     </Badge>
                   )}
-                  {vendor.socialLinks.twitter && (
+                  {vendorForUi.socialLinks.twitter && (
                     <Badge variant="secondary" asChild>
                       <a
-                        href={vendor.socialLinks.twitter}
+                        href={vendorForUi.socialLinks.twitter}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -164,10 +356,10 @@ export default async function VendorPage({ params }: VendorPageProps) {
                       </a>
                     </Badge>
                   )}
-                  {vendor.socialLinks.website && (
+                  {vendorForUi.socialLinks.website && (
                     <Badge variant="secondary" asChild>
                       <a
-                        href={vendor.socialLinks.website}
+                        href={vendorForUi.socialLinks.website}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -192,7 +384,7 @@ export default async function VendorPage({ params }: VendorPageProps) {
             </TabsTrigger>
             <TabsTrigger value="reviews" className="gap-2">
               <MessageSquare className="h-4 w-4" />
-              Değerlendirmeler ({getVendorReviews(vendor.id).length})
+              Değerlendirmeler ({vendorReviewCount})
             </TabsTrigger>
           </TabsList>
           
@@ -203,9 +395,9 @@ export default async function VendorPage({ params }: VendorPageProps) {
           <TabsContent value="reviews">
             <div className="max-w-3xl">
               <ReviewsSection
-                reviews={getVendorReviews(vendor.id)}
-                averageRating={getVendorAverageRating(vendor.id) || vendor.rating}
-                totalReviews={getVendorReviews(vendor.id).length || vendor.reviewCount}
+                reviews={vendorReviews as any}
+                averageRating={vendorAvgRating}
+                totalReviews={vendorReviewCount}
               />
             </div>
           </TabsContent>

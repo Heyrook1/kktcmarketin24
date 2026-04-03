@@ -36,6 +36,9 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
 
   if (!vendor) return null
 
+  const coverSrc = vendor.coverImage?.trim()
+  const logoSrc = vendor.logo?.trim()
+
   const hasNoProducts = products.length === 0
 
   const ratingDistribution = [5, 4, 3, 2, 1].map((r) => {
@@ -52,7 +55,11 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
         <ScrollArea className="flex-1">
           {/* Cover */}
           <div className="relative h-36 w-full">
-            <Image src={vendor.coverImage} alt={vendor.name} fill className="object-cover" />
+            {coverSrc ? (
+              <Image src={coverSrc} alt={vendor.name} fill className="object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-muted to-secondary" />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
           </div>
 
@@ -60,7 +67,13 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
             {/* Logo + name row */}
             <div className="flex items-end gap-4 -mt-10 relative z-10 mb-4">
               <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-4 border-background bg-secondary flex-shrink-0 shadow-lg">
-                <Image src={vendor.logo} alt={vendor.name} fill className="object-cover" />
+                {logoSrc ? (
+                  <Image src={logoSrc} alt={vendor.name} fill className="object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                    {vendor.name.slice(0, 1)}
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0 pb-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -93,7 +106,7 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
               <div className="flex flex-col items-center p-3 rounded-xl bg-secondary/50 text-center">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5 text-primary" />
-                  <span className="font-bold text-sm">{vendor.joinedDate.slice(0, 7)}</span>
+                  <span className="font-bold text-sm">{vendor.joinedDate ? vendor.joinedDate.slice(0, 7) : "—"}</span>
                 </div>
                 <span className="text-xs text-muted-foreground mt-0.5">Katılım</span>
               </div>
