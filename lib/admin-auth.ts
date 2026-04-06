@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/server"
+import { extractRoleName } from "@/lib/extract-role-name"
 
 export type AdminAuthResult =
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; role: "admin" | "super_admin" }
   | { ok: false; status: 401 | 403; message: string }
 
 export async function assertAdminAuth(): Promise<AdminAuthResult> {
@@ -21,11 +22,11 @@ export async function assertAdminAuth(): Promise<AdminAuthResult> {
     .eq("id", userId)
     .single()
 
-  const roleName = (profileData?.roles as { name?: string } | null)?.name?.toLowerCase()
-  if (roleName !== "admin") {
+  const roleName = extractRoleName(profileData?.roles)
+  if (roleName !== "admin" && roleName !== "super_admin") {
     return { ok: false, status: 403, message: "Yetkiniz yok." }
   }
 
-  return { ok: true, userId }
+  return { ok: true, userId, role: roleName as "admin" | "super_admin" }
 }
 

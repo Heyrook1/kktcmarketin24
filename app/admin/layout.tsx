@@ -3,13 +3,14 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { LayoutDashboard, Store, Package, Upload } from "lucide-react"
+import { extractRoleName } from "@/lib/extract-role-name"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login?next=/admin/dashboard")
+  if (!user) redirect("/login?next=/admin/dashboard")
 
   const { data: profileData } = await supabase
     .from("profiles")
@@ -17,8 +18,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     .eq("id", user.id)
     .single()
 
-  const roleName = (profileData?.roles as { name?: string } | null)?.name?.toLowerCase()
-  if (roleName !== "admin") redirect("/")
+  const roleName = extractRoleName(profileData?.roles)
+  if (roleName !== "admin" && roleName !== "super_admin") redirect("/")
+
+  const isSuperAdmin = roleName === "super_admin"
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -49,6 +52,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <Upload className="h-4 w-4" />
             Bulk Products
           </Link>
+          {isSuperAdmin && (
+            <Link
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors"
+              href="/super-admin"
+            >
+              <Package className="h-4 w-4" />
+              Super Admin
+            </Link>
+          )}
         </nav>
       </aside>
       <main className="flex-1 min-w-0 p-4 md:p-6">

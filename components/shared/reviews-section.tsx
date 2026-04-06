@@ -255,7 +255,7 @@ export function ReviewsSection({
                   </div>
                   <div className="flex items-center gap-2">
                     <Button asChild size="sm" className="gap-2 rounded-xl">
-                      <Link href="/auth/login">
+                      <Link href="/login">
                         <LogIn className="h-4 w-4" />
                         Giriş Yap
                       </Link>

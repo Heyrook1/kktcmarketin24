@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { type NextRequest, NextResponse } from 'next/server'
+import { extractRoleName } from '@/lib/extract-role-name'
 
 /**
  * Auth Callback Route
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     // No code — redirect to login with an error hint
-    return NextResponse.redirect(`${origin}/auth/login?error=missing_code`)
+    return NextResponse.redirect(`${origin}/login?error=missing_code`)
   }
 
   const cookieStore = await cookies()
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error || !data.user) {
-    return NextResponse.redirect(`${origin}/auth/login?error=auth_callback_failed`)
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
   }
 
   // Determine redirect based on role stored in profile
@@ -61,9 +62,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Role-based redirect after email confirmation / magic link
-  const roleName = (profile?.roles as { name?: string } | null)?.name ?? 'customer'
+  const roleName = extractRoleName(profile?.roles) ?? 'customer'
   let destination = '/account'
   if (roleName === 'admin')  destination = '/admin'
+  if (roleName === 'super_admin') destination = '/super-admin'
   if (roleName === 'vendor') destination = '/vendor-panel'
 
   // Honour an explicit `next` param if it was passed and isn't a role-default

@@ -1,18 +1,16 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ShoppingBag, Minus, Plus, Trash2, ArrowRight, Tag, X, Check, Loader2, Banknote, Store } from "lucide-react"
+import { ShoppingBag, Minus, Plus, Trash2, ArrowRight, Banknote, Store, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { useCartStore } from "@/lib/store/cart-store"
 import { formatPrice } from "@/lib/format"
 import { getVendorById } from "@/lib/data/vendors"
 import { cn } from "@/lib/utils"
+import { CartDiscountPicker } from "@/components/cart/cart-discount-picker"
 
 export function CartContent() {
   const {
@@ -29,30 +27,12 @@ export function CartContent() {
     removeCoupon,
   } = useCartStore()
 
-  const [couponInput, setCouponInput]     = useState("")
-  const [couponError, setCouponError]     = useState("")
-  const [couponLoading, setCouponLoading] = useState(false)
-
   const itemsByVendor  = getItemsByVendor()
   const totalPrice     = getTotalPrice()
   const discountAmount = getDiscountAmount()
   const finalPrice     = getFinalPrice()
   const totalItems     = items.reduce((sum, item) => sum + item.quantity, 0)
   const vendorCount    = Object.keys(itemsByVendor).length
-
-  async function handleApplyCoupon() {
-    const code = couponInput.trim()
-    if (!code) return
-    setCouponLoading(true)
-    setCouponError("")
-    const result = await applyCoupon(code)
-    setCouponLoading(false)
-    if (!result.valid) {
-      setCouponError(result.message)
-    } else {
-      setCouponInput("")
-    }
-  }
 
   if (items.length === 0) {
     return (
@@ -196,85 +176,52 @@ export function CartContent() {
               </div>
             )}
 
+            <CartDiscountPicker
+              subtotal={totalPrice}
+              appliedCoupon={appliedCoupon}
+              applyCoupon={applyCoupon}
+              removeCoupon={removeCoupon}
+            />
+
             <Separator />
 
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Ara Toplam ({totalItems} ürün)</span>
-              <span>{formatPrice(totalPrice)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Kargo</span>
-              <span className="text-emerald-600 font-medium">Ücretsiz</span>
-            </div>
-
-            {appliedCoupon && discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-emerald-600">
-                <span className="flex items-center gap-1">
-                  <Tag className="h-3.5 w-3.5" />{appliedCoupon.code}
+            <div className="rounded-xl border bg-muted/40 p-3 space-y-2.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Ara toplam ({totalItems} ürün)</span>
+                <span className="font-medium tabular-nums">{formatPrice(totalPrice)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Kargo</span>
+                <span className="text-emerald-600 font-medium">Ücretsiz</span>
+              </div>
+              {appliedCoupon && discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-emerald-700 dark:text-emerald-400">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                    İndirim ({appliedCoupon.code})
+                  </span>
+                  <span className="font-medium tabular-nums">−{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              {appliedCoupon?.type === "free_shipping" && discountAmount === 0 && (
+                <div className="flex justify-between text-sm text-emerald-700 dark:text-emerald-400">
+                  <span>Kargo (kupon)</span>
+                  <span className="font-medium">Ücretsiz</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between items-baseline gap-2 pt-0.5">
+                <span className="text-lg font-bold">Toplam</span>
+                <span className={cn("text-xl font-bold tabular-nums", discountAmount > 0 && "text-emerald-700 dark:text-emerald-400")}>
+                  {formatPrice(finalPrice)}
                 </span>
-                <span>-{formatPrice(discountAmount)}</span>
               </div>
-            )}
-            {appliedCoupon?.type === "free_shipping" && (
-              <div className="flex justify-between text-sm text-emerald-600">
-                <span className="flex items-center gap-1"><Tag className="h-3.5 w-3.5" />{appliedCoupon.code}</span>
-                <span>Ücretsiz kargo</span>
-              </div>
-            )}
-
-            <Separator />
-
-            {!appliedCoupon ? (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">İndirim Kodu</p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Kupon kodunu girin"
-                    value={couponInput}
-                    onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError("") }}
-                    onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                    className="text-sm uppercase"
-                    maxLength={20}
-                  />
-                  <Button
-                    variant="outline" size="sm"
-                    onClick={handleApplyCoupon}
-                    disabled={couponLoading || !couponInput.trim()}
-                    className="shrink-0"
-                  >
-                    {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Uygula"}
-                  </Button>
-                </div>
-                {couponError && (
-                  <p className="text-xs text-destructive flex items-center gap-1">
-                    <X className="h-3 w-3 shrink-0" />{couponError}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 px-3 py-2.5">
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <div>
-                    <p className="font-semibold text-emerald-800 dark:text-emerald-400">{appliedCoupon.code}</p>
-                    <p className="text-xs text-emerald-700 dark:text-emerald-500">{appliedCoupon.description}</p>
-                  </div>
-                </div>
-                <button onClick={removeCoupon} className="text-emerald-700 hover:text-destructive transition-colors ml-2" aria-label="Kuponu kaldır">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
-            <Separator />
-
-            <div className="flex justify-between font-bold text-lg">
-              <span>Toplam</span>
-              <span className={cn(discountAmount > 0 && "text-emerald-700")}>{formatPrice(finalPrice)}</span>
+              {discountAmount > 0 && (
+                <p className="text-[11px] text-center text-emerald-700 dark:text-emerald-400 font-medium">
+                  {formatPrice(discountAmount)} tasarruf
+                </p>
+              )}
             </div>
-            {discountAmount > 0 && (
-              <p className="text-xs text-emerald-600 text-right font-medium">{formatPrice(discountAmount)} tasarruf ettiniz!</p>
-            )}
           </CardContent>
 
           <CardFooter className="flex flex-col gap-2 pt-0">

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 export default async function VendorReturnsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login?next=/vendor-panel/returns")
+  if (!user) redirect("/login?next=/vendor-panel/returns")
 
   const { data: store } = await supabase
     .from("vendor_stores")

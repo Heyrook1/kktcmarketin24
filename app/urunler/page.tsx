@@ -2,10 +2,11 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { ProductsContent, ProductsContentSkeleton } from "@/app/products/products-content"
-import { buildSearchAliases } from "@/lib/smart-search"
 import { categories } from "@/lib/data/categories"
+import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
 
-export const revalidate = 60
+/** Always read fresh product rows from Supabase (new listings show without waiting on ISR). */
+export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Tüm Ürünler | Marketin24",
@@ -15,38 +16,6 @@ export const metadata: Metadata = {
     title: "Tüm Ürünler | Marketin24",
     description: "Onaylı satıcılarımızdan yüzlerce ürünü keşfedin.",
   },
-}
-
-/** Maps any possible DB category value → canonical slug */
-const CAT_MAP: Record<string, string> = {
-  elektronik: "electronics",        electronics: "electronics",
-  moda: "fashion",                  fashion: "fashion",
-  giyim: "fashion",                 "ev & bahçe": "home-garden",
-  "ev ve bahçe": "home-garden",     "home-garden": "home-garden",
-  ev: "home-garden",                bahçe: "home-garden",
-  güzellik: "beauty",               beauty: "beauty",
-  kozmetik: "beauty",               spor: "sports",
-  sports: "sports",                 "spor & outdoor": "sports",
-  "çocuk & bebek": "kids-baby",     "kids-baby": "kids-baby",
-  bebek: "kids-baby",               çocuk: "kids-baby",
-  "takı & aksesuar": "jewelry",     jewelry: "jewelry",
-  takı: "jewelry",                  aksesuar: "jewelry",
-  "market & gıda": "groceries",     groceries: "groceries",
-  market: "groceries",              gıda: "groceries",
-  "sağlık & wellness": "health",    health: "health",
-  sağlık: "health",                 wellness: "health",
-  "kitap & kırtasiye": "books",     books: "books",
-  kitap: "books",                   kırtasiye: "books",
-}
-
-export function normalizeCat(raw: string | null | undefined): string {
-  if (!raw) return ""
-  const lower = raw.toLowerCase().trim()
-  if (CAT_MAP[lower]) return CAT_MAP[lower]
-  const match = categories.find(
-    (c) => c.id === lower || c.slug === lower || c.name.toLowerCase() === lower
-  )
-  return match?.id ?? lower
 }
 
 export default async function UrunlerPage() {
@@ -70,39 +39,9 @@ export default async function UrunlerPage() {
 
   if (prodErr) console.error("[urunler/page] DB error:", prodErr.message)
 
-  const initialProducts = (rawProducts ?? []).map((p) => {
-    const store = Array.isArray(p.vendor_stores)
-      ? p.vendor_stores[0]
-      : (p.vendor_stores as { id: string; name: string; slug: string } | null)
-    const tags       = (p.tags as string[]) ?? []
-    const categoryId = normalizeCat(p.category)
-    const stockCount = typeof p.stock === "number" ? p.stock : 0
-    const dbImages   = (p.images as string[] | null) ?? []
-    const allImages  = dbImages.length > 0
-      ? dbImages
-      : p.image_url ? [p.image_url] : ["/placeholder.svg"]
-    return {
-      id:           p.id,
-      name:         p.name,
-      slug:         p.id,
-      description:  p.description ?? "",
-      price:        Number(p.price),
-      originalPrice: p.compare_price ? Number(p.compare_price) : undefined,
-      categoryId,
-      images:       allImages,
-      tags,
-      vendorId:     p.store_id,
-      vendorName:   store?.name ?? "",
-      inStock:      stockCount > 0,
-      stockCount,
-      stock:        stockCount,
-      featured:     false,
-      rating:       0,
-      reviewCount:  0,
-      createdAt:    p.created_at,
-      searchAliases: buildSearchAliases(categoryId, tags),
-    }
-  })
+  const initialProducts = (rawProducts ?? []).map((p) =>
+    mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
+  )
 
   const usedCatIds = [...new Set(
     initialProducts.map((p) => p.categoryId).filter(Boolean),

@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordDeliveryEvent, type DeliveryEventType } from '@/lib/reliability'
 import { assertDeliveryEventOwnership, isUuid } from '@/lib/vendor-auth'
+import { assertAdminAuth } from '@/lib/admin-auth'
 
 const VALID_EVENT_TYPES: DeliveryEventType[] = [
   'confirmed', 'delivered', 'cancelled_after_dispatch', 'door_refused',
@@ -34,9 +35,33 @@ export async function POST(
     return NextResponse.json({ error: 'Geçersiz sipariş kimliği.' }, { status: 400 })
   }
 
-  // Single ownership check — replaces the duplicated auth + store lookup
-  const auth = await assertDeliveryEventOwnership(orderId)
-  if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
+  // Vendor ownership first; fallback to admin/super_admin override.
+  const vendorAuth = await assertDeliveryEventOwnership(orderId)
+  let effectiveStoreId: string | null = vendorAuth.ok ? vendorAuth.session.storeId : null
+  let actorUserId: string | null = vendorAuth.ok ? vendorAuth.session.userId : null
+
+  const admin = adminClient()
+
+  if (!effectiveStoreId || !actorUserId) {
+    const adminAuth = await assertAdminAuth()
+    if (!adminAuth.ok) {
+      return NextResponse.json({ error: vendorAuth.ok ? 'Yetkiniz yok.' : vendorAuth.message }, { status: vendorAuth.ok ? 403 : vendorAuth.status })
+    }
+
+    const { data: row } = await admin
+      .from('vendor_orders')
+      .select('store_id')
+      .eq('order_id', orderId)
+      .limit(1)
+      .maybeSingle()
+
+    if (!row?.store_id) {
+      return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 })
+    }
+
+    effectiveStoreId = row.store_id
+    actorUserId = adminAuth.userId
+  }
 
   let body: { eventType?: string; notes?: string }
   try {
@@ -50,8 +75,6 @@ export async function POST(
     return NextResponse.json({ error: 'Geçersiz etkinlik türü.' }, { status: 400 })
   }
 
-  const admin = adminClient()
-
   // Fetch customer_id from parent order
   const { data: order } = await admin
     .from('orders')
@@ -62,13 +85,16 @@ export async function POST(
   if (!order?.customer_id) {
     return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 })
   }
+  if (!effectiveStoreId || !actorUserId) {
+    return NextResponse.json({ error: 'Yetki doğrulaması başarısız.' }, { status: 403 })
+  }
 
   const result = await recordDeliveryEvent(
     orderId,
-    auth.session.storeId,      // server-resolved — never from client
+    effectiveStoreId,      // server-resolved — never from client
     order.customer_id,
     eventType,
-    auth.session.userId,
+    actorUserId,
     body.notes
   )
 

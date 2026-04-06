@@ -13,7 +13,7 @@ import { getProductsByVendor } from "@/lib/data/products"
 import { getVendorReviews, getVendorAverageRating } from "@/lib/data/vendor-reviews"
 import { createClient } from "@/lib/supabase/server"
 import type { Product } from "@/lib/data/products"
-import { normalizeCat } from "@/app/urunler/page"
+import { normalizeCat } from "@/lib/normalize-product-category"
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>

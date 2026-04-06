@@ -10,6 +10,7 @@ import {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, BookOpen, ChevronRight,
   Bell,
+  ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -25,22 +26,37 @@ import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import { MegaMenu } from "@/components/layout/mega-menu"
 import { LanguageSelector } from "@/components/shared/language-selector"
+import { extractRoleName } from "@/lib/extract-role-name"
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell, Baby,
   Watch, ShoppingBasket, Heart, BookOpen,
 }
 
+function useHasMounted() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted
+}
+
 // ---------------------------------------------------------------------------
 // DynamicCartButton
 // ---------------------------------------------------------------------------
 function DynamicCartButton() {
+  const mounted = useHasMounted()
   const { getTotalItems, openCart } = useCartStore()
-  const totalItems = getTotalItems()
+  const totalItems = mounted ? getTotalItems() : 0
   const prevCount = useRef(totalItems)
   const [bumping, setBumping] = useState(false)
+  const skipBumpAfterHydration = useRef(true)
 
   useEffect(() => {
+    if (!mounted) return
+    if (skipBumpAfterHydration.current) {
+      skipBumpAfterHydration.current = false
+      prevCount.current = totalItems
+      return
+    }
     if (totalItems > prevCount.current) {
       setBumping(true)
       const t = setTimeout(() => setBumping(false), 400)
@@ -48,7 +64,7 @@ function DynamicCartButton() {
       return () => clearTimeout(t)
     }
     prevCount.current = totalItems
-  }, [totalItems])
+  }, [totalItems, mounted])
 
   return (
     <Button
@@ -72,14 +88,16 @@ function DynamicCartButton() {
 // WishlistButton
 // ---------------------------------------------------------------------------
 function WishlistButton() {
+  const mounted = useHasMounted()
   const { items } = useWishlistStore()
+  const count = mounted ? items.length : 0
   return (
     <Link href="/wishlist" aria-label="Favoriler">
       <Button variant="ghost" size="icon" className="relative h-9 w-9">
         <Heart className="h-5 w-5" />
-        {items.length > 0 && (
+        {count > 0 && (
           <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] leading-none flex items-center justify-center bg-red-500 text-white">
-            {items.length > 99 ? "99+" : items.length}
+            {count > 99 ? "99+" : count}
           </Badge>
         )}
       </Button>
@@ -93,7 +111,33 @@ function WishlistButton() {
 function UserMenu({ user }: { user: User | null }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [isVendor, setIsVendor] = useState(false)
+  const [roleName, setRoleName] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!user) {
+      setIsVendor(false)
+      setRoleName(null)
+      return
+    }
+    const supabase = createClient()
+    supabase
+      .from("vendor_stores")
+      .select("id")
+      .eq("owner_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setIsVendor(!!data))
+    supabase
+      .from("profiles")
+      .select("roles(name)")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        const role = extractRoleName(data?.roles)
+        setRoleName(role)
+      })
+  }, [user])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -114,7 +158,7 @@ function UserMenu({ user }: { user: User | null }) {
     return (
       <div className="hidden lg:flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/auth/login">
+          <Link href="/login">
             <LogIn className="h-4 w-4 mr-1.5" />
             Giriş Yap
           </Link>
@@ -165,17 +209,46 @@ function UserMenu({ user }: { user: User | null }) {
               </Link>
             ))}
           </div>
-          <Separator />
-          <div className="py-1">
-            <Link
-              href="/vendor-panel"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
-            >
-              <Store className="h-3.5 w-3.5" />
-              Satıcı Paneli
-            </Link>
-          </div>
+          {isVendor && (
+            <>
+              <Separator />
+              <div className="py-1">
+                <Link
+                  href="/vendor-panel"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Store className="h-3.5 w-3.5" />
+                  Satıcı Paneli
+                </Link>
+              </div>
+            </>
+          )}
+          {(roleName === "admin" || roleName === "super_admin") && (
+            <>
+              <Separator />
+              <div className="py-1">
+                <Link
+                  href="/admin/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Admin Paneli
+                </Link>
+                {roleName === "super_admin" && (
+                  <Link
+                    href="/super-admin"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <Store className="h-3.5 w-3.5" />
+                    Super Admin
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
           <Separator />
           <div className="py-1">
             <button
@@ -196,6 +269,8 @@ function UserMenu({ user }: { user: User | null }) {
 // ---------------------------------------------------------------------------
 export function Header() {
   const [user, setUser] = useState<User | null>(null)
+  const [mobileIsVendor, setMobileIsVendor] = useState(false)
+  const [mobileRoleName, setMobileRoleName] = useState<string | null>(null)
   const [megaMenuOpen, setMegaMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [expandedCat, setExpandedCat] = useState<string | null>(null)
@@ -230,6 +305,30 @@ export function Header() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setMobileIsVendor(false)
+      setMobileRoleName(null)
+      return
+    }
+    const supabase = createClient()
+    supabase
+      .from("vendor_stores")
+      .select("id")
+      .eq("owner_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setMobileIsVendor(!!data))
+    supabase
+      .from("profiles")
+      .select("roles(name)")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        const role = extractRoleName(data?.roles)
+        setMobileRoleName(role)
+      })
+  }, [user])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -297,7 +396,7 @@ export function Header() {
                   ) : (
                     <div className="flex gap-2 px-4 py-3 border-b">
                       <Button size="sm" className="flex-1" asChild>
-                        <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>Giriş Yap</Link>
+                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Giriş Yap</Link>
                       </Button>
                       <Button size="sm" variant="outline" className="flex-1" asChild>
                         <Link href="/auth/sign-up" onClick={() => setMobileMenuOpen(false)}>Kayıt Ol</Link>
@@ -346,10 +445,59 @@ export function Header() {
                   </nav>
 
                   <div className="border-t py-2">
+                    {user && (
+                      <>
+                        <Link
+                          href="/account"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <UserCircle className="h-4 w-4 text-muted-foreground" />
+                          Hesabım
+                        </Link>
+                        <Link
+                          href="/account?tab=orders"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                          Siparişlerim
+                        </Link>
+                      </>
+                    )}
+                    {mobileIsVendor && (
+                      <Link
+                        href="/vendor-panel"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Store className="h-4 w-4 text-muted-foreground" />
+                        Satıcı Paneli
+                      </Link>
+                    )}
+                    {(mobileRoleName === "admin" || mobileRoleName === "super_admin") && (
+                      <Link
+                        href="/admin/dashboard"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                        Admin Paneli
+                      </Link>
+                    )}
+                    {mobileRoleName === "super_admin" && (
+                      <Link
+                        href="/super-admin"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                        Super Admin
+                      </Link>
+                    )}
                     {[
                       { href: "/vendor-login", label: "Satıcı Girişi", icon: Store },
                       { href: "/seller-application", label: "Satıcı Ol", icon: Store },
-                      { href: "/account", label: "Hesabım", icon: UserCircle },
                     ].map(({ href, label, icon: Icon }) => (
                       <Link
                         key={href}

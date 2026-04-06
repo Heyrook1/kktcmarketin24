@@ -9,7 +9,7 @@ import Link from "next/link"
 export default async function VendorProductsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login?next=/vendor-panel/products")
+  if (!user) redirect("/login?next=/vendor-panel/products")
 
   const { data: store } = await supabase
     .from("vendor_stores").select("id, name").eq("owner_id", user.id).single()

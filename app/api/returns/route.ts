@@ -12,6 +12,23 @@ function getAdmin() {
 
 const VALID_REASONS = ["Hasar Var", "Yanlış Ürün", "Beklentiye Uymadı", "Diğer"] as const
 
+function deriveOrderStatusFromVendorRows(rows: Array<{ status: string }>): string {
+  if (rows.length === 0) return "pending"
+  if (rows.some((v) => v.status === "cancelled")) return "cancelled"
+  if (rows.some((v) => v.status === "refunded")) return "refunded"
+  const rank: Record<string, number> = {
+    pending: 0,
+    confirmed: 1,
+    preparing: 2,
+    shipped: 3,
+    exchange_requested: 4,
+    delivered: 5,
+  }
+  const minRank = Math.min(...rows.map((v) => rank[v.status] ?? 0))
+  const byRank = ["pending", "confirmed", "preparing", "shipped", "exchange_requested", "delivered"]
+  return byRank[minRank] ?? "pending"
+}
+
 export async function POST(req: NextRequest) {
   try {
     // ── Auth ───────────────────────────────────────────────────────────────
@@ -37,14 +54,29 @@ export async function POST(req: NextRequest) {
     // ── Verify order belongs to this customer and is delivered ─────────────
     const { data: order, error: orderErr } = await admin
       .from("orders")
-      .select("id, customer_id, created_at, saga_status, order_vendor_sub_orders(store_id)")
+      .select("id, customer_id, customer_email, created_at, saga_status, order_vendor_sub_orders(store_id)")
       .eq("id", order_id)
       .single()
 
     if (orderErr || !order)
       return NextResponse.json({ error: "Sipariş bulunamadı." }, { status: 404 })
-    if (order.customer_id !== user.id)
+    const belongsToUser =
+      order.customer_id === user.id ||
+      (!!user.email && !!order.customer_email && order.customer_email.toLowerCase() === user.email.toLowerCase())
+    if (!belongsToUser)
       return NextResponse.json({ error: "Bu sipariş size ait değil." }, { status: 403 })
+
+    const { data: vendorRows, error: vendorErr } = await admin
+      .from("vendor_orders")
+      .select("status")
+      .eq("order_id", order_id)
+    if (vendorErr) {
+      return NextResponse.json({ error: "Sipariş durumu doğrulanamadı." }, { status: 500 })
+    }
+    const derived = deriveOrderStatusFromVendorRows(vendorRows ?? [])
+    if (derived !== "delivered") {
+      return NextResponse.json({ error: "İade talebi sadece teslim edilen siparişler için açılabilir." }, { status: 422 })
+    }
 
     // ── 14-day window check ────────────────────────────────────────────────
     const orderDate = new Date(order.created_at)
@@ -61,8 +93,19 @@ export async function POST(req: NextRequest) {
     if (existing)
       return NextResponse.json({ error: "Bu sipariş için zaten bir iade talebi mevcut." }, { status: 409 })
 
-    // ── Derive store_id from first sub-order ───────────────────────────────
-    const storeId = (order.order_vendor_sub_orders as Array<{ store_id: string }>)[0]?.store_id ?? null
+    // ── Derive store_id from sub-order set (single-vendor only) ────────────
+    const storeIds = [...new Set(
+      ((order.order_vendor_sub_orders as Array<{ store_id: string }> | null) ?? [])
+        .map((r) => r.store_id)
+        .filter(Boolean),
+    )]
+    if (storeIds.length !== 1) {
+      return NextResponse.json(
+        { error: "Çoklu satıcılı siparişler için iade desteği yakında eklenecek. Lütfen destek ile iletişime geçin." },
+        { status: 422 }
+      )
+    }
+    const storeId = storeIds[0]
 
     // ── Insert return request ──────────────────────────────────────────────
     const { data: returnRow, error: insertErr } = await admin

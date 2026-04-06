@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
-import { normalizeCat } from "@/app/urunler/page"
+import { normalizeCat } from "@/lib/normalize-product-category"
 import type { Product } from "@/lib/data/products"
 
 /** Map a vendor_products DB row to the Product shape */
@@ -123,8 +123,35 @@ async function fetchProducts(opts: {
   return (data ?? []).map((p) => toProduct(p as Parameters<typeof toProduct>[0]))
 }
 
+async function fetchProductsWithFallback(opts: {
+  orderBy?: string
+  ascending?: boolean
+  limit?: number
+  hasSale?: boolean
+}) {
+  const targetCount = opts.limit ?? 8
+  const primaryProducts = await fetchProducts(opts)
+  if (!opts.hasSale || primaryProducts.length >= targetCount) return primaryProducts
+
+  // If discount-only pool is small, fill the remaining slots with latest active products.
+  const fallbackProducts = await fetchProducts({
+    orderBy: "created_at",
+    ascending: false,
+    limit: targetCount * 3,
+  })
+
+  const mergedProducts = [...primaryProducts]
+  for (const product of fallbackProducts) {
+    if (mergedProducts.some((p) => p.id === product.id)) continue
+    mergedProducts.push(product)
+    if (mergedProducts.length >= targetCount) break
+  }
+
+  return mergedProducts.slice(0, targetCount)
+}
+
 export async function FeaturedProducts() {
-  const products = await fetchProducts({ hasSale: true, limit: 8 })
+  const products = await fetchProductsWithFallback({ hasSale: true, limit: 8 })
   return (
     <ProductSection
       title="Öne Çıkan Ürünler"

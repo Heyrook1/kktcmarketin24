@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ProductDetail } from "@/app/products/[id]/product-detail"
 import { ProductGrid } from "@/components/product/product-grid"
-import { normalizeCat } from "@/app/urunler/page"
+import { normalizeCat } from "@/lib/normalize-product-category"
 import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
 import type { Product } from "@/lib/data/products"
@@ -12,7 +12,7 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
-export const revalidate = 60
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params

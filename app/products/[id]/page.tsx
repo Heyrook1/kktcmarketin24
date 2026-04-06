@@ -9,9 +9,10 @@ import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
+import { normalizeCat } from "@/lib/normalize-product-category"
 import type { Product } from "@/lib/data/products"
 
-export const revalidate = 60
+export const dynamic = "force-dynamic"
 
 interface ProductPageProps {
   params: Promise<{ id: string }>
@@ -42,7 +43,7 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     price:        Number(data.price),
     originalPrice: data.compare_price ? Number(data.compare_price) : undefined,
     images:       allImages,
-    categoryId:   (data.category ?? "other").toLowerCase().replace(/\s+/g, "-"),
+    categoryId:   normalizeCat(data.category ?? "other"),
     vendorId:     data.store_id,
     rating:       0,
     reviewCount:  0,

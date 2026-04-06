@@ -11,24 +11,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { assertVendorOrderOwnership } from '@/lib/vendor-auth'
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
-// Vendor-permitted statuses and their allowed next states.
-// System-only states (pending_otp, failed, refunded) are excluded.
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  pending:    ['confirmed', 'cancelled'],
-  confirmed:  ['shipped'],
-  shipped:    ['delivered'],
-  // cancelled and delivered are terminal — no further transitions
-}
+import { assertAdminAuth } from '@/lib/admin-auth'
+import { updateVendorOrderStatus } from '@/lib/order-status/update-vendor-order-status'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -37,11 +23,7 @@ interface RouteContext {
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { id } = await params
 
-  // Verify caller owns this vendor_order
-  const auth = await assertVendorOrderOwnership(id)
-  if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
-
-  let body: { status?: string }
+  let body: { status?: string; trackingNumber?: string | null }
   try {
     body = await req.json()
   } catch {
@@ -53,43 +35,43 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: '"status" alanı zorunludur.' }, { status: 422 })
   }
 
-  const admin = adminClient()
+  // Vendor owner path first; fallback to admin/super_admin override.
+  const vendorAuth = await assertVendorOrderOwnership(id)
+  let effectiveStoreId: string | null = vendorAuth.ok ? vendorAuth.session.storeId : null
 
-  // Fetch current status to validate the transition
-  const { data: current, error: fetchErr } = await admin
-    .from('vendor_orders')
-    .select('status')
-    .eq('id', id)
-    .single()
-
-  if (fetchErr || !current) {
-    return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 })
+  if (!effectiveStoreId) {
+    const adminAuth = await assertAdminAuth()
+    if (!adminAuth.ok) {
+      return NextResponse.json({ error: vendorAuth.ok ? "Yetkiniz yok." : vendorAuth.message }, { status: vendorAuth.ok ? 403 : vendorAuth.status })
+    }
+    const admin = createAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: row } = await admin
+      .from("vendor_orders")
+      .select("store_id")
+      .eq("id", id)
+      .maybeSingle()
+    if (!row?.store_id) {
+      return NextResponse.json({ error: "Sipariş bulunamadı." }, { status: 404 })
+    }
+    effectiveStoreId = row.store_id
   }
 
-  const allowed = ALLOWED_TRANSITIONS[current.status] ?? []
-  if (!allowed.includes(newStatus)) {
+  const result = await updateVendorOrderStatus({
+    vendorOrderId: id,
+    vendorStoreId: effectiveStoreId,
+    newStatus,
+    trackingNumber: body.trackingNumber ?? null,
+  })
+
+  if (!result.ok) {
     return NextResponse.json(
-      {
-        error: `"${current.status}" durumundan "${newStatus}" durumuna geçiş yapılamaz.`,
-        allowedNext: allowed,
-      },
-      { status: 422 }
+      { error: result.error, ...(result.allowedNext ? { allowedNext: result.allowedNext } : {}) },
+      { status: result.status }
     )
   }
 
-  const { error: updateErr } = await admin
-    .from('vendor_orders')
-    .update({
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .eq('store_id', auth.session.storeId)  // second ownership guard in the query itself
-
-  if (updateErr) {
-    console.error('[vendor/orders status PATCH]', updateErr)
-    return NextResponse.json({ error: 'Durum güncellenemedi.' }, { status: 500 })
-  }
-
-  return NextResponse.json({ ok: true, status: newStatus })
+  return NextResponse.json({ ok: true, status: result.status })
 }

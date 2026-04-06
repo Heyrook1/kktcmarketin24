@@ -17,6 +17,13 @@ const ACTION_TO_STATUS: Record<string, string> = {
   complete: "completed",
 }
 
+const RETURN_ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  requested: ["approved", "rejected"],
+  approved: ["completed"],
+  rejected: [],
+  completed: [],
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -63,6 +70,14 @@ export async function PATCH(
 
     if (!store)
       return NextResponse.json({ error: "Bu iade size ait değil." }, { status: 403 })
+
+    const allowed = RETURN_ALLOWED_TRANSITIONS[ret.status] ?? []
+    if (!allowed.includes(newStatus)) {
+      return NextResponse.json(
+        { error: `"${ret.status}" durumundan "${newStatus}" durumuna geçiş yapılamaz.`, allowedNext: allowed },
+        { status: 422 }
+      )
+    }
 
     // ── Build update payload ───────────────────────────────────────────────
     const updatePayload: Record<string, string | null> = { status: newStatus }

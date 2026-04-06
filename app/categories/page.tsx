@@ -8,7 +8,7 @@ import { categories } from "@/lib/data/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/server"
 
-export const revalidate = 300
+export const dynamic = "force-dynamic"
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Smartphone, Shirt, Home, Sparkles, Dumbbell,

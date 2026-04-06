@@ -40,7 +40,7 @@ const CartItemSchema = z.object({
   product_id:   z.string().uuid({ message: "Geçersiz ürün kimliği." }),
   quantity:     z.number().int().min(1, "Miktar en az 1 olmalıdır.").max(99, "Miktar 99'u geçemez."),
   product_name: z.string().optional(),
-  image_url:    z.string().url().optional().or(z.literal("")),
+  image_url:    z.string().max(2048).optional().nullable(),
 })
 
 const DeliveryAddressSchema = z.object({
@@ -62,17 +62,144 @@ const PlaceOrderSchema = z.object({
 
 type PlaceOrderBody = z.infer<typeof PlaceOrderSchema>
 
+/** İstanbul (TR/KKTC) — 24 saat */
+const ORDER_NUMBER_TZ = "Europe/Istanbul"
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function generateOrderNumber(admin: ReturnType<typeof sb>): Promise<string> {
-  const today      = new Date()
-  const datePart   = today.toISOString().slice(0, 10).replace(/-/g, "")
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
-  const { count }  = await admin
+function sanitizeVendorLabel(raw: string): string {
+  const tr: Record<string, string> = {
+    ç: "C", Ç: "C", ğ: "G", Ğ: "G", ı: "I", İ: "I", i: "I", ö: "O", Ö: "O", ş: "S", Ş: "S", ü: "U", Ü: "U",
+  }
+  let s = raw
+    .trim()
+    .split("")
+    .map((ch) => tr[ch] ?? ch)
+    .join("")
+  s = s.replace(/[^a-zA-Z0-9]+/g, "")
+  s = s.toUpperCase()
+  return s.slice(0, 24) || "MAGAZA"
+}
+
+function istanbulDateTimeParts(d: Date): { ddmmyyyy: string; hhmm: string } {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: ORDER_NUMBER_TZ,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+  const parts = fmt.formatToParts(d)
+  const get = (t: Intl.DateTimeFormatPartTypes) =>
+    (parts.find((p) => p.type === t)?.value ?? "0").padStart(2, "0")
+  const day = get("day")
+  const month = get("month")
+  const year = parts.find((p) => p.type === "year")?.value ?? "0000"
+  const hour = get("hour")
+  const minute = get("minute")
+  return {
+    ddmmyyyy: `${day}${month}${year}`,
+    hhmm: `${hour}${minute}`,
+  }
+}
+
+function vendorLabelFromVerifiedItems(
+  items: { storeId: string; storeName: string }[],
+): string {
+  const byStore = new Map<string, string>()
+  for (const i of items) {
+    if (!byStore.has(i.storeId)) byStore.set(i.storeId, i.storeName)
+  }
+  if (byStore.size === 0) return "MAGAZA"
+  if (byStore.size === 1) return sanitizeVendorLabel([...byStore.values()][0])
+  return "COKLU"
+}
+
+/**
+ * Format: SATICIADI-DDMMYYYY-HHmm-sırano (İstanbul, 24s).
+ * Aynı önek (aynı dakika + aynı satıcı etiketi) için sıra 1, 2, 3…
+ */
+async function generateUniqueOrderNumber(
+  admin: ReturnType<typeof sb>,
+  items: { storeId: string; storeName: string }[],
+): Promise<string> {
+  const vendor = vendorLabelFromVerifiedItems(items)
+  const { ddmmyyyy, hhmm } = istanbulDateTimeParts(new Date())
+  const base = `${vendor}-${ddmmyyyy}-${hhmm}`
+
+  const { data: rows } = await admin
     .from("orders")
-    .select("*", { count: "exact", head: true })
-    .gte("created_at", startOfDay)
-  return `MKT-${datePart}-${String((count ?? 0) + 1).padStart(3, "0")}`
+    .select("order_number")
+    .like("order_number", `${base}-%`)
+
+  let maxSeq = 0
+  for (const r of rows ?? []) {
+    const on = r.order_number
+    if (!on.startsWith(`${base}-`)) continue
+    const tail = on.slice(base.length + 1)
+    const n = parseInt(tail, 10)
+    if (!Number.isNaN(n)) maxSeq = Math.max(maxSeq, n)
+  }
+
+  const nextSeq = maxSeq + 1
+  return `${base}-${nextSeq}`
+}
+
+const MAX_ORDER_NUMBER_RETRIES = 15
+
+function isUniqueViolation(err: { code?: string } | null | undefined): boolean {
+  return err?.code === "23505"
+}
+
+/** Eski şema: order_number yok — Postgres metni çoğu zaman `details` içinde gelir */
+function isOrderNumberColumnMissing(
+  err: { code?: string; message?: string; details?: string; hint?: string } | null | undefined,
+): boolean {
+  if (!err) return false
+  const text = [err.message, err.details, err.hint].filter(Boolean).join(" ").toLowerCase()
+  if (err.code === "42703") return true
+  if (err.code === "PGRST204" && text.includes("order_number")) return true
+  if (text.includes("orders.order_number") && text.includes("does not exist")) return true
+  if (text.includes("order_number") && (text.includes("column") || text.includes("does not exist"))) return true
+  return false
+}
+
+/**
+ * INSERT bazen order_number döndürmez (şema önbelleği / sessiz yok sayma). Satırda boşsa UPDATE ile tamamla.
+ */
+async function ensureOrderNumberOnRow(
+  admin: ReturnType<typeof sb>,
+  orderId: string,
+  lastCandidate: string,
+  items: { storeId: string; storeName: string }[],
+): Promise<string> {
+  const { data: row } = await admin.from("orders").select("order_number").eq("id", orderId).maybeSingle()
+  if (row?.order_number) return row.order_number
+
+  let candidate = lastCandidate
+  for (let u = 0; u < MAX_ORDER_NUMBER_RETRIES; u++) {
+    const { data: updated, error: upErr } = await admin
+      .from("orders")
+      .update({ order_number: candidate })
+      .eq("id", orderId)
+      .select("order_number")
+      .single()
+    if (!upErr && updated?.order_number) return updated.order_number
+    if (upErr && isUniqueViolation(upErr)) {
+      candidate = await generateUniqueOrderNumber(admin, items)
+      continue
+    }
+    if (upErr && isOrderNumberColumnMissing(upErr)) {
+      return lastCandidate
+    }
+    if (upErr) {
+      console.warn("[place-order] ensureOrderNumberOnRow update failed:", upErr.message)
+    }
+    candidate = await generateUniqueOrderNumber(admin, items)
+  }
+  return lastCandidate
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -215,77 +342,209 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: stockErrors[0], details: stockErrors, outOfStock: true }, { status: 409 })
   }
 
-  // 7. Insert order
-  const orderNumber = await generateOrderNumber(admin)
+  // 7. Insert order — order_number tek INSERT ile (idx_orders_order_number_unique, 021); 23505 → yeniden dene
+  const customerEmail =
+    user?.email?.trim() || guestEmail?.trim() || "noemail@marketin24.local"
 
-  const { data: order, error: orderErr } = await admin
-    .from("orders")
-    .insert({
-      customer_id:      user?.id ?? null,
-      customer_name:    deliveryAddress.fullName,
-      customer_email:   user?.email ?? guestEmail ?? null,
-      customer_phone:   deliveryAddress.phone,
-      delivery_address: deliveryAddress,
-      subtotal:         serverSubtotal,
-      discount_amount:  discountAmount,
-      shipping_fee:     0,
-      total:            serverTotal,
-      coupon_code:      couponCode?.toUpperCase() ?? null,
-      payment_status:   "pending",
-      saga_status:      "completed",
-      cart_id:          cartId ?? null,
-    })
-    .select("id")
-    .single()
+  const orderInsertBase = {
+    customer_id:      user?.id ?? null,
+    customer_name:    deliveryAddress.fullName,
+    customer_email:   customerEmail,
+    customer_phone:   deliveryAddress.phone,
+    delivery_address: deliveryAddress,
+    subtotal:         serverSubtotal,
+    discount_amount:  discountAmount,
+    shipping_fee:     0,
+    total:            serverTotal,
+    coupon_code:      couponCode?.toUpperCase() ?? null,
+    payment_status:   "pending",
+    saga_status:      "completed",
+    cart_id:          cartId ?? null,
+  }
 
-  if (orderErr || !order) {
+  let order: { id: string; order_number: string | null } | null = null
+  let orderNumber = ""
+
+  for (let attempt = 0; attempt < MAX_ORDER_NUMBER_RETRIES; attempt++) {
+    orderNumber = await generateUniqueOrderNumber(admin, verifiedItems)
+    const { data: inserted, error: orderErr } = await admin
+      .from("orders")
+      .insert({ ...orderInsertBase, order_number: orderNumber })
+      .select("id, order_number")
+      .single()
+
+    if (!orderErr && inserted) {
+      order = inserted
+      break
+    }
+
+    if (orderErr && isUniqueViolation(orderErr)) {
+      continue
+    }
+
+    if (orderErr && isOrderNumberColumnMissing(orderErr)) {
+      // Sütun yokken .select("order_number") tüm isteği düşürür; yalnızca id dön.
+      const { data: legacyOrder, error: legacyErr } = await admin
+        .from("orders")
+        .insert(orderInsertBase)
+        .select("id")
+        .single()
+      if (legacyErr || !legacyOrder) {
+        await Promise.all(
+          verifiedItems.map((i) => admin.rpc("restore_stock", { p_product_id: i.productId, p_quantity: i.quantity }))
+        )
+        console.error("[place-order] orders insert (legacy) failed:", legacyErr)
+        const devHint =
+          process.env.NODE_ENV === "development" && legacyErr?.message
+            ? ` (${legacyErr.message})`
+            : ""
+        return NextResponse.json(
+          { error: `Sipariş oluşturulamadı. Lütfen tekrar deneyin.${devHint}` },
+          { status: 500 }
+        )
+      }
+      order = { id: legacyOrder.id, order_number: null }
+      for (let u = 0; u < MAX_ORDER_NUMBER_RETRIES; u++) {
+        orderNumber = await generateUniqueOrderNumber(admin, verifiedItems)
+        const { error: upErr } = await admin
+          .from("orders")
+          .update({ order_number: orderNumber })
+          .eq("id", order.id)
+        if (!upErr) break
+        if (isUniqueViolation(upErr)) continue
+        console.warn("[place-order] order_number update skipped:", upErr.message)
+        break
+      }
+      break
+    }
+
     await Promise.all(
       verifiedItems.map((i) => admin.rpc("restore_stock", { p_product_id: i.productId, p_quantity: i.quantity }))
     )
     console.error("[place-order] orders insert failed:", orderErr)
-    return NextResponse.json({ error: "Sipariş oluşturulamadı. Lütfen tekrar deneyin." }, { status: 500 })
+    const devHint =
+      process.env.NODE_ENV === "development" && orderErr?.message
+        ? ` (${orderErr.message})`
+        : ""
+    return NextResponse.json(
+      { error: `Sipariş oluşturulamadı. Lütfen tekrar deneyin.${devHint}` },
+      { status: 500 }
+    )
+  }
+
+  if (!order) {
+    await Promise.all(
+      verifiedItems.map((i) => admin.rpc("restore_stock", { p_product_id: i.productId, p_quantity: i.quantity }))
+    )
+    return NextResponse.json(
+      { error: "Sipariş numarası atanamadı (çok sayıda çakışma). Lütfen tekrar deneyin." },
+      { status: 409 }
+    )
+  }
+
+  if (!order.order_number) {
+    orderNumber = await ensureOrderNumberOnRow(admin, order.id, orderNumber, verifiedItems)
+  } else {
+    orderNumber = order.order_number
   }
 
   const orderId = order.id
 
-  const { error: itemsErr } = await admin.from("order_items").insert(
-    verifiedItems.map((item) => ({
-      order_id:     orderId,
-      product_id:   item.productId,
-      product_name: item.productName,
-      store_id:     item.storeId,
-      quantity:     item.quantity,
-      unit_price:   item.unitPrice,
-      line_total:   item.lineTotal,
-      image_url:    item.imageUrl,
-    }))
-  )
-  if (itemsErr) console.error("[place-order] order_items insert failed:", itemsErr)
-
-  // vendor sub-orders
   const vendorMap = new Map<string, typeof verifiedItems>()
   for (const item of verifiedItems) {
     if (!vendorMap.has(item.storeId)) vendorMap.set(item.storeId, [])
     vendorMap.get(item.storeId)!.push(item)
   }
 
-  const { data: subOrderRows } = await admin
-    .from("order_vendor_sub_orders")
-    .insert(
-      Array.from(vendorMap.entries()).map(([storeId, grpItems]) => ({
-        order_id:    orderId,
-        store_id:    storeId,
-        store_name:  grpItems[0].storeName,
-        step_status: "completed",
-        subtotal:    grpItems.reduce((s, i) => s + i.lineTotal, 0),
-        items:       grpItems.map((i) => ({
-          productId: i.productId, productName: i.productName,
-          quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.lineTotal,
-        })),
-        notes: deliveryAddress.notes ?? null,
-      }))
+  const subOrderRows: { id: string; store_id: string; subtotal: number }[] = []
+
+  try {
+    for (const [, grpItems] of vendorMap) {
+      const grpSubtotal = grpItems.reduce((s, i) => s + i.lineTotal, 0)
+      const storeId = grpItems[0].storeId
+      const storeName = grpItems[0].storeName
+
+      const { data: subOrder, error: subErr } = await admin
+        .from("order_vendor_sub_orders")
+        .insert({
+          order_id:    orderId,
+          store_id:    storeId,
+          store_name:  storeName,
+          step_status: "completed",
+          subtotal:    grpSubtotal,
+          items:       grpItems.map((i) => ({
+            productId: i.productId,
+            productName: i.productName,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            lineTotal: i.lineTotal,
+          })),
+          notes: deliveryAddress.notes ?? null,
+        })
+        .select("id, store_id, subtotal")
+        .single()
+
+      if (subErr || !subOrder) {
+        throw new Error(subErr?.message ?? "sub_order insert failed")
+      }
+
+      const { error: itemsErr } = await admin.from("order_items").insert(
+        grpItems.map((item) => ({
+          order_id:     orderId,
+          sub_order_id: subOrder.id,
+          product_id:   item.productId,
+          product_name: item.productName,
+          store_id:     item.storeId,
+          quantity:     item.quantity,
+          unit_price:   item.unitPrice,
+          line_total:   item.lineTotal,
+          image_url:    item.imageUrl,
+        }))
+      )
+      if (itemsErr) throw new Error(itemsErr.message)
+
+      const itemsCount = grpItems.reduce((n, i) => n + i.quantity, 0)
+      const voFull = {
+        store_id:       storeId,
+        order_id:       orderId,
+        sub_order_id:   subOrder.id,
+        customer_name:  deliveryAddress.fullName,
+        customer_email: customerEmail,
+        status:         "pending",
+        total:          grpSubtotal,
+        items_count:    itemsCount,
+        notes:          deliveryAddress.notes ?? null,
+      }
+      let voErr = (await admin.from("vendor_orders").insert(voFull)).error
+      if (voErr) {
+        console.warn("[place-order] vendor_orders full insert failed, retrying minimal row:", voErr.message)
+        voErr = (
+          await admin.from("vendor_orders").insert({
+            store_id:       storeId,
+            customer_name:  deliveryAddress.fullName,
+            customer_email: customerEmail,
+            status:         "pending",
+            total:          grpSubtotal,
+            items_count:    itemsCount,
+            notes:          deliveryAddress.notes ?? null,
+          })
+        ).error
+      }
+      if (voErr) throw new Error(voErr.message)
+
+      subOrderRows.push({ id: subOrder.id, store_id: subOrder.store_id, subtotal: subOrder.subtotal })
+    }
+  } catch (e) {
+    console.error("[place-order] sub-order / items / vendor_orders failed:", e)
+    await Promise.all(
+      verifiedItems.map((i) => admin.rpc("restore_stock", { p_product_id: i.productId, p_quantity: i.quantity }))
     )
-    .select("id, store_id, subtotal")
+    await admin.from("orders").delete().eq("id", orderId)
+    return NextResponse.json(
+      { error: "Sipariş kaydedilirken bir hata oluştu. Lütfen tekrar deneyin." },
+      { status: 500 }
+    )
+  }
 
   await admin.from("order_status_history").insert({
     order_id:   orderId,
@@ -296,13 +555,14 @@ export async function POST(req: NextRequest) {
   })
 
   // 8. Outbox events
-  if (subOrderRows) {
-    for (const sub of subOrderRows) {
-      await insertOutboxEvent("sub_order", sub.id, "vendor.order.created", {
-        orderId, subOrderId: sub.id, storeId: sub.store_id,
-        subtotal: sub.subtotal, customerName: deliveryAddress.fullName,
-      })
-    }
+  for (const sub of subOrderRows) {
+    await insertOutboxEvent("sub_order", sub.id, "vendor.order.created", {
+      orderId,
+      subOrderId: sub.id,
+      storeId: sub.store_id,
+      subtotal: sub.subtotal,
+      customerName: deliveryAddress.fullName,
+    })
   }
 
   return NextResponse.json({ ok: true, orderId, orderNumber, serverTotal, discountAmount }, { status: 201 })

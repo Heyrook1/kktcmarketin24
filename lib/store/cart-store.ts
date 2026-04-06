@@ -163,13 +163,18 @@ export const useCartStore = create<CartState>()(
           }
           const result: Extract<CouponResult, { valid: true }> = { valid: true, ...data }
           set({ appliedCoupon: result })
+          syncServerCart(get().cartId, get().items, result.code)
           return result
         } catch {
           return { valid: false, message: "Kupon doğrulanamadı. Lütfen tekrar deneyin." }
         }
       },
 
-      removeCoupon: () => set({ appliedCoupon: null }),
+      removeCoupon: () => {
+        const { cartId, items } = get()
+        set({ appliedCoupon: null })
+        syncServerCart(cartId, items, undefined)
+      },
 
       getItemsByVendor: () =>
         get().items.reduce((acc, item) => {

@@ -143,7 +143,7 @@ export default function UpdatePasswordPage() {
 
               <div className="text-center">
                 <Link
-                  href="/auth/login"
+                  href="/login"
                   className="text-sm text-muted-foreground hover:text-foreground"
                 >
                   {'← Girişe geri dön'}

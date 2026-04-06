@@ -136,7 +136,7 @@ export default function ResetPasswordPage() {
                   Farklı e-posta dene
                 </Button>
                 <Button asChild className="w-full h-11 rounded-xl">
-                  <Link href="/auth/login">Giriş sayfasına dön</Link>
+                  <Link href="/login">Giriş sayfasına dön</Link>
                 </Button>
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function ResetPasswordPage() {
 
               <div className="mt-6 text-center">
                 <Link
-                  href="/auth/login"
+                  href="/login"
                   className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />

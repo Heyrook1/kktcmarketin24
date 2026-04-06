@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:qa": "node ./scripts/qa-smoke.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

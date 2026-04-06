@@ -22,7 +22,7 @@ function StarRow({ rating }: { rating: number }) {
 export default async function VendorReviewsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login?next=/vendor-panel/reviews")
+  if (!user) redirect("/login?next=/vendor-panel/reviews")
 
   const { data: store } = await supabase
     .from("vendor_stores").select("id").eq("owner_id", user.id).single()

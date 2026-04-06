@@ -16,14 +16,14 @@ import { VendorDashboardCharts } from "./dashboard-charts"
 export default async function VendorDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login?next=/vendor-panel")
+  if (!user) redirect("/login?next=/vendor-panel")
 
-  // Fetch vendor store
-  const { data: store } = await supabase
+  const { data: stores } = await supabase
     .from("vendor_stores")
     .select("*")
     .eq("owner_id", user.id)
-    .single()
+
+  const store = stores?.[0]
 
   if (!store) {
     return (
@@ -38,9 +38,12 @@ export default async function VendorDashboardPage() {
     )
   }
 
-  // Fetch summary stats in parallel
+  const storeIds = (stores ?? []).map((s) => s.id)
+
   const [ordersRes, productsRes, reviewsRes, trafficRes] = await Promise.all([
-    supabase.from("vendor_orders").select("id, status, total, created_at").eq("store_id", store.id),
+    storeIds.length
+      ? supabase.from("vendor_orders").select("id, status, total, created_at").in("store_id", storeIds)
+      : Promise.resolve({ data: [] as { id: string; status: string; total: number; created_at: string }[] }),
     supabase.from("vendor_products").select("id, is_active, stock").eq("store_id", store.id),
     supabase.from("vendor_reviews").select("id, rating").eq("store_id", store.id),
     supabase.from("vendor_traffic").select("page_views, unique_visitors, date")
@@ -64,15 +67,23 @@ export default async function VendorDashboardPage() {
   const STATUS_COLORS: Record<string, string> = {
     pending:   "bg-amber-100 text-amber-800",
     confirmed: "bg-blue-100 text-blue-800",
+    preparing: "bg-violet-100 text-violet-800",
     shipped:   "bg-purple-100 text-purple-800",
+    exchange_requested: "bg-orange-100 text-orange-800",
     delivered: "bg-green-100 text-green-800",
     cancelled: "bg-red-100 text-red-800",
     refunded:  "bg-gray-100 text-gray-700",
   }
 
   const STATUS_LABELS: Record<string, string> = {
-    pending: "Bekliyor", confirmed: "Onaylandı", shipped: "Kargoda",
-    delivered: "Teslim", cancelled: "İptal", refunded: "İade",
+    pending: "Bekliyor",
+    confirmed: "Sipariş onaylandı",
+    preparing: "Hazırlanıyor",
+    shipped: "Kargoya teslim edildi",
+    exchange_requested: "Değişim talep edildi",
+    delivered: "Teslim alındı",
+    cancelled: "İptal",
+    refunded: "İade",
   }
 
   return (

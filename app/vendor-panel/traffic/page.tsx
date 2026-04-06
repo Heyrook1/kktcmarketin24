@@ -18,7 +18,7 @@ export default function VendorTrafficPage() {
     async function load() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { window.location.href = "/auth/login"; return }
+      if (!user) { window.location.href = "/login"; return }
 
       const { data: store } = await supabase
         .from("vendor_stores").select("id").eq("owner_id", user.id).single()

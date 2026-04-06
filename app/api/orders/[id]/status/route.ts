@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { assertVendorOrderOwnership } from '@/lib/vendor-auth'
+import { assertAdminAuth } from '@/lib/admin-auth'
+import { updateVendorOrderStatus } from '@/lib/order-status/update-vendor-order-status'
 
 export const runtime = 'nodejs'
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending:   ['confirmed', 'cancelled'],
-  confirmed: ['preparing', 'cancelled'],
-  preparing: ['shipped', 'cancelled'],
-  shipped:   ['delivered', 'cancelled'],
-  delivered: ['refunded'],
-  cancelled: [],
-  refunded:  [],
-}
-
-function adminClient() {
-  return createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
-}
 
 export async function PATCH(
   req: NextRequest,
@@ -28,66 +12,55 @@ export async function PATCH(
 ) {
   try {
     const { id: orderId } = await params
-    const { status: newStatus, notes } = await req.json() as { status: string; notes?: string }
+    const { status: newStatus, notes, trackingNumber } = await req.json() as {
+      status: string
+      notes?: string
+      trackingNumber?: string | null
+    }
 
     if (!orderId || !newStatus) {
       return NextResponse.json({ error: 'orderId ve status zorunludur.' }, { status: 400 })
     }
 
-    // Auth — must be authenticated vendor
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check vendor owns a store that has this vendor_order
-    const { data: vendorOrder, error: voErr } = await supabase
-      .from('vendor_orders')
-      .select('id, status, store_id, vendor_stores!inner(owner_id)')
-      .eq('id', orderId)
-      .single()
-
-    if (voErr || !vendorOrder) {
-      return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 })
-    }
-
-    const ownerCheck = vendorOrder.vendor_stores as unknown as { owner_id: string }
-    if (ownerCheck.owner_id !== user.id) {
-      return NextResponse.json({ error: 'Bu siparişi güncelleme yetkiniz yok.' }, { status: 403 })
-    }
-
-    const currentStatus = vendorOrder.status as string
-    const allowed = VALID_TRANSITIONS[currentStatus] ?? []
-    if (!allowed.includes(newStatus)) {
-      return NextResponse.json(
-        { error: `${currentStatus} → ${newStatus} geçişi geçersiz.` },
-        { status: 422 }
+    // Legacy alias endpoint: keep behavior fully aligned with vendor endpoint.
+    const vendorAuth = await assertVendorOrderOwnership(orderId)
+    let effectiveStoreId: string | null = vendorAuth.ok ? vendorAuth.session.storeId : null
+    if (!effectiveStoreId) {
+      const adminAuth = await assertAdminAuth()
+      if (!adminAuth.ok) {
+        return NextResponse.json({ error: vendorAuth.ok ? "Yetkiniz yok." : vendorAuth.message }, { status: vendorAuth.ok ? 403 : vendorAuth.status })
+      }
+      const admin = createAdmin(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
       )
+      const { data: row } = await admin
+        .from("vendor_orders")
+        .select("store_id")
+        .eq("id", orderId)
+        .maybeSingle()
+      if (!row?.store_id) {
+        return NextResponse.json({ error: "Sipariş bulunamadı." }, { status: 404 })
+      }
+      effectiveStoreId = row.store_id
     }
 
-    // Use admin client to bypass RLS for write
-    const admin = adminClient()
-
-    const { error: updateErr } = await admin
-      .from('vendor_orders')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', orderId)
-
-    if (updateErr) {
-      return NextResponse.json({ error: updateErr.message }, { status: 500 })
-    }
-
-    // Also insert into order_status_history for the parent order
-    await admin.from('order_status_history').insert({
-      order_id: orderId,
-      old_status: currentStatus,
-      new_status: newStatus,
-      changed_by: 'vendor',
+    const result = await updateVendorOrderStatus({
+      vendorOrderId: orderId,
+      vendorStoreId: effectiveStoreId,
+      newStatus,
+      trackingNumber: trackingNumber ?? null,
       notes: notes ?? null,
     })
 
-    return NextResponse.json({ ok: true, status: newStatus })
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, ...(result.allowedNext ? { allowedNext: result.allowedNext } : {}) },
+        { status: result.status }
+      )
+    }
+
+    return NextResponse.json({ ok: true, status: result.status })
   } catch (err) {
     console.error('[api/orders/[id]/status]', err)
     return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 })

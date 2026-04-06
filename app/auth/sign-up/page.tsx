@@ -79,7 +79,7 @@ export default function SignUpPage() {
               Gönderilen adres: <span className="font-medium text-foreground">{email}</span>
             </p>
             <Button asChild className="w-full h-11 mt-2">
-              <Link href="/auth/login">Giriş sayfasına git</Link>
+              <Link href="/login">Giriş sayfasına git</Link>
             </Button>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function SignUpPage() {
               <div role="alert" className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">
                 {error}
                 {error.includes("zaten kayıtlı") && (
-                  <Link href="/auth/login" className="ml-1 font-medium underline hover:text-red-800">
+                  <Link href="/login" className="ml-1 font-medium underline hover:text-red-800">
                     Giriş yap
                   </Link>
                 )}
@@ -185,7 +185,7 @@ export default function SignUpPage() {
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             Zaten hesabın var mı?{" "}
-            <Link href="/auth/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-primary hover:underline">
               Giriş yap
             </Link>
           </div>

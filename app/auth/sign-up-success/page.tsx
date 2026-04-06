@@ -26,7 +26,7 @@ export default function SignUpSuccessPage() {
             <span>Doğrulama e-postası spam klasörüne düşmüş olabilir.</span>
           </div>
           <Button asChild className="w-full h-11">
-            <Link href="/auth/login">Giriş Yap</Link>
+            <Link href="/login">Giriş Yap</Link>
           </Button>
           <div className="mt-4">
             <Button asChild variant="ghost" size="sm">

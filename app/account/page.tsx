@@ -17,7 +17,7 @@ export default async function AccountPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    redirect("/auth/login")
+    redirect("/login?next=/account")
   }
 
   try {

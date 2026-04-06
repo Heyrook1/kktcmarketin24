@@ -22,7 +22,7 @@ export default function VendorAnalyticsPage() {
     async function load() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { window.location.href = "/auth/login"; return }
+      if (!user) { window.location.href = "/login"; return }
 
       const { data: store } = await supabase
         .from("vendor_stores").select("id").eq("owner_id", user.id).single()
@@ -69,8 +69,14 @@ export default function VendorAnalyticsPage() {
 
   // Status breakdown for pie
   const STATUS_LABELS: Record<string, string> = {
-    pending: "Bekliyor", confirmed: "Onaylandı", shipped: "Kargoda",
-    delivered: "Teslim", cancelled: "İptal", refunded: "İade",
+    pending: "Bekliyor",
+    confirmed: "Sipariş onaylandı",
+    preparing: "Hazırlanıyor",
+    shipped: "Kargoya teslim edildi",
+    exchange_requested: "Değişim talep edildi",
+    delivered: "Teslim alındı",
+    cancelled: "İptal",
+    refunded: "İade",
   }
   const PIE_COLORS = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ef4444","#6b7280"]
   const statusData = Object.entries(

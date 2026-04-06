@@ -165,7 +165,7 @@ export default function SellerApplicationPage() {
                 size="sm"
                 className="gap-2 bg-white text-primary hover:bg-white/90 font-semibold shadow-sm"
               >
-                <Link href="/auth/login?next=/vendor-panel">
+                <Link href="/login?next=/vendor-panel">
                   <LogIn className="h-4 w-4" />
                   Satıcı Girişi
                 </Link>

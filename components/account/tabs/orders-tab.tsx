@@ -6,17 +6,19 @@ import useSWR from "swr"
 import {
   Package, Truck, CheckCircle, Clock, XCircle, RefreshCw,
   ChevronDown, ChevronUp, MapPin, Hash, Calendar, RotateCcw,
-  AlertTriangle, CornerUpLeft, X, Loader2,
+  AlertTriangle, CornerUpLeft, X, Loader2, Pencil, Ban,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type OrderStatus =
-  | "pending" | "confirmed" | "preparing" | "shipped"
+  | "pending" | "confirmed" | "preparing" | "shipped" | "exchange_requested"
   | "delivered" | "cancelled" | "refunded" | "return_requested"
 
 interface DbOrderItem {
@@ -31,30 +33,51 @@ interface DbSubOrder {
   id: string; store_id: string; store_name: string | null
   step_status: string; subtotal: number
 }
+interface DbVendorFulfillment {
+  id: string
+  store_id: string
+  status: string
+  tracking_number: string | null
+  vendor_stores: { name: string } | null
+}
 interface DbOrder {
-  id: string; created_at: string; updated_at: string
+  id: string
+  order_number: string | null
+  created_at: string; updated_at: string
   saga_status: string; payment_status: string; coupon_code: string | null
   subtotal: number; shipping_fee: number; discount_amount: number; total: number
   customer_name: string; customer_phone: string | null
-  delivery_address: { fullName: string; phone: string; line1: string; city: string; district: string } | null
+  delivery_address: {
+    fullName: string; phone: string; line1: string; city: string; district: string; notes?: string
+  } | null
   order_items: DbOrderItem[]
   order_status_history: DbStatusHistory[]
   order_vendor_sub_orders: DbSubOrder[]
+  vendor_orders?: DbVendorFulfillment[] | null
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: React.ElementType }> = {
-  pending:          { label: "Beklemede",         color: "bg-amber-100 text-amber-700 border-amber-200",    icon: Clock },
-  confirmed:        { label: "Onaylandı",          color: "bg-blue-100 text-blue-700 border-blue-200",       icon: CheckCircle },
-  preparing:        { label: "Hazırlanıyor",       color: "bg-purple-100 text-purple-700 border-purple-200", icon: Package },
-  shipped:          { label: "Kargoda",            color: "bg-cyan-100 text-cyan-700 border-cyan-200",       icon: Truck },
-  delivered:        { label: "Teslim Edildi",      color: "bg-green-100 text-green-700 border-green-200",    icon: CheckCircle },
-  cancelled:        { label: "İptal Edildi",       color: "bg-red-100 text-red-700 border-red-200",          icon: XCircle },
-  refunded:         { label: "İade Edildi",        color: "bg-gray-100 text-gray-700 border-gray-200",       icon: RefreshCw },
-  return_requested: { label: "İade Talep Edildi",  color: "bg-orange-100 text-orange-700 border-orange-200", icon: CornerUpLeft },
+  pending:            { label: "Beklemede",              color: "bg-amber-100 text-amber-700 border-amber-200",    icon: Clock },
+  confirmed:          { label: "Sipariş onaylandı",      color: "bg-blue-100 text-blue-700 border-blue-200",       icon: CheckCircle },
+  preparing:          { label: "Hazırlanıyor",           color: "bg-purple-100 text-purple-700 border-purple-200", icon: Package },
+  shipped:            { label: "Kargoya teslim edildi",   color: "bg-cyan-100 text-cyan-700 border-cyan-200",       icon: Truck },
+  exchange_requested: { label: "Değişim talep edildi",   color: "bg-orange-100 text-orange-700 border-orange-200", icon: RefreshCw },
+  delivered:          { label: "Teslim alındı",          color: "bg-green-100 text-green-700 border-green-200",    icon: CheckCircle },
+  cancelled:          { label: "İptal Edildi",           color: "bg-red-100 text-red-700 border-red-200",          icon: XCircle },
+  refunded:           { label: "İade Edildi",            color: "bg-gray-100 text-gray-700 border-gray-200",       icon: RefreshCw },
+  return_requested:   { label: "İade Talep Edildi",      color: "bg-orange-100 text-orange-700 border-orange-200", icon: CornerUpLeft },
 }
 
-const STATUS_STEPS: OrderStatus[] = ["pending", "confirmed", "preparing", "shipped", "delivered"]
+/** Satıcı durum akışı ile uyumlu ilerleme adımları */
+const STATUS_STEPS: OrderStatus[] = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "shipped",
+  "exchange_requested",
+  "delivered",
+]
 const RETURN_REASONS = ["Hasar Var", "Yanlış Ürün", "Beklentiye Uymadı", "Diğer"] as const
 
 function fmt(n: number) {
@@ -62,18 +85,42 @@ function fmt(n: number) {
 }
 
 function deriveStatus(order: DbOrder): OrderStatus {
-  const subStatuses = order.order_vendor_sub_orders.map((s) => s.step_status)
-  if (subStatuses.length === 0) return (order.saga_status ?? "pending") as OrderStatus
-  if (subStatuses.every((s) => s === "delivered")) return "delivered"
-  if (subStatuses.some((s) => s === "shipped"))    return "shipped"
-  if (subStatuses.some((s) => s === "preparing"))  return "preparing"
-  if (subStatuses.some((s) => s === "confirmed"))  return "confirmed"
-  if (subStatuses.every((s) => s === "cancelled")) return "cancelled"
-  // Check status history for return_requested
   const hasReturnReq = order.order_status_history?.some(
     (h) => h.new_status === "return_requested",
   )
   if (hasReturnReq) return "return_requested"
+
+  const vos = order.vendor_orders
+  if (vos && vos.length > 0) {
+    if (vos.some((v) => v.status === "cancelled")) return "cancelled"
+    if (vos.some((v) => v.status === "refunded")) return "refunded"
+    const rank: Record<string, number> = {
+      pending: 0,
+      confirmed: 1,
+      preparing: 2,
+      shipped: 3,
+      exchange_requested: 4,
+      delivered: 5,
+    }
+    const minRank = Math.min(...vos.map((v) => rank[v.status] ?? 0))
+    const byRank: OrderStatus[] = [
+      "pending",
+      "confirmed",
+      "preparing",
+      "shipped",
+      "exchange_requested",
+      "delivered",
+    ]
+    return byRank[minRank] ?? "pending"
+  }
+
+  if (order.order_status_history?.some((h) => h.new_status === "cancelled")) {
+    return "cancelled"
+  }
+
+  const subStatuses = order.order_vendor_sub_orders.map((s) => s.step_status)
+  if (subStatuses.length === 0) return "pending"
+  if (subStatuses.every((s) => s === "completed" || s === "delivered")) return "delivered"
   return "pending"
 }
 
@@ -83,6 +130,21 @@ function isReturnEligible(order: DbOrder): boolean {
   const daysDiff = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
   return daysDiff <= 14
 }
+
+/** Satıcı onayı beklenirken (tüm vendor satırları pending) müşteri düzenleyebilir / iptal edebilir */
+function canCustomerModifyOrder(order: DbOrder): boolean {
+  const st = deriveStatus(order)
+  if (st === "cancelled" || st === "refunded") return false
+  const vos = order.vendor_orders
+  if (vos && vos.length > 0) {
+    return vos.every((v) => v.status === "pending")
+  }
+  return st === "pending"
+}
+
+const EDIT_CITIES = [
+  "Lefkoşa", "Girne", "Gazimağusa", "Güzelyurt", "İskele", "Lefke", "Diğer",
+] as const
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -232,18 +294,175 @@ function ReturnModal({
   )
 }
 
+function EditOrderModal({
+  order,
+  onClose,
+  onSuccess,
+}: {
+  order: DbOrder
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const a = order.delivery_address
+  const [fullName, setFullName]     = useState(a?.fullName ?? "")
+  const [phone, setPhone]           = useState(a?.phone ?? "")
+  const [line1, setLine1]           = useState(a?.line1 ?? "")
+  const [city, setCity]             = useState(a?.city ?? "Lefkoşa")
+  const [district, setDistrict]     = useState(a?.district ?? "")
+  const [notes, setNotes]           = useState(a?.notes ?? "")
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/orders/${order.id}/delivery`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          line1: line1.trim(),
+          city,
+          district: district.trim(),
+          notes: notes.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(typeof data.error === "string" ? data.error : "Güncellenemedi.")
+        return
+      }
+      onSuccess()
+      onClose()
+    } catch {
+      setError("Bağlantı hatası.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-card rounded-2xl shadow-xl w-full max-w-md border max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div className="flex items-center gap-2">
+            <Pencil className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm">Teslimat adresini düzenle</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 hover:bg-secondary transition-colors"
+            aria-label="Kapat"
+          >
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-5 py-5 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Satıcı onayından önce adresinizi güncelleyebilirsiniz.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="eo-name">Ad Soyad</Label>
+            <Input id="eo-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required minLength={2} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="eo-phone">Telefon</Label>
+            <Input id="eo-phone" value={phone} onChange={(e) => setPhone(e.target.value)} required minLength={7} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="eo-line1">Adres satırı</Label>
+            <Input id="eo-line1" value={line1} onChange={(e) => setLine1(e.target.value)} required minLength={5} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="eo-city">Şehir</Label>
+              <select
+                id="eo-city"
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              >
+                {EDIT_CITIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eo-dist">Semt</Label>
+              <Input id="eo-dist" value={district} onChange={(e) => setDistrict(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="eo-notes">Not (isteğe bağlı)</Label>
+            <textarea
+              id="eo-notes"
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              maxLength={500}
+            />
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {error}
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
+              Vazgeç
+            </Button>
+            <Button type="submit" className="flex-1 gap-2" disabled={loading}>
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Kaydet
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── OrderCard ────────────────────────────────────────────────────────────────
 function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess: () => void }) {
   const [expanded, setExpanded]   = useState(false)
   const [showReturn, setShowReturn] = useState(false)
+  const [showEdit, setShowEdit]     = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   const status        = deriveStatus(order)
   const cfg           = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending
   const StatusIcon    = cfg.icon
-  const progressStep  = STATUS_STEPS.indexOf(status)
+  const progressStep  = Math.max(0, STATUS_STEPS.indexOf(status))
   const addr          = order.delivery_address
   const returnOk      = isReturnEligible(order)
   const returnRequested = status === "return_requested"
+  const canModify     = canCustomerModifyOrder(order)
+
+  async function handleCancelOrder() {
+    if (!canModify) return
+    if (!window.confirm("Bu siparişi iptal etmek istediğinize emin misiniz?")) return
+    setCancelling(true)
+    try {
+      const res = await fetch(`/api/orders/${order.id}/cancel`, { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        window.alert(typeof data.error === "string" ? data.error : "İptal edilemedi.")
+        return
+      }
+      onReturnSuccess()
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   return (
     <>
@@ -252,6 +471,13 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
           order={order}
           onClose={() => setShowReturn(false)}
           onSuccess={() => { setShowReturn(false); onReturnSuccess() }}
+        />
+      )}
+      {showEdit && (
+        <EditOrderModal
+          order={order}
+          onClose={() => setShowEdit(false)}
+          onSuccess={onReturnSuccess}
         />
       )}
 
@@ -266,7 +492,9 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
               <Package className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm font-mono">{order.id.slice(0, 8).toUpperCase()}</p>
+              <p className="font-semibold text-sm font-mono">
+                {order.order_number ?? order.id.slice(0, 8).toUpperCase()}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {new Date(order.created_at).toLocaleDateString("tr-TR", {
                   day: "numeric", month: "long", year: "numeric",
@@ -291,6 +519,11 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
             {/* Progress tracker */}
             {!["cancelled", "refunded", "return_requested"].includes(status) && (
               <div className="px-5 py-4 bg-secondary/30">
+                {status === "pending" && (
+                  <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    Siparişiniz satıcı onayı bekliyor. Satıcı onayladığında bu sipariş için bildirim ve durum güncellemesi alırsınız.
+                  </div>
+                )}
                 <div className="flex items-center gap-0">
                   {STATUS_STEPS.map((s, i) => {
                     const done   = i <= progressStep
@@ -397,28 +630,98 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
               </div>
             </div>
 
-            {/* Sub-orders (multi-vendor) */}
-            {order.order_vendor_sub_orders.length > 1 && (
+            {canModify && (
+              <>
+                <Separator />
+                <div className="px-5 py-3 flex flex-wrap gap-2 items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Satıcı onayından önce adresi düzenleyebilir veya siparişi iptal edebilirsiniz.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => setShowEdit(true)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Düzenle
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="gap-1.5"
+                      onClick={handleCancelOrder}
+                      disabled={cancelling}
+                    >
+                      {cancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
+                      İptal
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Durum geçmişi (satıcı güncellemeleri) */}
+            {(order.order_status_history?.length ?? 0) > 0 && (
+              <>
+                <Separator />
+                <div className="px-5 py-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    İşlem geçmişi
+                  </p>
+                  <ul className="space-y-1.5 text-xs">
+                    {order.order_status_history
+                      .slice()
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((h) => (
+                        <li key={h.id} className="flex justify-between gap-3 text-muted-foreground">
+                          <span>
+                            {h.old_status ? `${h.old_status} → ` : ""}
+                            <span className="text-foreground font-medium">{h.new_status}</span>
+                            {h.notes ? ` — ${h.notes}` : ""}
+                          </span>
+                          <time className="shrink-0 tabular-nums">
+                            {new Date(h.created_at).toLocaleString("tr-TR")}
+                          </time>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </>
+            )}
+
+            {/* Satıcı bazlı durum + takip */}
+            {(order.vendor_orders?.length ?? 0) > 0 && (
               <>
                 <Separator />
                 <div className="px-5 py-3 space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Satıcı Bazlı Durum
                   </p>
-                  {order.order_vendor_sub_orders.map((sub) => {
-                    const subCfg = STATUS_CONFIG[sub.step_status as OrderStatus] ?? STATUS_CONFIG.pending
+                  {order.vendor_orders!.map((v) => {
+                    const label = v.vendor_stores?.name ?? v.store_id.slice(0, 8)
+                    const st = v.status as OrderStatus
+                    const subCfg = STATUS_CONFIG[st] ?? STATUS_CONFIG.pending
                     const SubIcon = subCfg.icon
                     return (
-                      <div key={sub.id} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {sub.store_name ?? sub.store_id.slice(0, 8)}
-                        </span>
-                        <span className={cn(
-                          "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border",
-                          subCfg.color,
-                        )}>
-                          <SubIcon className="h-3 w-3" />{subCfg.label}
-                        </span>
+                      <div key={v.id} className="flex flex-col gap-0.5 text-sm border rounded-lg px-3 py-2 bg-muted/20">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-muted-foreground font-medium">{label}</span>
+                          <span className={cn(
+                            "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border",
+                            subCfg.color,
+                          )}>
+                            <SubIcon className="h-3 w-3" />{subCfg.label}
+                          </span>
+                        </div>
+                        {v.tracking_number && (
+                          <p className="text-xs text-muted-foreground">
+                            Takip no: <span className="font-mono text-foreground">{v.tracking_number}</span>
+                          </p>
+                        )}
                       </div>
                     )
                   })}
@@ -530,10 +833,11 @@ export function OrdersTab({ userId }: { userId: string }) {
           >
             <option value="all">Tüm Siparişler</option>
             <option value="pending">Beklemede</option>
-            <option value="confirmed">Onaylandı</option>
+            <option value="confirmed">Sipariş onaylandı</option>
             <option value="preparing">Hazırlanıyor</option>
-            <option value="shipped">Kargoda</option>
-            <option value="delivered">Teslim Edildi</option>
+            <option value="shipped">Kargoya teslim edildi</option>
+            <option value="exchange_requested">Değişim talep edildi</option>
+            <option value="delivered">Teslim alındı</option>
             <option value="cancelled">İptal Edildi</option>
             <option value="return_requested">İade Talep Edildi</option>
           </select>

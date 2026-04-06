@@ -14,7 +14,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 
 // ── Admin client (service role) ───────────────────────────────────────────────
@@ -63,6 +62,7 @@ export async function resolveVendorSession(): Promise<VendorAuthResult> {
     .from('vendor_stores')
     .select('id')
     .eq('owner_id', user.id)
+    .limit(1)
     .maybeSingle()
 
   if (storeErr || !store) {
@@ -87,23 +87,27 @@ export async function assertProductOwnership(
     return { ok: false, status: 404, message: 'Geçersiz ürün kimliği.' }
   }
 
-  const sessionResult = await resolveVendorSession()
-  if (!sessionResult.ok) return sessionResult
+  const supabase = await createServerClient()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) {
+    return { ok: false, status: 401, message: 'Kimlik doğrulaması gerekli.' }
+  }
 
-  const { session } = sessionResult
   const admin = adminClient()
 
   const { data: product, error } = await admin
     .from('vendor_products')
-    .select('id')
+    .select('id, store_id, vendor_stores!inner(owner_id)')
     .eq('id', productId)
-    .eq('store_id', session.storeId)  // ownership: product MUST belong to this store
-    .maybeSingle()
+    .limit(1)
+    .single()
 
-  if (error || !product) {
+  const owner = product?.vendor_stores as unknown as { owner_id?: string } | null
+  if (error || !product || owner?.owner_id !== user.id) {
     return { ok: false, status: 403, message: 'Bu ürüne erişim yetkiniz yok.' }
   }
 
+  const session: VendorSession = { userId: user.id, storeId: product.store_id as string }
   return { ok: true, session, productId: product.id }
 }
 
@@ -118,23 +122,27 @@ export async function assertVendorOrderOwnership(
     return { ok: false, status: 404, message: 'Geçersiz sipariş kimliği.' }
   }
 
-  const sessionResult = await resolveVendorSession()
-  if (!sessionResult.ok) return sessionResult
+  const supabase = await createServerClient()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) {
+    return { ok: false, status: 401, message: 'Kimlik doğrulaması gerekli.' }
+  }
 
-  const { session } = sessionResult
   const admin = adminClient()
 
   const { data: vo, error } = await admin
     .from('vendor_orders')
-    .select('id')
+    .select('id, store_id, vendor_stores!inner(owner_id)')
     .eq('id', vendorOrderId)
-    .eq('store_id', session.storeId)  // ownership check
-    .maybeSingle()
+    .limit(1)
+    .single()
 
-  if (error || !vo) {
+  const owner = vo?.vendor_stores as unknown as { owner_id?: string } | null
+  if (error || !vo || owner?.owner_id !== user.id) {
     return { ok: false, status: 403, message: 'Bu siparişe erişim yetkiniz yok.' }
   }
 
+  const session: VendorSession = { userId: user.id, storeId: vo.store_id as string }
   return { ok: true, session, vendorOrderId: vo.id }
 }
 
@@ -149,23 +157,27 @@ export async function assertDeliveryEventOwnership(
     return { ok: false, status: 404, message: 'Geçersiz sipariş kimliği.' }
   }
 
-  const sessionResult = await resolveVendorSession()
-  if (!sessionResult.ok) return sessionResult
+  const supabase = await createServerClient()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) {
+    return { ok: false, status: 401, message: 'Kimlik doğrulaması gerekli.' }
+  }
 
-  const { session } = sessionResult
   const admin = adminClient()
 
   const { data: vo, error } = await admin
     .from('vendor_orders')
-    .select('id')
+    .select('id, store_id, vendor_stores!inner(owner_id)')
     .eq('order_id', parentOrderId)
-    .eq('store_id', session.storeId)
-    .maybeSingle()
+    .limit(1)
+    .single()
 
-  if (error || !vo) {
+  const owner = vo?.vendor_stores as unknown as { owner_id?: string } | null
+  if (error || !vo || owner?.owner_id !== user.id) {
     return { ok: false, status: 403, message: 'Bu siparişe erişim yetkiniz yok.' }
   }
 
+  const session: VendorSession = { userId: user.id, storeId: vo.store_id as string }
   return { ok: true, session, vendorOrderId: vo.id }
 }
 

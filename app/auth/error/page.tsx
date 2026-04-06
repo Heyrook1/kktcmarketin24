@@ -23,7 +23,7 @@ export default function AuthErrorPage() {
           </p>
           <div className="flex flex-col gap-2">
             <Button asChild className="w-full h-11">
-              <Link href="/auth/login">Tekrar Giriş Yap</Link>
+              <Link href="/login">Tekrar Giriş Yap</Link>
             </Button>
             <Button asChild variant="outline" className="w-full h-11">
               <Link href="/">Ana Sayfaya Dön</Link>

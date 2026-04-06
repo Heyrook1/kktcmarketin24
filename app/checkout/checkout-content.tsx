@@ -45,6 +45,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     getTotalPrice, getDiscountAmount, getFinalPrice,
     appliedCoupon, clearCart, getItemsByVendor,
   } = useCartStore()
+  const couponCode = appliedCoupon?.code?.trim()
 
   const profileName  = (profile?.full_name as string) ?? (user?.user_metadata?.full_name as string) ?? ""
   const profilePhone = (profile?.phone as string) ?? ""
@@ -87,22 +88,25 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
     setServerError(null)
 
     const payload = {
-      fullName: form.fullName.trim(),
-      phone:    form.phone.trim(),
-      address:  form.address.trim(),
-      city:     form.city,
-      notes:    form.notes.trim(),
+      deliveryAddress: {
+        fullName: form.fullName.trim(),
+        phone:    form.phone.trim(),
+        line1:    form.address.trim(),
+        city:     form.city as (typeof CITIES)[number],
+        notes:    form.notes.trim() || undefined,
+      },
       cartId,
-      items: items.map(({ product, quantity }) => ({
-        product_id:   product.id,
-        product_name: product.name,
-        vendor_id:    product.vendorId,
-        vendor_name:  getVendorById(product.vendorId)?.name ?? "Bilinmeyen Satıcı",
-        store_id:     product.vendorId,
-        price:        product.price,
-        quantity,
-        image_url:    product.images?.[0] ?? null,
-      })),
+      ...(couponCode ? { couponCode } : {}),
+      items: items.map(({ product, quantity }) => {
+        const img = product.images?.[0]?.trim()
+        const image_url =
+          img && (img.startsWith("http://") || img.startsWith("https://")) ? img : undefined
+        return {
+          product_id: product.id,
+          quantity,
+          ...(image_url ? { image_url } : {}),
+        }
+      }),
     }
 
     try {
@@ -111,16 +115,25 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(payload),
       })
-      const data = await res.json() as { orderId?: string; error?: string }
+      const data = await res.json() as { orderId?: string; orderNumber?: string; error?: string }
 
       if (!res.ok) {
         setServerError(data.error ?? "Sipariş oluşturulamadı. Lütfen tekrar deneyin.")
         setSubmitting(false)
         return
       }
+      if (!data.orderId) {
+        setServerError("Sipariş alındı ancak yönlendirme bilgisi eksik. Lütfen Siparişlerim sayfasını kontrol edin.")
+        setSubmitting(false)
+        return
+      }
 
       clearCart()
-      router.push(`/order-confirmation/${data.orderId}`)
+      const q =
+        data.orderNumber && /^[A-Za-z0-9-]+$/.test(data.orderNumber)
+          ? `?orderNumber=${encodeURIComponent(data.orderNumber)}`
+          : ""
+      router.push(`/order-confirmation/${data.orderId}${q}`)
     } catch {
       setServerError("Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.")
       setSubmitting(false)
@@ -275,7 +288,7 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
                 <p className="text-xs text-destructive font-medium mt-3 flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5 shrink-0" />
                   Kapıda ödeme için giriş yapmanız zorunludur.{" "}
-                  <a href="/auth/login?next=/checkout" className="underline">Giriş yap</a>
+                  <a href="/login?next=/checkout" className="underline">Giriş yap</a>
                 </p>
               )}
             </CardContent>

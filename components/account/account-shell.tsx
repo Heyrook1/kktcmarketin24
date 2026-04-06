@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import {
   User as UserIcon, ShoppingBag, Tag,
@@ -33,10 +33,25 @@ interface AccountShellProps {
   profile: Record<string, unknown> | null
 }
 
+const VALID_TABS: Tab[] = ["profile", "orders", "coupons", "support"]
+
+function tabFromSearchParams(searchParams: ReturnType<typeof useSearchParams>): Tab {
+  const raw = searchParams.get("tab")
+  if (raw && VALID_TABS.includes(raw as Tab)) return raw as Tab
+  return "profile"
+}
+
 export function AccountShell({ user, profile }: AccountShellProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<Tab>("profile")
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<Tab>(() => tabFromSearchParams(searchParams))
   const [loggingOut, setLoggingOut] = useState(false)
+
+  const tabParam = searchParams.get("tab")
+  useEffect(() => {
+    const t = tabParam && VALID_TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "profile"
+    setActiveTab(t)
+  }, [tabParam])
 
   const fullName = (profile?.full_name as string) ||
     user.user_metadata?.full_name ||
@@ -55,6 +70,11 @@ export function AccountShell({ user, profile }: AccountShellProps) {
     .map((w: string) => w[0])
     .join("")
     .toUpperCase()
+
+  function goToTab(tab: Tab) {
+    setActiveTab(tab)
+    router.replace(`/account?tab=${tab}`, { scroll: false })
+  }
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -104,7 +124,8 @@ export function AccountShell({ user, profile }: AccountShellProps) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  type="button"
+                  onClick={() => goToTab(tab.id)}
                   className={cn(
                     "w-full flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors",
                     i !== 0 && "border-t",

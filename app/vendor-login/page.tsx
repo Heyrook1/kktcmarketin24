@@ -90,7 +90,7 @@ export default async function VendorLoginPage() {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button size="lg" className="gap-2 font-semibold" asChild>
-                  <Link href="/auth/login?next=/vendor-panel">
+                  <Link href="/login?next=/vendor-panel">
                     <Zap className="h-4 w-4" />
                     Satıcı Girişi Yap
                   </Link>
@@ -210,7 +210,7 @@ export default async function VendorLoginPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button size="lg" className="gap-2 font-semibold" asChild>
-              <Link href="/auth/login?next=/vendor-panel">
+              <Link href="/login?next=/vendor-panel">
                 <Zap className="h-4 w-4" />
                 Giriş Yap
               </Link>

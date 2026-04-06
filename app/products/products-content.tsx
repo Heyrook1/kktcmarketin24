@@ -253,10 +253,10 @@ function ProductsInner({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [searchInput, selectedCategories, sortBy, router])
 
-  // Sync URL → state when navigating from navbar
+  // Sync URL → state when navigating from navbar (clear category when param removed)
   useEffect(() => {
     setSearchInput(urlQ)
-    if (urlCategory) setSelectedCats([urlCategory])
+    setSelectedCats(urlCategory ? [urlCategory] : [])
     setSortBy(urlSort)
   }, [urlQ, urlCategory, urlSort])
 

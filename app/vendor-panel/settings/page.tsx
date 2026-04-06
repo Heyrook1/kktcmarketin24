@@ -11,7 +11,7 @@ import { VendorProfileEditor } from "@/components/vendor/vendor-profile-editor"
 export default async function VendorSettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login?next=/vendor-panel/settings")
+  if (!user) redirect("/login?next=/vendor-panel/settings")
 
   const { data: store } = await supabase
     .from("vendor_stores").select("*").eq("owner_id", user.id).single()

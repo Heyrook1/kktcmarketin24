@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { formatPrice, formatDate } from "@/lib/format"
 
 interface Item {
   id: string
@@ -57,22 +58,30 @@ interface Order {
 interface Props {
   order: Order
   storeMap: Record<string, StoreInfo>
-  formatPrice: (n: number) => string
-  formatDate: (s: string) => string
+  /** Checkout’tan gelen ?orderNumber= (DB’de henüz görünmese bile doğru formatı gösterir) */
+  orderNumberHint?: string
 }
 
-export function OrderConfirmationClient({ order, storeMap, formatPrice, formatDate }: Props) {
+export function OrderConfirmationClient({ order, storeMap, orderNumberHint }: Props) {
   const emailSentRef = useRef(false)
 
   // Fire email notifications once after mount
   useEffect(() => {
     if (emailSentRef.current) return
+    const dedupeKey = `orderPlacedEmail:${order.id}`
+    if (typeof window !== "undefined" && window.localStorage.getItem(dedupeKey) === "sent") return
     emailSentRef.current = true
     fetch("/api/notifications/order-placed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId: order.id }),
-    }).catch(() => {/* fire-and-forget */})
+    })
+      .then(() => {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(dedupeKey, "sent")
+        }
+      })
+      .catch(() => {/* fire-and-forget */})
   }, [order.id])
 
   const delivery = order.delivery_address as {
@@ -81,7 +90,8 @@ export function OrderConfirmationClient({ order, storeMap, formatPrice, formatDa
 
   const subOrders = order.order_vendor_sub_orders ?? []
   const items     = order.order_items ?? []
-  const orderNum  = order.order_number ?? `MKT-${order.id.slice(0, 8).toUpperCase()}`
+  const orderNum =
+    order.order_number ?? orderNumberHint ?? `MKT-${order.id.slice(0, 8).toUpperCase()}`
 
   // First vendor WhatsApp / phone for primary CTA
   const firstStore    = subOrders[0] ? storeMap[subOrders[0].store_id] : null
@@ -143,7 +153,7 @@ export function OrderConfirmationClient({ order, storeMap, formatPrice, formatDa
           </div>
 
           <p className="text-muted-foreground mt-3 max-w-md mx-auto text-pretty">
-            Siparişiniz onaylandı. Teslimat sırasında kapıda ödeme yapacaksınız.
+            Siparişiniz alındı ve satıcı onayı bekleniyor. Teslimat sırasında kapıda ödeme yapacaksınız.
           </p>
 
           {/* Estimated delivery callout */}
@@ -163,7 +173,7 @@ export function OrderConfirmationClient({ order, storeMap, formatPrice, formatDa
             </Badge>
             <Badge variant="outline" className="text-xs px-3 py-1">
               <Package className="h-3 w-3 mr-1" />
-              Hazırlanıyor
+              Satıcı Onayı Bekleniyor
             </Badge>
           </div>
         </div>

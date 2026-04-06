@@ -5,13 +5,11 @@ import { notFound } from "next/navigation"
 import { ChevronRight } from "lucide-react"
 import { ProductGrid } from "@/components/product/product-grid"
 import { getCategoryBySlug, categories } from "@/lib/data/categories"
-import { getProductsByCategory } from "@/lib/data/products"
+import { createClient } from "@/lib/supabase/server"
+import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
+import type { Product } from "@/lib/data/products"
 
-// ISR: regenerate at most once per hour.
-// Category pages are filtered server-side using `searchParams` so the
-// rendered HTML always reflects the active subcategory — good for SEO and
-// usable without JS.
-export const revalidate = 3600
+export const dynamic = "force-dynamic"
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
@@ -46,14 +44,27 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   if (!category) notFound()
 
-  let products = getProductsByCategory(category.id)
+  const supabase = await createClient()
+  const { data: rawRows, error } = await supabase
+    .from("vendor_products")
+    .select(
+      "id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id, name, slug)"
+    )
+    .eq("is_active", true)
+    .eq("category", category.id)
+    .order("created_at", { ascending: false })
+    .limit(200)
 
-  // Server-side subcategory filter — rendered in HTML, not client JS
+  if (error) console.error("[category/page] DB error:", error.message)
+
+  let products: Product[] = (rawRows ?? []).map((p) =>
+    mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
+  )
+
   if (sub) {
     products = products.filter((p) => p.tags?.includes(sub))
   }
 
-  // Server-side sort
   switch (sort) {
     case "price-low":
       products = [...products].sort((a, b) => a.price - b.price)
@@ -75,7 +86,6 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   return (
     <div>
-      {/* Hero Banner */}
       <div className="relative h-48 md:h-64 w-full overflow-hidden">
         <Image
           src={category.image}
@@ -98,17 +108,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
               <ChevronRight className="h-4 w-4" />
               <span className="text-white">{category.name}</span>
             </nav>
-            <h1 className="text-3xl md:text-4xl font-bold text-white">
-              {category.name}
-            </h1>
-            <p className="text-white/80 mt-1 max-w-xl">
-              {category.description}
-            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white">{category.name}</h1>
+            <p className="text-white/80 mt-1 max-w-xl">{category.description}</p>
           </div>
         </div>
       </div>
 
-      {/* Sort links — plain <a> tags work without JS */}
       <div className="container mx-auto px-4 pt-6">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground font-medium mr-1">Sırala:</span>
@@ -140,19 +145,14 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </div>
       </div>
 
-      {/* Products */}
       <div className="container mx-auto px-4 py-6">
-        <p className="text-sm text-muted-foreground mb-6">
-          {products.length} ürün bulundu
-        </p>
+        <p className="text-sm text-muted-foreground mb-6">{products.length} ürün bulundu</p>
 
         <ProductGrid products={products} />
 
         {products.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Bu kategoride henüz ürün bulunmuyor.
-            </p>
+            <p className="text-muted-foreground">Bu kategoride henüz ürün bulunmuyor.</p>
             <Link href="/urunler" className="text-primary hover:underline mt-2 inline-block">
               Tüm ürünlere göz at
             </Link>

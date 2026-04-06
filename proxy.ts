@@ -1,18 +1,26 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
+import { extractRoleName } from '@/lib/extract-role-name'
 
 // ─── Route protection map ────────────────────────────────────────────────────
 // Routes that require authentication and (optionally) a specific role.
 // Roles are read from the `user_role` JWT claim set by custom_access_token_hook.
 // Falls back to a DB profile lookup if the claim is absent (e.g. older tokens).
 const ROLE_PROTECTED: Array<{ path: string; roles: string[] }> = [
-  { path: '/admin',        roles: ['admin'] },
-  { path: '/vendor-panel', roles: ['admin', 'vendor'] },
-  { path: '/account',      roles: ['admin', 'vendor', 'customer'] },
+  { path: '/admin',        roles: ['admin', 'super_admin'] },
+  { path: '/super-admin',  roles: ['super_admin'] },
+  { path: '/vendor-panel', roles: ['admin', 'super_admin', 'vendor'] },
+  { path: '/account',      roles: ['admin', 'super_admin', 'vendor', 'customer'] },
 ]
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Auth UI + OAuth callback: do not run Supabase session refresh in proxy — avoids hard failures
+  // (missing env, transient Supabase errors) blocking /auth/* and /login.
+  if (pathname.startsWith('/auth/') || pathname === '/login') {
+    return NextResponse.next({ request })
+  }
 
   // Build a mutable response that will carry refreshed session cookies
   let response = NextResponse.next({ request })
@@ -41,9 +49,6 @@ export async function proxy(request: NextRequest) {
   // Refresh session — this is the only getUser() call we make
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Auth routes: never redirect, just pass through
-  if (pathname.startsWith('/auth/')) return response
-
   // Find whether this path is protected and what roles are required
   const rule = ROLE_PROTECTED.find((r) => pathname.startsWith(r.path))
   if (!rule) return response   // public route
@@ -53,27 +58,20 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(request, response, pathname)
   }
 
-  // Retrieve role — first try JWT claim (fast), then DB (authoritative)
-  const jwtRole = (await supabase.auth.getSession())
-    .data.session?.user?.user_metadata?.user_role as string | undefined
-
-  let role: string = jwtRole ?? 'customer'
-
-  if (!jwtRole) {
-    // Fallback: query the profile directly
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('roles(name)')
-      .eq('id', user.id)
-      .single()
-    role = (profile?.roles as { name?: string } | null)?.name ?? 'customer'
-  }
+  // Resolve role from DB (authoritative) to avoid stale JWT claim mismatches.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('roles(name)')
+    .eq('id', user.id)
+    .maybeSingle()
+  const role = extractRoleName(profile?.roles) ?? 'customer'
 
   // Check if user's role is allowed for this route
   if (!rule.roles.includes(role)) {
     // Logged in but wrong role — redirect to their correct home
     const destination = role === 'vendor' ? '/vendor-panel'
                       : role === 'admin'  ? '/admin'
+                      : role === 'super_admin' ? '/super-admin'
                       : '/account'
     const url = request.nextUrl.clone()
     url.pathname = destination
@@ -93,7 +91,7 @@ function redirectToLogin(
   pathname: string
 ): NextResponse {
   const loginUrl = request.nextUrl.clone()
-  loginUrl.pathname = '/auth/login'
+  loginUrl.pathname = '/login'
   loginUrl.searchParams.set('next', pathname)
   const redirect = NextResponse.redirect(loginUrl)
   response.cookies.getAll().forEach(({ name, value }) =>
