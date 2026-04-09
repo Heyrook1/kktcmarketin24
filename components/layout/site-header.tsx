@@ -26,6 +26,8 @@ import { createClient } from "@/lib/supabase/client"
 import type { User } from "@supabase/supabase-js"
 import { MegaMenu } from "@/components/layout/mega-menu"
 import { LanguageSelector } from "@/components/shared/language-selector"
+import { CurrencySelector } from "@/components/shared/currency-selector"
+import { CurrencyRatesSync } from "@/components/shared/currency-rates-sync"
 import { extractRoleName } from "@/lib/extract-role-name"
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -100,6 +102,17 @@ function WishlistButton() {
             {count > 99 ? "99+" : count}
           </Badge>
         )}
+      </Button>
+    </Link>
+  )
+}
+
+function CustomerMessageButton({ user }: { user: User | null }) {
+  const href = user ? "/account?tab=orders" : "/login?next=/account%3Ftab%3Dorders"
+  return (
+    <Link href={href} aria-label="Mesajlar ve bildirimler">
+      <Button variant="ghost" size="icon" className="relative h-9 w-9">
+        <Bell className="h-5 w-5" />
       </Button>
     </Link>
   )
@@ -274,6 +287,7 @@ export function Header() {
   const [megaMenuOpen, setMegaMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [expandedCat, setExpandedCat] = useState<string | null>(null)
+  const [mobileAccountOpen, setMobileAccountOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
 
@@ -296,6 +310,12 @@ export function Header() {
     setMegaMenuOpen(false)
     setMobileMenuOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    setExpandedCat(null)
+    setMobileAccountOpen(false)
+  }, [mobileMenuOpen])
 
   useEffect(() => {
     const supabase = createClient()
@@ -338,6 +358,7 @@ export function Header() {
 
   return (
     <>
+      <CurrencyRatesSync />
       <CartDrawer />
       <header
         className={cn(
@@ -357,7 +378,10 @@ export function Header() {
               </Link>
               <Link href="/about" className="hover:text-primary transition-colors">Hakkımızda</Link>
               <Link href="/contact" className="hover:text-primary transition-colors">İletişim</Link>
-              <LanguageSelector />
+              <div className="flex items-center gap-2">
+                <CurrencySelector />
+                <LanguageSelector />
+              </div>
             </div>
           </div>
         </div>
@@ -444,72 +468,99 @@ export function Header() {
                     })}
                   </nav>
 
-                  <div className="border-t py-2">
-                    {user && (
-                      <>
+                  {!expandedCat && (
+                    <div className="border-t py-2">
+                      {user && (
+                        <>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                            onClick={() => setMobileAccountOpen((v) => !v)}
+                            aria-expanded={mobileAccountOpen}
+                            aria-controls="mobile-account-links"
+                          >
+                            <UserCircle className="h-4 w-4 text-muted-foreground" />
+                            <span className="flex-1 text-left">Hesabım</span>
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 text-muted-foreground transition-transform",
+                                mobileAccountOpen && "rotate-90"
+                              )}
+                            />
+                          </button>
+                          {mobileAccountOpen && (
+                            <div id="mobile-account-links" className="pl-11 pr-4 pb-2 bg-secondary/30">
+                              <Link
+                                href="/account"
+                                className="block py-2 text-sm text-foreground hover:text-primary transition-colors"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                Hesabım
+                              </Link>
+                              <Link
+                                href="/account?tab=orders"
+                                className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                Siparişlerim
+                              </Link>
+                              <Link
+                                href="/wishlist"
+                                className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                Favorilerim
+                              </Link>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {mobileIsVendor && (
                         <Link
-                          href="/account"
+                          href="/vendor-panel"
                           className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
                           onClick={() => setMobileMenuOpen(false)}
                         >
-                          <UserCircle className="h-4 w-4 text-muted-foreground" />
-                          Hesabım
+                          <Store className="h-4 w-4 text-muted-foreground" />
+                          Satıcı Paneli
                         </Link>
+                      )}
+                      {(mobileRoleName === "admin" || mobileRoleName === "super_admin") && (
                         <Link
-                          href="/account?tab=orders"
+                          href="/admin/dashboard"
                           className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
                           onClick={() => setMobileMenuOpen(false)}
                         >
-                          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                          Siparişlerim
+                          <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                          Admin Paneli
                         </Link>
-                      </>
-                    )}
-                    {mobileIsVendor && (
-                      <Link
-                        href="/vendor-panel"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Store className="h-4 w-4 text-muted-foreground" />
-                        Satıcı Paneli
-                      </Link>
-                    )}
-                    {(mobileRoleName === "admin" || mobileRoleName === "super_admin") && (
-                      <Link
-                        href="/admin/dashboard"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-                        Admin Paneli
-                      </Link>
-                    )}
-                    {mobileRoleName === "super_admin" && (
-                      <Link
-                        href="/super-admin"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                        Super Admin
-                      </Link>
-                    )}
-                    {[
-                      { href: "/vendor-login", label: "Satıcı Girişi", icon: Store },
-                      { href: "/seller-application", label: "Satıcı Ol", icon: Store },
-                    ].map(({ href, label, icon: Icon }) => (
-                      <Link
-                        key={href}
-                        href={href}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        {label}
-                      </Link>
-                    ))}
-                  </div>
+                      )}
+                      {mobileRoleName === "super_admin" && (
+                        <Link
+                          href="/super-admin"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                          Super Admin
+                        </Link>
+                      )}
+                      {[
+                        { href: "/vendor-login", label: "Satıcı Girişi", icon: Store },
+                        { href: "/seller-application", label: "Satıcı Ol", icon: Store },
+                      ].map(({ href, label, icon: Icon }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          {label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
@@ -561,6 +612,7 @@ export function Header() {
             {/* Right actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
               <WishlistButton />
+              <CustomerMessageButton user={user} />
               <DynamicCartButton />
               <UserMenu user={user} />
             </div>

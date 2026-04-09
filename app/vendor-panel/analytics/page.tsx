@@ -8,6 +8,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
+import { normalizeVendorOrderStatus, VENDOR_STATUS_LABELS } from "@/lib/order-status/vendor-status"
 
 type Order = { status: string; total: number; items_count: number; created_at: string }
 type ProductView = { name: string; view_count: number }
@@ -68,23 +69,14 @@ export default function VendorAnalyticsPage() {
     .map(([key, val]) => ({ month: MONTHS_TR[parseInt(key.split("-")[1]) - 1], ...val }))
 
   // Status breakdown for pie
-  const STATUS_LABELS: Record<string, string> = {
-    pending: "Bekliyor",
-    confirmed: "Sipariş onaylandı",
-    preparing: "Hazırlanıyor",
-    shipped: "Kargoya teslim edildi",
-    exchange_requested: "Değişim talep edildi",
-    delivered: "Teslim alındı",
-    cancelled: "İptal",
-    refunded: "İade",
-  }
   const PIE_COLORS = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ef4444","#6b7280"]
   const statusData = Object.entries(
     orders.reduce<Record<string, number>>((acc, o) => {
-      acc[o.status] = (acc[o.status] ?? 0) + 1
+      const normalized = normalizeVendorOrderStatus(o.status)
+      acc[normalized] = (acc[normalized] ?? 0) + 1
       return acc
     }, {})
-  ).map(([status, count], i) => ({ name: STATUS_LABELS[status] ?? status, value: count, color: PIE_COLORS[i % PIE_COLORS.length] }))
+  ).map(([status, count], i) => ({ name: VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(status)], value: count, color: PIE_COLORS[i % PIE_COLORS.length] }))
 
   const totalRevenue = orders.filter(o => o.status === "delivered").reduce((s, o) => s + o.total, 0)
   const totalOrders = orders.length

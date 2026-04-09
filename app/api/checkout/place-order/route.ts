@@ -510,7 +510,7 @@ export async function POST(req: NextRequest) {
         sub_order_id:   subOrder.id,
         customer_name:  deliveryAddress.fullName,
         customer_email: customerEmail,
-        status:         "pending",
+        status:         "confirmed",
         total:          grpSubtotal,
         items_count:    itemsCount,
         notes:          deliveryAddress.notes ?? null,
@@ -523,7 +523,7 @@ export async function POST(req: NextRequest) {
             store_id:       storeId,
             customer_name:  deliveryAddress.fullName,
             customer_email: customerEmail,
-            status:         "pending",
+            status:         "confirmed",
             total:          grpSubtotal,
             items_count:    itemsCount,
             notes:          deliveryAddress.notes ?? null,
@@ -549,9 +549,9 @@ export async function POST(req: NextRequest) {
   await admin.from("order_status_history").insert({
     order_id:   orderId,
     old_status: null,
-    new_status: "pending",
+    new_status: "confirmed",
     changed_by: "customer",
-    notes:      `Sipariş alındı — ${orderNumber}`,
+    notes:      `Siparis olusturuldu ve onaylandi — ${orderNumber}`,
   })
 
   // 8. Outbox events

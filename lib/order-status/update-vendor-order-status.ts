@@ -1,27 +1,22 @@
 import { createClient } from "@supabase/supabase-js"
 import { sendOrderStatusUpdateEmails } from "@/lib/email/order-status-notify"
-
-export const VENDOR_ORDER_TRANSITIONS: Record<string, string[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "shipped", "cancelled"],
-  preparing: ["shipped", "cancelled"],
-  shipped: ["exchange_requested", "delivered", "cancelled"],
-  exchange_requested: ["preparing", "delivered", "cancelled"],
-  delivered: [],
-  cancelled: [],
-  refunded: [],
-}
+import { insertOutboxEvent } from "@/lib/checkout/outbox"
+import {
+  getAllowedNextVendorStatuses,
+  normalizeVendorOrderStatus,
+  type CanonicalVendorOrderStatus,
+} from "@/lib/order-status/vendor-status"
 
 export interface UpdateVendorOrderStatusInput {
   vendorOrderId: string
   vendorStoreId: string
-  newStatus: string
+  newStatus: CanonicalVendorOrderStatus
   trackingNumber?: string | null
   notes?: string | null
 }
 
 export type UpdateVendorOrderStatusResult =
-  | { ok: true; status: string }
+  | { ok: true; status: CanonicalVendorOrderStatus }
   | { ok: false; status: 403 | 404 | 422 | 500; error: string; allowedNext?: string[] }
 
 function adminClient() {
@@ -47,6 +42,7 @@ export async function updateVendorOrderStatus(
 ): Promise<UpdateVendorOrderStatusResult> {
   const admin = adminClient()
   const { vendorOrderId, vendorStoreId, newStatus, notes } = input
+  const nextStatus = normalizeVendorOrderStatus(newStatus)
 
   const { data: fullRow, error: fullErr } = await admin
     .from("vendor_orders")
@@ -86,26 +82,26 @@ export async function updateVendorOrderStatus(
   }
 
   const currentStatus = row.status as string
-  const allowed = VENDOR_ORDER_TRANSITIONS[currentStatus] ?? []
-  if (!allowed.includes(newStatus)) {
+  const allowed = getAllowedNextVendorStatuses(currentStatus)
+  if (!allowed.includes(nextStatus)) {
     return {
       ok: false,
       status: 422,
-      error: `"${currentStatus}" durumundan "${newStatus}" durumuna geçiş yapılamaz.`,
+      error: `"${currentStatus}" durumundan "${nextStatus}" durumuna geçiş yapılamaz.`,
       allowedNext: allowed,
     }
   }
 
   const tracking =
-    newStatus === "shipped" && typeof input.trackingNumber === "string"
+    nextStatus === "shipped" && typeof input.trackingNumber === "string"
       ? input.trackingNumber.trim()
       : null
 
   let { error: updateErr } = await admin
     .from("vendor_orders")
     .update({
-      status: newStatus,
-      ...(newStatus === "shipped" && tracking ? { tracking_number: tracking } : {}),
+      status: nextStatus,
+      ...(nextStatus === "shipped" && tracking ? { tracking_number: tracking } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", vendorOrderId)
@@ -115,7 +111,7 @@ export async function updateVendorOrderStatus(
     const retry = await admin
       .from("vendor_orders")
       .update({
-        status: newStatus,
+        status: nextStatus,
         updated_at: new Date().toISOString(),
       })
       .eq("id", vendorOrderId)
@@ -132,7 +128,7 @@ export async function updateVendorOrderStatus(
     await admin.from("order_status_history").insert({
       order_id: parentOrderId,
       old_status: currentStatus,
-      new_status: newStatus,
+      new_status: nextStatus,
       changed_by: "vendor",
       notes: notes ?? (tracking ? `Kargo takip: ${tracking}` : null),
     })
@@ -159,9 +155,20 @@ export async function updateVendorOrderStatus(
     customerEmail: row.customer_email ?? null,
     customerName: row.customer_name ?? "Müşteri",
     storeName: storeRow?.name ?? "Mağaza",
-    newStatus,
+    newStatus: nextStatus,
     trackingNumber: tracking,
   })
 
-  return { ok: true, status: newStatus }
+  if (parentOrderId) {
+    await insertOutboxEvent("order", parentOrderId, "customer.order.status_updated", {
+      orderId: parentOrderId,
+      vendorOrderId,
+      storeId: row.store_id,
+      customerEmail: row.customer_email ?? null,
+      status: nextStatus,
+      orderNumber: orderNumber ?? null,
+    })
+  }
+
+  return { ok: true, status: nextStatus }
 }

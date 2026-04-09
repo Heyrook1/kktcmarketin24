@@ -15,6 +15,10 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { assertVendorOrderOwnership } from '@/lib/vendor-auth'
 import { assertAdminAuth } from '@/lib/admin-auth'
 import { updateVendorOrderStatus } from '@/lib/order-status/update-vendor-order-status'
+import {
+  CANONICAL_VENDOR_ORDER_STATUSES,
+  normalizeVendorOrderStatus,
+} from "@/lib/order-status/vendor-status"
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -30,9 +34,16 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: 'Geçersiz JSON gövdesi.' }, { status: 400 })
   }
 
-  const newStatus = body.status
-  if (!newStatus || typeof newStatus !== 'string') {
+  const newStatusRaw = body.status
+  const newStatus = normalizeVendorOrderStatus(newStatusRaw)
+  if (!newStatusRaw || typeof newStatusRaw !== 'string') {
     return NextResponse.json({ error: '"status" alanı zorunludur.' }, { status: 422 })
+  }
+  if (!(CANONICAL_VENDOR_ORDER_STATUSES as readonly string[]).includes(newStatusRaw) && newStatus !== newStatusRaw) {
+    return NextResponse.json(
+      { error: `Geçersiz durum. İzin verilenler: ${CANONICAL_VENDOR_ORDER_STATUSES.join(", ")}` },
+      { status: 422 }
+    )
   }
 
   // Vendor owner path first; fallback to admin/super_admin override.
@@ -57,6 +68,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Sipariş bulunamadı." }, { status: 404 })
     }
     effectiveStoreId = row.store_id
+  }
+  if (!effectiveStoreId) {
+    return NextResponse.json({ error: "Magaza bulunamadi." }, { status: 404 })
   }
 
   const result = await updateVendorOrderStatus({

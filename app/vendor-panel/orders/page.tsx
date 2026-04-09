@@ -9,27 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ShoppingBag } from "lucide-react"
 import { VendorOrdersTable, type OrderRow } from "@/components/vendor/vendor-orders-table"
 import { getReliabilityScore } from "@/lib/reliability"
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Bekliyor",
-  confirmed: "Sipariş onaylandı",
-  preparing: "Hazırlanıyor",
-  shipped: "Kargoya teslim edildi",
-  exchange_requested: "Değişim talep edildi",
-  delivered: "Teslim alındı",
-  cancelled: "İptal",
-  refunded: "İade",
-}
-const STATUS_COLORS: Record<string, string> = {
-  pending:   "bg-amber-100 text-amber-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  preparing: "bg-violet-100 text-violet-800",
-  shipped:   "bg-purple-100 text-purple-800",
-  exchange_requested: "bg-orange-100 text-orange-800",
-  delivered: "bg-emerald-100 text-emerald-800",
-  cancelled: "bg-red-100 text-red-800",
-  refunded:  "bg-gray-100 text-gray-700",
-}
+import {
+  CANONICAL_VENDOR_ORDER_STATUSES,
+  VENDOR_STATUS_COLORS,
+  VENDOR_STATUS_LABELS,
+  normalizeVendorOrderStatus,
+} from "@/lib/order-status/vendor-status"
 
 interface VendorOrdersPageProps {
   searchParams: Promise<{ store?: string }>
@@ -168,8 +153,8 @@ export default async function VendorOrdersPage({ searchParams }: VendorOrdersPag
     }
   })
 
-  const statusGroups = Object.keys(STATUS_LABELS).reduce<Record<string, number>>((acc, s) => {
-    acc[s] = items.filter(o => o.status === s).length
+  const statusGroups = CANONICAL_VENDOR_ORDER_STATUSES.reduce<Record<string, number>>((acc, status) => {
+    acc[status] = items.filter((order) => normalizeVendorOrderStatus(order.status) === status).length
     return acc
   }, {})
 
@@ -215,8 +200,8 @@ export default async function VendorOrdersPage({ searchParams }: VendorOrdersPag
       {/* Status summary pills */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(statusGroups).filter(([, count]) => count > 0).map(([status, count]) => (
-          <span key={status} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[status]}`}>
-            {STATUS_LABELS[status]} <span className="font-bold">{count}</span>
+            <span key={status} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${VENDOR_STATUS_COLORS[normalizeVendorOrderStatus(status)]}`}>
+            {VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(status)]} <span className="font-bold">{count}</span>
           </span>
         ))}
       </div>

@@ -8,10 +8,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   ShoppingBag, Package, Star, TrendingUp,
-  Users, ArrowRight, CircleDot,
+  Users, ArrowRight, CircleDot, LifeBuoy,
 } from "lucide-react"
 import Link from "next/link"
 import { VendorDashboardCharts } from "./dashboard-charts"
+import {
+  VENDOR_STATUS_COLORS,
+  VENDOR_STATUS_LABELS,
+  normalizeVendorOrderStatus,
+} from "@/lib/order-status/vendor-status"
 
 export default async function VendorDashboardPage() {
   const supabase = await createClient()
@@ -56,35 +61,13 @@ export default async function VendorDashboardPage() {
   const traffic = trafficRes.data ?? []
 
   const totalRevenue = orders.filter(o => o.status === "delivered").reduce((s, o) => s + Number(o.total), 0)
-  const pendingOrders = orders.filter(o => o.status === "pending").length
+  const pendingOrders = orders.filter((o) => normalizeVendorOrderStatus(o.status) === "confirmed").length
   const avgRating = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "—"
   const totalVisitors = traffic.reduce((s, t) => s + t.unique_visitors, 0)
 
   const recentOrders = orders
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
-
-  const STATUS_COLORS: Record<string, string> = {
-    pending:   "bg-amber-100 text-amber-800",
-    confirmed: "bg-blue-100 text-blue-800",
-    preparing: "bg-violet-100 text-violet-800",
-    shipped:   "bg-purple-100 text-purple-800",
-    exchange_requested: "bg-orange-100 text-orange-800",
-    delivered: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
-    refunded:  "bg-gray-100 text-gray-700",
-  }
-
-  const STATUS_LABELS: Record<string, string> = {
-    pending: "Bekliyor",
-    confirmed: "Sipariş onaylandı",
-    preparing: "Hazırlanıyor",
-    shipped: "Kargoya teslim edildi",
-    exchange_requested: "Değişim talep edildi",
-    delivered: "Teslim alındı",
-    cancelled: "İptal",
-    refunded: "İade",
-  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -130,6 +113,21 @@ export default async function VendorDashboardPage() {
       {/* Charts row */}
       <VendorDashboardCharts storeId={store.id} />
 
+      <Card className="shadow-sm border-primary/20 bg-primary/5">
+        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <LifeBuoy className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-medium">Destek ve Mesaj Merkezi</p>
+              <p className="text-xs text-muted-foreground">Admin ekibine sorunlarinizi iletebilirsiniz.</p>
+            </div>
+          </div>
+          <Button asChild size="sm">
+            <Link href="/vendor-panel/inbox">Destek Kutusunu Ac</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Recent orders + quick stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 shadow-sm">
@@ -161,8 +159,8 @@ export default async function VendorDashboardPage() {
                       <td className="px-4 py-2.5 font-medium truncate max-w-[120px]">{(order as any).customer_name}</td>
                       <td className="px-4 py-2.5">₺{Number(order.total).toLocaleString("tr-TR")}</td>
                       <td className="px-4 py-2.5">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
-                          {STATUS_LABELS[order.status] ?? order.status}
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${VENDOR_STATUS_COLORS[normalizeVendorOrderStatus(order.status)]}`}>
+                          {VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(order.status)]}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-muted-foreground hidden sm:table-cell">

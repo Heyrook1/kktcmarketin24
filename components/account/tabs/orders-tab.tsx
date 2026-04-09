@@ -15,11 +15,17 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { deriveCanonicalVendorOrderStatus } from "@/lib/order-status/vendor-status"
+import { ThreadChatPanel } from "@/components/shared/thread-chat-panel"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type OrderStatus =
-  | "pending" | "confirmed" | "preparing" | "shipped" | "exchange_requested"
-  | "delivered" | "cancelled" | "refunded" | "return_requested"
+  | "confirmed"
+  | "shipped"
+  | "exchange_requested"
+  | "delivered"
+  | "cancelled"
+  | "return_requested"
 
 interface DbOrderItem {
   id: string; product_id: string; product_name: string; image_url: string | null
@@ -58,22 +64,17 @@ interface DbOrder {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: React.ElementType }> = {
-  pending:            { label: "Beklemede",              color: "bg-amber-100 text-amber-700 border-amber-200",    icon: Clock },
   confirmed:          { label: "Sipariş onaylandı",      color: "bg-blue-100 text-blue-700 border-blue-200",       icon: CheckCircle },
-  preparing:          { label: "Hazırlanıyor",           color: "bg-purple-100 text-purple-700 border-purple-200", icon: Package },
-  shipped:            { label: "Kargoya teslim edildi",   color: "bg-cyan-100 text-cyan-700 border-cyan-200",       icon: Truck },
-  exchange_requested: { label: "Değişim talep edildi",   color: "bg-orange-100 text-orange-700 border-orange-200", icon: RefreshCw },
-  delivered:          { label: "Teslim alındı",          color: "bg-green-100 text-green-700 border-green-200",    icon: CheckCircle },
+  shipped:            { label: "Sipariş kargoda",        color: "bg-cyan-100 text-cyan-700 border-cyan-200",       icon: Truck },
+  exchange_requested: { label: "Degisim / iade edildi",  color: "bg-orange-100 text-orange-700 border-orange-200", icon: RefreshCw },
+  delivered:          { label: "Musteriye teslim edildi", color: "bg-green-100 text-green-700 border-green-200",   icon: CheckCircle },
   cancelled:          { label: "İptal Edildi",           color: "bg-red-100 text-red-700 border-red-200",          icon: XCircle },
-  refunded:           { label: "İade Edildi",            color: "bg-gray-100 text-gray-700 border-gray-200",       icon: RefreshCw },
   return_requested:   { label: "İade Talep Edildi",      color: "bg-orange-100 text-orange-700 border-orange-200", icon: CornerUpLeft },
 }
 
 /** Satıcı durum akışı ile uyumlu ilerleme adımları */
 const STATUS_STEPS: OrderStatus[] = [
-  "pending",
   "confirmed",
-  "preparing",
   "shipped",
   "exchange_requested",
   "delivered",
@@ -92,26 +93,7 @@ function deriveStatus(order: DbOrder): OrderStatus {
 
   const vos = order.vendor_orders
   if (vos && vos.length > 0) {
-    if (vos.some((v) => v.status === "cancelled")) return "cancelled"
-    if (vos.some((v) => v.status === "refunded")) return "refunded"
-    const rank: Record<string, number> = {
-      pending: 0,
-      confirmed: 1,
-      preparing: 2,
-      shipped: 3,
-      exchange_requested: 4,
-      delivered: 5,
-    }
-    const minRank = Math.min(...vos.map((v) => rank[v.status] ?? 0))
-    const byRank: OrderStatus[] = [
-      "pending",
-      "confirmed",
-      "preparing",
-      "shipped",
-      "exchange_requested",
-      "delivered",
-    ]
-    return byRank[minRank] ?? "pending"
+    return deriveCanonicalVendorOrderStatus(vos)
   }
 
   if (order.order_status_history?.some((h) => h.new_status === "cancelled")) {
@@ -119,9 +101,9 @@ function deriveStatus(order: DbOrder): OrderStatus {
   }
 
   const subStatuses = order.order_vendor_sub_orders.map((s) => s.step_status)
-  if (subStatuses.length === 0) return "pending"
+  if (subStatuses.length === 0) return "confirmed"
   if (subStatuses.every((s) => s === "completed" || s === "delivered")) return "delivered"
-  return "pending"
+  return "confirmed"
 }
 
 function isReturnEligible(order: DbOrder): boolean {
@@ -131,15 +113,15 @@ function isReturnEligible(order: DbOrder): boolean {
   return daysDiff <= 14
 }
 
-/** Satıcı onayı beklenirken (tüm vendor satırları pending) müşteri düzenleyebilir / iptal edebilir */
+/** Siparis kargoya cikmadan once (confirmed) musteri duzenleyebilir / iptal edebilir */
 function canCustomerModifyOrder(order: DbOrder): boolean {
   const st = deriveStatus(order)
-  if (st === "cancelled" || st === "refunded") return false
+  if (st === "cancelled") return false
   const vos = order.vendor_orders
   if (vos && vos.length > 0) {
-    return vos.every((v) => v.status === "pending")
+    return vos.every((v) => deriveCanonicalVendorOrderStatus([v]) === "confirmed")
   }
-  return st === "pending"
+  return st === "confirmed"
 }
 
 const EDIT_CITIES = [
@@ -437,9 +419,12 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
   const [showReturn, setShowReturn] = useState(false)
   const [showEdit, setShowEdit]     = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [selectedVendorOrderId, setSelectedVendorOrderId] = useState<string | null>(
+    order.vendor_orders?.[0]?.id ?? null,
+  )
 
   const status        = deriveStatus(order)
-  const cfg           = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending
+  const cfg           = STATUS_CONFIG[status] ?? STATUS_CONFIG.confirmed
   const StatusIcon    = cfg.icon
   const progressStep  = Math.max(0, STATUS_STEPS.indexOf(status))
   const addr          = order.delivery_address
@@ -517,11 +502,11 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
         {expanded && (
           <div className="border-t">
             {/* Progress tracker */}
-            {!["cancelled", "refunded", "return_requested"].includes(status) && (
+            {!["cancelled", "return_requested"].includes(status) && (
               <div className="px-5 py-4 bg-secondary/30">
-                {status === "pending" && (
+                {status === "confirmed" && (
                   <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                    Siparişiniz satıcı onayı bekliyor. Satıcı onayladığında bu sipariş için bildirim ve durum güncellemesi alırsınız.
+                    Siparisiniz onaylandi. Kargoya ciktiginda durum otomatik guncellenecektir.
                   </div>
                 )}
                 <div className="flex items-center gap-0">
@@ -704,7 +689,7 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
                   {order.vendor_orders!.map((v) => {
                     const label = v.vendor_stores?.name ?? v.store_id.slice(0, 8)
                     const st = v.status as OrderStatus
-                    const subCfg = STATUS_CONFIG[st] ?? STATUS_CONFIG.pending
+                    const subCfg = STATUS_CONFIG[st] ?? STATUS_CONFIG.confirmed
                     const SubIcon = subCfg.icon
                     return (
                       <div key={v.id} className="flex flex-col gap-0.5 text-sm border rounded-lg px-3 py-2 bg-muted/20">
@@ -725,6 +710,37 @@ function OrderCard({ order, onReturnSuccess }: { order: DbOrder; onReturnSuccess
                       </div>
                     )
                   })}
+                </div>
+
+                <div className="px-5 pb-3 space-y-2">
+                  {order.vendor_orders!.length > 1 && (
+                    <div className="space-y-1">
+                      <Label htmlFor={`vendor-thread-${order.id}`} className="text-xs text-muted-foreground">
+                        Mesajlasacaginiz magazayi secin
+                      </Label>
+                      <select
+                        id={`vendor-thread-${order.id}`}
+                        className="h-9 rounded-md border bg-background px-3 text-sm"
+                        value={selectedVendorOrderId ?? ""}
+                        onChange={(event) => setSelectedVendorOrderId(event.target.value || null)}
+                      >
+                        {order.vendor_orders!.map((vendorOrder) => (
+                          <option key={vendorOrder.id} value={vendorOrder.id}>
+                            {vendorOrder.vendor_stores?.name ?? vendorOrder.store_id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedVendorOrderId && (
+                    <ThreadChatPanel
+                      endpoint={`/api/messages/customer-vendor/${selectedVendorOrderId}`}
+                      title="Saticiya Mesaj"
+                      placeholder="Saticiya iletmek istediginiz notu yazin..."
+                      emptyText="Bu siparis satiri icin henuz mesaj yok."
+                    />
+                  )}
                 </div>
               </>
             )}
@@ -832,9 +848,7 @@ export function OrdersTab({ userId }: { userId: string }) {
             onChange={(e) => setFilter(e.target.value as OrderStatus | "all")}
           >
             <option value="all">Tüm Siparişler</option>
-            <option value="pending">Beklemede</option>
             <option value="confirmed">Sipariş onaylandı</option>
-            <option value="preparing">Hazırlanıyor</option>
             <option value="shipped">Kargoya teslim edildi</option>
             <option value="exchange_requested">Değişim talep edildi</option>
             <option value="delivered">Teslim alındı</option>
@@ -857,7 +871,7 @@ export function OrdersTab({ userId }: { userId: string }) {
         </div>
       )}
 
-      {!isLoading && orders.length > 0 && deriveStatus(orders[0]) === "pending" && (
+      {!isLoading && orders.length > 0 && deriveStatus(orders[0]) === "confirmed" && (
         <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
           <Clock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <div>

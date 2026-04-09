@@ -3,6 +3,10 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { assertVendorOrderOwnership } from '@/lib/vendor-auth'
 import { assertAdminAuth } from '@/lib/admin-auth'
 import { updateVendorOrderStatus } from '@/lib/order-status/update-vendor-order-status'
+import {
+  CANONICAL_VENDOR_ORDER_STATUSES,
+  normalizeVendorOrderStatus,
+} from "@/lib/order-status/vendor-status"
 
 export const runtime = 'nodejs'
 
@@ -12,14 +16,21 @@ export async function PATCH(
 ) {
   try {
     const { id: orderId } = await params
-    const { status: newStatus, notes, trackingNumber } = await req.json() as {
+    const { status: newStatusRaw, notes, trackingNumber } = await req.json() as {
       status: string
       notes?: string
       trackingNumber?: string | null
     }
+    const newStatus = normalizeVendorOrderStatus(newStatusRaw)
 
-    if (!orderId || !newStatus) {
+    if (!orderId || !newStatusRaw) {
       return NextResponse.json({ error: 'orderId ve status zorunludur.' }, { status: 400 })
+    }
+    if (!(CANONICAL_VENDOR_ORDER_STATUSES as readonly string[]).includes(newStatusRaw) && newStatus !== newStatusRaw) {
+      return NextResponse.json(
+        { error: `Geçersiz durum. İzin verilenler: ${CANONICAL_VENDOR_ORDER_STATUSES.join(", ")}` },
+        { status: 422 }
+      )
     }
 
     // Legacy alias endpoint: keep behavior fully aligned with vendor endpoint.
@@ -43,6 +54,9 @@ export async function PATCH(
         return NextResponse.json({ error: "Sipariş bulunamadı." }, { status: 404 })
       }
       effectiveStoreId = row.store_id
+    }
+    if (!effectiveStoreId) {
+      return NextResponse.json({ error: "Magaza bulunamadi." }, { status: 404 })
     }
 
     const result = await updateVendorOrderStatus({

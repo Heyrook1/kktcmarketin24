@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { deriveCanonicalVendorOrderStatus } from "@/lib/order-status/vendor-status"
 
 function getAdmin() {
   return createAdminClient(
@@ -13,20 +14,7 @@ function getAdmin() {
 const VALID_REASONS = ["Hasar Var", "Yanlış Ürün", "Beklentiye Uymadı", "Diğer"] as const
 
 function deriveOrderStatusFromVendorRows(rows: Array<{ status: string }>): string {
-  if (rows.length === 0) return "pending"
-  if (rows.some((v) => v.status === "cancelled")) return "cancelled"
-  if (rows.some((v) => v.status === "refunded")) return "refunded"
-  const rank: Record<string, number> = {
-    pending: 0,
-    confirmed: 1,
-    preparing: 2,
-    shipped: 3,
-    exchange_requested: 4,
-    delivered: 5,
-  }
-  const minRank = Math.min(...rows.map((v) => rank[v.status] ?? 0))
-  const byRank = ["pending", "confirmed", "preparing", "shipped", "exchange_requested", "delivered"]
-  return byRank[minRank] ?? "pending"
+  return deriveCanonicalVendorOrderStatus(rows)
 }
 
 export async function POST(req: NextRequest) {

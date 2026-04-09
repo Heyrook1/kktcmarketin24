@@ -3,14 +3,19 @@
  */
 
 const STATUS_LABEL_TR: Record<string, string> = {
-  pending: "Beklemede",
   confirmed: "Sipariş onaylandı",
-  preparing: "Hazırlanıyor",
-  shipped: "Kargoya teslim edildi",
-  exchange_requested: "Değişim talep edildi",
-  delivered: "Teslim alındı",
+  shipped: "Sipariş kargoda",
+  exchange_requested: "Değişim / iade edildi",
+  delivered: "Müşteriye teslim edildi",
   cancelled: "İptal edildi",
-  refunded: "İade edildi",
+}
+
+const STATUS_NOTE_TR: Record<string, string> = {
+  confirmed: "Siparişiniz onaylandı ve hazırlık tamamlandı.",
+  shipped: "Siparişiniz kargoya verildi, teslimat süreci başladı.",
+  exchange_requested: "Siparişiniz için değişim / iade süreci başlatıldı.",
+  delivered: "Siparişiniz teslim edildi. Güle güle kullanın.",
+  cancelled: "Siparişiniz iptal edildi.",
 }
 
 export async function sendOrderStatusUpdateEmails(params: {
@@ -41,6 +46,7 @@ export async function sendOrderStatusUpdateEmails(params: {
       <div style="background:#fff;padding:24px 32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">
         <p>Merhaba <strong>${escapeHtml(params.customerName)}</strong>,</p>
         <p><strong>${escapeHtml(params.storeName)}</strong> mağazası siparişinizi şu duruma getirdi: <strong>${escapeHtml(label)}</strong>.</p>
+        <p>${escapeHtml(STATUS_NOTE_TR[params.newStatus] ?? "Durum bilgisi güncellendi.")}</p>
         ${trackingBlock}
         <p style="color:#6b7280;font-size:13px;margin-top:20px">
           Siparişlerinizi hesabınızdan takip edebilirsiniz.

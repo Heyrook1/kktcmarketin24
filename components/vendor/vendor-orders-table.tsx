@@ -15,12 +15,21 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { VendorOrderProgress } from "@/components/shared/vendor-order-progress"
+import { ThreadChatPanel } from "@/components/shared/thread-chat-panel"
 import {
   CheckCircle2, Package, Truck, XCircle, DoorOpen,
   ChevronDown, ShieldCheck, ShieldAlert, ShieldQuestion, Shield,
   AlertTriangle, Loader2,
 } from "lucide-react"
 import type { ReliabilityScore } from "@/lib/reliability"
+import {
+  VENDOR_STATUS_COLORS,
+  VENDOR_STATUS_LABELS,
+  getAllowedNextVendorStatuses,
+  normalizeVendorOrderStatus,
+  type CanonicalVendorOrderStatus,
+} from "@/lib/order-status/vendor-status"
 
 // ── Reliability badge ──────────────────────────────────────────────────────────
 
@@ -85,7 +94,7 @@ interface DeliveryEventMenuProps {
   vendorOrderId: string
   /** Parent `orders.id` — required by delivery-event API */
   parentOrderId: string | null
-  onEventRecorded: (vendorOrderId: string, eventType: string) => void
+  onEventRecorded: (vendorOrderId: string, eventType: string) => Promise<void>
 }
 
 const EVENT_OPTIONS = [
@@ -116,11 +125,10 @@ export function DeliveryEventMenu({ vendorOrderId, parentOrderId, onEventRecorde
     setLoading(true)
     setError(null)
     try {
-      if (!parentOrderId) {
-        setError("Bu satır için ana sipariş kimliği yok.")
-        return
-      }
-      const res = await fetch(`/api/orders/${parentOrderId}/delivery-event`, {
+      const endpoint = parentOrderId
+        ? `/api/orders/${parentOrderId}/delivery-event`
+        : `/api/vendor/orders/${vendorOrderId}/delivery-event`
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventType: selectedEvent.type, notes }),
@@ -131,7 +139,7 @@ export function DeliveryEventMenu({ vendorOrderId, parentOrderId, onEventRecorde
         return
       }
       setDialogOpen(false)
-      onEventRecorded(vendorOrderId, selectedEvent.type)
+      await onEventRecorded(vendorOrderId, selectedEvent.type)
     } catch {
       setError("Sunucu hatası. Lütfen tekrar deneyin.")
     } finally {
@@ -178,6 +186,11 @@ export function DeliveryEventMenu({ vendorOrderId, parentOrderId, onEventRecorde
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-1">
+            {!parentOrderId && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Legacy sipariş satırı algılandı. Sistem ana siparişi otomatik eşleştirerek kaydetmeyi deneyecek.
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="event-notes">Not (isteğe bağlı)</Label>
               <Textarea
@@ -272,30 +285,12 @@ type VendorOrderDetails = {
   }>
 }
 
-const STATUS_ACTIONS: Record<string, { value: string; label: string; needsTracking?: boolean }[]> = {
-  pending: [
-    { value: "confirmed", label: "Sipariş onaylandı" },
-    { value: "cancelled", label: "İptal" },
-  ],
-  confirmed: [
-    { value: "preparing", label: "Hazırlanıyor" },
-    { value: "shipped", label: "Kargoya teslim edildi", needsTracking: true },
-    { value: "cancelled", label: "İptal" },
-  ],
-  preparing: [
-    { value: "shipped", label: "Kargoya teslim edildi", needsTracking: true },
-    { value: "cancelled", label: "İptal" },
-  ],
-  shipped: [
-    { value: "exchange_requested", label: "Değişim talep edildi" },
-    { value: "delivered", label: "Teslim alındı" },
-    { value: "cancelled", label: "İptal" },
-  ],
-  exchange_requested: [
-    { value: "preparing", label: "Yeniden hazırlanıyor" },
-    { value: "delivered", label: "Teslim alındı" },
-    { value: "cancelled", label: "İptal" },
-  ],
+const ACTION_LABELS: Record<CanonicalVendorOrderStatus, string> = {
+  confirmed: "Siparis onaylandi",
+  shipped: "Siparis kargoda",
+  exchange_requested: "Degisim / iade edildi",
+  delivered: "Musteriye teslim edildi",
+  cancelled: "Siparis iptal edildi",
 }
 
 function VendorOrderStatusMenu({
@@ -303,19 +298,23 @@ function VendorOrderStatusMenu({
   onStatusUpdated,
 }: {
   row: OrderRow
-  onStatusUpdated: (vendorOrderId: string, newStatus: string) => void
+  onStatusUpdated: (vendorOrderId: string, newStatus: CanonicalVendorOrderStatus) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [trackDialog, setTrackDialog] = useState(false)
-  const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+  const [pendingStatus, setPendingStatus] = useState<CanonicalVendorOrderStatus | null>(null)
   const [tracking, setTracking] = useState("")
 
-  const actions = STATUS_ACTIONS[row.status] ?? []
+  const actions = getAllowedNextVendorStatuses(row.status).map((next) => ({
+    value: next,
+    label: ACTION_LABELS[next],
+    needsTracking: next === "shipped",
+  }))
   if (actions.length === 0) return null
 
-  async function applyStatus(status: string, trackingNumber?: string) {
+  async function applyStatus(status: CanonicalVendorOrderStatus, trackingNumber?: string) {
     setLoading(true)
     setErr(null)
     try {
@@ -337,7 +336,7 @@ function VendorOrderStatusMenu({
         setErr((payload.error ?? "Güncellenemedi.") + detail)
         return
       }
-      onStatusUpdated(row.id, status)
+      await onStatusUpdated(row.id, status)
       setOpen(false)
       setTrackDialog(false)
       setPendingStatus(null)
@@ -425,27 +424,6 @@ function VendorOrderStatusMenu({
 
 // ── Orders table ───────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Bekliyor",
-  confirmed: "Sipariş onaylandı",
-  preparing: "Hazırlanıyor",
-  shipped: "Kargoya teslim edildi",
-  exchange_requested: "Değişim talep edildi",
-  delivered: "Teslim alındı",
-  cancelled: "İptal",
-  refunded: "İade",
-}
-const STATUS_COLORS: Record<string, string> = {
-  pending:   "bg-amber-100 text-amber-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  preparing: "bg-violet-100 text-violet-800",
-  shipped:   "bg-purple-100 text-purple-800",
-  exchange_requested: "bg-orange-100 text-orange-800",
-  delivered: "bg-emerald-100 text-emerald-800",
-  cancelled: "bg-red-100 text-red-800",
-  refunded:  "bg-gray-100 text-gray-700",
-}
-
 export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[] }) {
   const [mounted, setMounted] = useState(false)
   const [orders, setOrders] = useState(initialOrders)
@@ -456,21 +434,57 @@ export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[]
   const [detail, setDetail] = useState<VendorOrderDetails | null>(null)
   const showStoreColumn = orders.some((o) => Boolean(o.store_name))
 
-  const handleEventRecorded = (vendorOrderId: string, eventType: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === vendorOrderId
-          ? { ...o, status: eventType === "delivered" ? "delivered" : eventType === "confirmed" ? "confirmed" : o.status }
-          : o
-      )
-    )
+  async function fetchOrderDetail(vendorOrderId: string): Promise<VendorOrderDetails> {
+    const res = await fetch(`/api/vendor/orders/${vendorOrderId}`)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error((data as { error?: string }).error ?? "Sipariş detayı yüklenemedi.")
+    }
+    return (data as { order: VendorOrderDetails }).order
   }
 
-  const handleStatusUpdated = (vendorOrderId: string, newStatus: string) => {
+  async function refreshOrderRow(vendorOrderId: string): Promise<void> {
+    const latest = await fetchOrderDetail(vendorOrderId)
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === vendorOrderId
+          ? {
+              ...order,
+              status: latest.status,
+              tracking_number: latest.tracking_number,
+              total: latest.total,
+              customer_name: latest.customer_name,
+              customer_email: latest.customer_email,
+            }
+          : order
+      )
+    )
+    setDetail((prev) => (prev && prev.id === vendorOrderId ? latest : prev))
+  }
+
+  const handleEventRecorded = async (vendorOrderId: string, eventType: string) => {
+    if (eventType === "delivered" || eventType === "confirmed") {
+      const optimisticStatus = eventType as CanonicalVendorOrderStatus
+      setOrders((prev) => prev.map((o) => (o.id === vendorOrderId ? { ...o, status: optimisticStatus } : o)))
+      setDetail((prev) => (prev && prev.id === vendorOrderId ? { ...prev, status: optimisticStatus } : prev))
+    }
+    try {
+      await refreshOrderRow(vendorOrderId)
+    } catch (error) {
+      setDetailError(error instanceof Error ? error.message : "Sipariş yenilenemedi.")
+    }
+  }
+
+  const handleStatusUpdated = async (vendorOrderId: string, newStatus: CanonicalVendorOrderStatus) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === vendorOrderId ? { ...o, status: newStatus } : o))
     )
     setDetail((prev) => (prev && prev.id === vendorOrderId ? { ...prev, status: newStatus } : prev))
+    try {
+      await refreshOrderRow(vendorOrderId)
+    } catch (error) {
+      setDetailError(error instanceof Error ? error.message : "Sipariş yenilenemedi.")
+    }
   }
 
   const openDetails = async (vendorOrderId: string) => {
@@ -479,14 +493,8 @@ export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[]
     setDetailLoading(true)
     setDetailError(null)
     try {
-      const res = await fetch(`/api/vendor/orders/${vendorOrderId}`)
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setDetailError((data as { error?: string }).error ?? "Sipariş detayı yüklenemedi.")
-        setDetail(null)
-        return
-      }
-      setDetail((data as { order: VendorOrderDetails }).order)
+      const latest = await fetchOrderDetail(vendorOrderId)
+      setDetail(latest)
     } catch {
       setDetailError("Bağlantı hatası. Lütfen tekrar deneyin.")
       setDetail(null)
@@ -568,9 +576,15 @@ export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[]
                 )}
               </td>
               <td className="px-4 py-3">
-                <Badge variant="outline" className={`text-xs font-medium border-0 ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
-                  {STATUS_LABELS[order.status] ?? order.status}
+                <Badge
+                  variant="outline"
+                  className={`text-xs font-medium border-0 ${VENDOR_STATUS_COLORS[normalizeVendorOrderStatus(order.status)]}`}
+                >
+                  {VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(order.status)]}
                 </Badge>
+                <div className="mt-2">
+                  <VendorOrderProgress status={order.status} compact />
+                </div>
               </td>
               <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                 {new Date(order.created_at).toLocaleDateString("tr-TR")}
@@ -625,10 +639,18 @@ export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[]
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Durum</p>
-                  <Badge variant="outline" className={`mt-1 text-xs font-medium border-0 ${STATUS_COLORS[detail.status] ?? "bg-muted text-muted-foreground"}`}>
-                    {STATUS_LABELS[detail.status] ?? detail.status}
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 text-xs font-medium border-0 ${VENDOR_STATUS_COLORS[normalizeVendorOrderStatus(detail.status)]}`}
+                  >
+                    {VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(detail.status)]}
                   </Badge>
                 </div>
+              </div>
+
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground mb-2">Durum ilerlemesi</p>
+                <VendorOrderProgress status={detail.status} />
               </div>
 
               <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
@@ -640,10 +662,19 @@ export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[]
                     onEventRecorded={handleEventRecorded}
                   />
                 )}
-                <Button size="sm" variant="outline" onClick={() => selectedId && void openDetails(selectedId)}>
+                <Button size="sm" variant="outline" onClick={() => selectedId && void refreshOrderRow(selectedId)}>
                   Yenile
                 </Button>
               </div>
+
+              {selectedRow && (
+                <ThreadChatPanel
+                  endpoint={`/api/messages/customer-vendor/${selectedRow.id}`}
+                  title="Musteri ile Mesajlasma"
+                  placeholder="Musteriye mesaj yazin..."
+                  emptyText="Bu siparis satirinda henuz mesaj yok."
+                />
+              )}
 
               <div className="rounded-lg border p-3 text-sm space-y-1">
                 <p><span className="text-muted-foreground">Müşteri:</span> {detail.customer_name} ({detail.customer_email})</p>
@@ -704,8 +735,10 @@ export function VendorOrdersTable({ initialOrders }: { initialOrders: OrderRow[]
                     {detail.history.map((h) => (
                       <li key={h.id} className="flex items-center justify-between gap-3">
                         <span className="text-muted-foreground">
-                          {h.old_status ? `${h.old_status} → ` : ""}
-                          <span className="text-foreground font-medium">{h.new_status}</span>
+                          {h.old_status ? `${VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(h.old_status)]} → ` : ""}
+                          <span className="text-foreground font-medium">
+                            {VENDOR_STATUS_LABELS[normalizeVendorOrderStatus(h.new_status)]}
+                          </span>
                           {h.notes ? ` — ${h.notes}` : ""}
                         </span>
                         <time className="text-xs text-muted-foreground shrink-0">

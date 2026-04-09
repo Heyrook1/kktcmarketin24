@@ -106,6 +106,7 @@ export default async function SuperAdminPage() {
           <Button asChild><Link href="/admin/dashboard">Admin Dashboard</Link></Button>
           <Button asChild variant="secondary"><Link href="/admin/vendors">Vendor Yönetimi</Link></Button>
           <Button asChild variant="secondary"><Link href="/vendor-panel/orders">Vendor Sipariş Operasyonları</Link></Button>
+          <Button asChild variant="secondary"><Link href="/super-admin/inbox">Vendor Destek Mesajları</Link></Button>
           <Button asChild variant="outline"><Link href="/account?tab=orders">Müşteri Sipariş Görünümü</Link></Button>
           <Button asChild variant="outline"><Link href="/vendor-panel/settings"><Settings className="h-4 w-4 mr-1" />Vendor Ayarları</Link></Button>
         </CardContent>

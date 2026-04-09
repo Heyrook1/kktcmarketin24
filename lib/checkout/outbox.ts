@@ -24,6 +24,7 @@ export type OutboxEventType =
   | 'vendor.order.created'
   | 'vendor.order.compensated'
   | 'vendor.sub_order.step_failed'
+  | 'customer.order.status_updated'
 
 export async function insertOutboxEvent(
   aggregateType: 'order' | 'sub_order',

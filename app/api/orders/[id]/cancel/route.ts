@@ -69,7 +69,7 @@ async function loadVendorOrderRowsForCancel(
       .select("id, status, total, created_at")
       .eq("customer_email", parent.customer_email)
       .in("store_id", uniqStores)
-      .eq("status", "pending")
+      .in("status", ["pending", "confirmed"])
     if (!le && loose?.length) {
       const target = Number(parent.total)
       const parentTime = parent.created_at ? new Date(parent.created_at).getTime() : Number.NaN
@@ -96,7 +96,7 @@ async function loadVendorOrderRowsForCancel(
 async function sweepVendorOrdersCancelled(a: ReturnType<typeof admin>, orderId: string): Promise<void> {
   const upd = { status: "cancelled" as const, updated_at: new Date().toISOString() }
 
-  const u1 = await a.from("vendor_orders").update(upd).eq("order_id", orderId).eq("status", "pending")
+  const u1 = await a.from("vendor_orders").update(upd).eq("order_id", orderId).in("status", ["pending", "confirmed"])
   if (u1.error && !isMissingColumnErr(u1.error, "order_id")) {
     console.warn("[cancel] sweep order_id:", u1.error.message)
   }
@@ -104,7 +104,7 @@ async function sweepVendorOrdersCancelled(a: ReturnType<typeof admin>, orderId: 
   const { data: subs } = await a.from("order_vendor_sub_orders").select("id").eq("order_id", orderId)
   const subIds = subs?.map((s) => s.id) ?? []
   if (subIds.length > 0) {
-    const u2 = await a.from("vendor_orders").update(upd).in("sub_order_id", subIds).eq("status", "pending")
+    const u2 = await a.from("vendor_orders").update(upd).in("sub_order_id", subIds).in("status", ["pending", "confirmed"])
     if (u2.error && !isMissingColumnErr(u2.error, "sub_order_id")) {
       console.warn("[cancel] sweep sub_order_id:", u2.error.message)
     }
@@ -124,7 +124,7 @@ async function sweepVendorOrdersCancelled(a: ReturnType<typeof admin>, orderId: 
     .select("id, total, created_at")
     .eq("customer_email", o.customer_email)
     .in("store_id", uniqStores)
-    .eq("status", "pending")
+    .in("status", ["pending", "confirmed"])
 
   const target = Number(o.total)
   const parentTime = o.created_at ? new Date(o.created_at).getTime() : Number.NaN
@@ -187,7 +187,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       if (allCancelled) {
         return NextResponse.json({ ok: true, alreadyCancelled: true })
       }
-      if (rows.some((r) => r.status !== "pending")) {
+      if (rows.some((r) => !["pending", "confirmed"].includes(r.status))) {
         return NextResponse.json(
           { error: "Satıcı siparişi onayladığı için iptal edilemez." },
           { status: 403 },

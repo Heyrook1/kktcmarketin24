@@ -1,12 +1,20 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { ChevronDown, Check } from "lucide-react"
+import { useState, useRef, useEffect, useMemo } from "react"
+import { ChevronDown, Check, RefreshCw, CircleDot } from "lucide-react"
 import { useCurrencyStore, CURRENCIES, type CurrencyCode } from "@/lib/store/currency-store"
 import { cn } from "@/lib/utils"
 
 export function CurrencySelector() {
-  const { activeCurrency, setCurrency } = useCurrencyStore()
+  const {
+    activeCurrency,
+    setCurrency,
+    rates,
+    ratesSource,
+    isLoading,
+    error,
+    refreshRates,
+  } = useCurrencyStore()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -32,6 +40,12 @@ export function CurrencySelector() {
     setCurrency(code)
     setOpen(false)
   }
+
+  const rateLabel = useMemo(() => {
+    const rate = rates[activeCurrency.code] ?? 1
+    if (activeCurrency.code === "TRY") return "1 TRY = 1.00 TRY"
+    return `1 TRY = ${rate.toFixed(4)} ${activeCurrency.code}`
+  }, [activeCurrency.code, rates])
 
   return (
     <div ref={ref} className="relative">
@@ -91,10 +105,28 @@ export function CurrencySelector() {
             )
           })}
 
-          {/* Rate note */}
+          {/* Live rate status */}
           <div className="mx-3 mt-1 mb-1 pt-2 border-t border-border/60">
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
-              Kurlar yaklaşık olup bilgi amacıyla gösterilir. Ödeme TL üzerinden alınır.
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] text-muted-foreground leading-relaxed inline-flex items-center gap-1">
+                <CircleDot className={cn("h-2.5 w-2.5", ratesSource === "live" ? "text-emerald-500" : "text-amber-500")} />
+                {ratesSource === "live" ? "Canlı kur" : "Yedek kur"}
+              </p>
+              <button
+                type="button"
+                onClick={() => void refreshRates(true)}
+                disabled={isLoading}
+                className="inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+                aria-label="Kurları yenile"
+              >
+                <RefreshCw className={cn("h-2.5 w-2.5", isLoading && "animate-spin")} />
+                Yenile
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">{rateLabel}</p>
+            {error && <p className="text-[10px] text-amber-600 mt-0.5">{error}</p>}
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Ödeme tahsilatı TRY üzerinden yapılır.
             </p>
           </div>
         </div>
