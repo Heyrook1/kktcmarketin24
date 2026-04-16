@@ -1,0 +1,79 @@
+name: CI — Kalite Kapısı
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  quality-gate:
+    name: Kalite Kontrolü
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js Kurulum
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Bağımlılıkları Yükle
+        run: npm ci
+
+      - name: TypeScript Kontrolü
+        run: npx tsc --noEmit
+
+      - name: ESLint Kontrolü
+        run: npx eslint .
+
+      - name: QA Smoke Test
+        run: npm run test:qa
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+  claude-review:
+    name: Claude Kod İncelemesi
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Claude PR Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            Sen KKTC Marketin24 projesinin kıdemli code reviewer'ısın.
+            Bu Next.js 16 App Router + Supabase + Upstash projesi için PR'ı incele.
+
+            ZORUNLU KONTROLLER:
+            1. Supabase kullanımı: server component → createServerClient, client → createBrowserClient
+            2. Her yeni API route'da Zod validation var mı?
+            3. Redis key convention: {entity}:{id}:{action}
+            4. RLS politikası etkileniyor mu? Yeni tablo varsa RLS eklenmiş mi?
+            5. POS modülü (app/pos/) değiştiyse stok senkronizasyonu etkilendi mi?
+            6. TypeScript strict ihlali var mı?
+            7. Güvenlik: auth bypass riski, SQL injection, rate limit eksikliği
+            8. Fiyat alanlarında min validation var mı? (BUG-001 tekrarı)
+            9. Demo ürün filtresi bozuldu mu?
+            10. URL convention: /urunler?category= kullanılıyor mu?
+
+            ÇIKTI FORMATI (Türkçe):
+            ✅ Onaylanan kısımlar
+            ⚠️ Uyarılar (bloklamaz)
+            🚫 Kritik sorunlar (merge edilmemeli)
+            💡 İyileştirme önerileri
+
+            Eğer kritik sorun yoksa "MERGE EDİLEBİLİR" yaz.

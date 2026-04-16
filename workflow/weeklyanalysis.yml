@@ -1,0 +1,72 @@
+name: Haftalık Otonom Analiz
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Her Pazartesi 06:00 UTC (09:00 KKTC)
+  workflow_dispatch:        # Manuel tetikleme butonu
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  competitor-analysis:
+    name: Rakip & Pazar Analizi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Claude Rakip Analizi
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            Sen KKTC Marketin24 projesinin rekabet analiz ajanısın.
+            CLAUDE.md dosyasını oku ve proje bağlamını anla.
+
+            Bu hafta için şunları analiz et:
+
+            1. KKTC & Türkiye e-ticaret pazarında son gelişmeler
+            2. Trendyol, Hepsiburada'da yeni özellikler var mı?
+            3. Shopify POS'ta bu hafta ne değişti?
+            4. Marketin24'te olmayan ama rakiplerde olan kritik özellikler
+            5. KKTC'ye özgü fırsatlar (ödeme, lojistik, lokal ihtiyaç)
+            6. POS yazılım trendleri — vendor'lar ne istiyor?
+
+            ÇIKTI:
+            - docs/weekly-analysis/ klasörüne {YYYY-MM-DD}-analysis.md yaz
+            - Her eksik özellik için ayrı GitHub Issue aç
+              Label: "competitor-analysis", "enhancement"
+              Priority: P0/P1/P2
+            - Özet raporu PR comment olarak da ekle
+
+            EN ÖNEMLİ: Her öneri için efor (S/M/L) ve etki (düşük/orta/yüksek) belirt.
+            Quick-win (S efor + yüksek etki) olanları "quick-win" label'ıyla işaretle.
+
+  technical-debt:
+    name: Teknik Borç Analizi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Claude Teknik Borç Taraması
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            CLAUDE.md'yi oku. Kod tabanını tara:
+
+            1. TypeScript: any kullanımı, tip eksikliği
+            2. Zod validation eksik API route'lar
+            3. 200+ satır bileşenler → refactor adayları
+            4. Supabase N+1 sorgu riskleri
+            5. Redis cache'lenmesi gereken ama cache'lenmeyen endpoint'ler
+            6. Tekrarlayan kod → lib/ katmanına taşınabilecekler
+            7. BUG listesi (CLAUDE.md'deki açık bug'lar) — hangisi hâlâ açık?
+
+            Her sorun için GitHub Issue aç:
+            Label: "tech-debt"
+            Kolay olanları "good-first-issue" ekle.

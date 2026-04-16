@@ -1,0 +1,142 @@
+name: Otonom Geliştirme Ajanı
+
+on:
+  issues:
+    types: [labeled]          # "auto-fix" label eklenince tetiklenir
+  schedule:
+    - cron: '0 22 * * *'     # Her gece 22:00 UTC — gece vardiyası
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Claude''a verilecek görev (boş bırakırsan gece rutini çalışır)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  auto-fix-issue:
+    name: Issue Otomatik Çözümü
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'auto-fix')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js Kurulum
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Bağımlılıkları Yükle
+        run: npm ci
+
+      - name: Claude Issue Çözücü
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            CLAUDE.md'yi oku. Şu GitHub Issue'yu çöz:
+
+            Başlık: ${{ github.event.issue.title }}
+            İçerik: ${{ github.event.issue.body }}
+
+            ADIMLAR:
+            1. Sorunu analiz et
+            2. İlgili dosyaları bul ve düzelt
+            3. tsc --noEmit && eslint . çalıştır
+            4. npm run test:qa çalıştır
+            5. Başarılıysa değişiklikleri commit et
+            6. PR aç: başlığı "fix: [issue başlığı]" formatında
+            7. PR'ı issue'a bağla: "Closes #${{ github.event.issue.number }}"
+
+            KRİTİK: Güvenlik kontrollerini atlama. Supabase RLS'e dokunma.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+  nightly-routine:
+    name: Gece Geliştirme Rutini
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.task == '')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js Kurulum
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Bağımlılıkları Yükle
+        run: npm ci
+
+      - name: Claude Gece Rutini
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            CLAUDE.md'yi oku. Gece bakım rutinini çalıştır:
+
+            SIRAYLA YAP:
+            1. "quick-win" label'lı açık issue'ları listele
+            2. En küçük eforlu 1 tanesini seç ve çöz
+            3. tsc --noEmit && eslint . && npm run test:qa çalıştır
+            4. Başarılıysa PR aç
+
+            AYRICA:
+            5. package.json'daki patch güncellemelerini kontrol et
+            6. Güvenli olanları güncelle (tsc + eslint kontrolü sonrası)
+            7. npm audit çalıştır — kritik açık varsa Issue aç
+
+            RAPOR:
+            8. docs/nightly-reports/{tarih}.md dosyasına özet yaz:
+               - Ne yapıldı
+               - Kaç satır değişti
+               - Açık kalan önemli issue'lar
+               - Yarın için öneri
+
+            KRİTİK KURALLAR:
+            - Hiçbir zaman main'e direkt push etme — her zaman PR
+            - Supabase migration değiştirme
+            - .env dosyalarına dokunma
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+  manual-task:
+    name: Manuel Görev Çalıştır
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.task != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js Kurulum
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Bağımlılıkları Yükle
+        run: npm ci
+
+      - name: Claude Görev Çalıştır
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            CLAUDE.md'yi oku. Şu görevi tamamla:
+
+            ${{ github.event.inputs.task }}
+
+            Bitince tsc --noEmit && eslint . && npm run test:qa çalıştır.
+            Değişiklik varsa PR aç.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
