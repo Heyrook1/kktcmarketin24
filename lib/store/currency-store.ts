@@ -68,15 +68,30 @@ export const useCurrencyStore = create<CurrencyState>()(
 
         set({ isLoading: true, error: null })
         try {
-          const endpoint = force
+          const primaryEndpoint = force
             ? `/api/currency/rates?force=1&t=${Date.now()}`
             : "/api/currency/rates"
-          const res = await fetch(endpoint, { cache: "no-store" })
-          const payload = await res.json() as {
-            rates?: Partial<Record<CurrencyCode, number>>
-            fetchedAt?: string
-            source?: RatesSource
-            error?: string
+
+          const fallbackEndpoint = force
+            ? `/api/currency?force=1&t=${Date.now()}`
+            : "/api/currency"
+
+          async function fetchRates(endpoint: string) {
+            const response = await fetch(endpoint, { cache: "no-store" })
+            const payload = await response.json().catch(() => ({})) as {
+              rates?: Partial<Record<CurrencyCode, number>>
+              fetchedAt?: string
+              source?: RatesSource
+              error?: string
+            }
+            return { response, payload }
+          }
+
+          let { response: res, payload } = await fetchRates(primaryEndpoint)
+          if (res.status === 404) {
+            const fallback = await fetchRates(fallbackEndpoint)
+            res = fallback.response
+            payload = fallback.payload
           }
 
           if (!res.ok || !payload.rates) {

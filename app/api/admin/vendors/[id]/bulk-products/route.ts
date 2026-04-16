@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { assertAdminAuth } from "@/lib/admin-auth"
 import { revalidatePath } from "next/cache"
+import { productCreateSchema } from "@/lib/validations/product"
 
 function adminClient() {
   return createClient(
@@ -46,63 +47,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const item = rawProducts[i] as Record<string, unknown> | null
     if (!item) return NextResponse.json({ error: `Ürün ${i + 1} geçersiz.` }, { status: 422 })
 
-    const name = String(item.name ?? "").trim()
-    const description = item.description == null ? null : String(item.description).trim() || null
-
-    const price = Number(item.price)
-    if (!name) return NextResponse.json({ error: `Ürün ${i + 1}: name zorunludur.` }, { status: 422 })
-    if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: `Ürün ${i + 1}: price > 0 olmalıdır.` }, { status: 422 })
-
-    const comparePriceRaw = item.compare_price ?? item.comparePrice
-    const comparePrice =
-      comparePriceRaw == null || comparePriceRaw === ""
-        ? null
-        : (() => {
-            const n = Number(comparePriceRaw)
-            return Number.isFinite(n) ? n : null
-          })()
-
     const category = String(item.category_id ?? item.category ?? "").trim()
     if (!category) return NextResponse.json({ error: `Ürün ${i + 1}: category/category_id zorunludur.` }, { status: 422 })
 
-    const stock = item.stock == null || item.stock === ""
-      ? 0
-      : (() => {
-          const n = Number(item.stock)
-          return Number.isFinite(n) ? Math.trunc(n) : 0
-        })()
+    const comparePriceRaw = item.compare_price ?? (item as any).comparePrice
+    const compare_price = comparePriceRaw == null || comparePriceRaw === "" ? null : comparePriceRaw
 
-    const isActive = item.is_active == null ? true : Boolean(item.is_active)
+    const parsed = productCreateSchema.safeParse({
+      ...item,
+      category,
+      compare_price,
+    })
 
-    const imageUrl = item.image_url == null || item.image_url === "" ? null : String(item.image_url).trim()
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Geçersiz ürün verisi."
+      return NextResponse.json({ error: `Ürün ${i + 1}: ${message}` }, { status: 422 })
+    }
 
-    const imagesFromBody = Array.isArray(item.images)
-      ? (item.images as unknown[]).map((x) => (x == null ? "" : String(x).trim())).filter(Boolean)
-      : null
-
-    const images = (imagesFromBody && imagesFromBody.length > 0)
-      ? imagesFromBody
-      : imageUrl
-        ? [imageUrl]
-        : []
-
-    const tags = Array.isArray(item.tags)
-      ? (item.tags as unknown[]).map((x) => (x == null ? "" : String(x).trim())).filter(Boolean)
-      : typeof item.tags === "string"
-        ? item.tags.split(",").map((t) => t.trim()).filter(Boolean)
-        : []
+    const images = parsed.data.images ?? (parsed.data.image_url ? [parsed.data.image_url] : [])
+    const image_url = images[0] ?? parsed.data.image_url ?? null
 
     productsToInsert.push({
-      name,
-      description,
-      price,
-      compare_price: comparePrice,
-      category,
-      image_url: images[0] ?? null,
+      ...parsed.data,
+      image_url,
       images,
-      tags,
-      stock,
-      is_active: isActive,
       store_id: id,
     })
   }

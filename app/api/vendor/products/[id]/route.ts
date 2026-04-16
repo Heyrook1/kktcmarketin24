@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { assertProductOwnership } from '@/lib/vendor-auth'
 import { revalidatePath } from 'next/cache'
+import { productPatchSchema } from '@/lib/validations/product'
 
 function adminClient() {
   return createClient(
@@ -81,23 +82,20 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     const updates = pickPatchable(body)
 
-    // Validate price if provided
-    if ('price' in updates) {
-      const price = Number(updates.price)
-      if (!Number.isFinite(price) || price <= 0) {
-        return NextResponse.json({ error: 'Fiyat sıfırdan büyük olmalıdır.' }, { status: 422 })
-      }
-      updates.price = price
+    const parsed = productPatchSchema.safeParse(updates)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Geçersiz ürün verisi.'
+      return NextResponse.json({ error: message }, { status: 422 })
     }
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(parsed.data).length === 0) {
       return NextResponse.json({ error: 'Güncellenecek alan yok.' }, { status: 422 })
     }
 
     const admin = adminClient()
     const { error } = await admin
       .from('vendor_products')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...parsed.data, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('store_id', auth.session.storeId) // second ownership guard in the query itself
 

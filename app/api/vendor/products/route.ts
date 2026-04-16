@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { resolveVendorSession } from "@/lib/vendor-auth"
 import { revalidatePath } from "next/cache"
+import { productCreateSchema } from "@/lib/validations/product"
 
 function adminClient() {
   return createClient(
@@ -65,21 +66,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Geçersiz JSON." }, { status: 400 })
     }
 
-    if (!body.name || String(body.name).trim() === "") {
-      return NextResponse.json({ error: "Ürün adı zorunludur." }, { status: 422 })
-    }
-    const price = Number(body.price)
-    if (!Number.isFinite(price) || price <= 0) {
-      return NextResponse.json({ error: "Fiyat sıfırdan büyük olmalıdır." }, { status: 422 })
-    }
     // Accept category_id OR category
     const category = String(body.category_id ?? body.category ?? "").trim()
     if (!category) {
       return NextResponse.json({ error: "Kategori zorunludur." }, { status: 422 })
     }
 
+    const parsed = productCreateSchema.safeParse({ ...body, category })
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Geçersiz ürün verisi."
+      return NextResponse.json({ error: message }, { status: 422 })
+    }
+
     // Build the allowed fields — use `category` column (text) only
-    const picked = pickAllowed({ ...body, category })
+    const picked = pickAllowed(parsed.data as Record<string, unknown>)
     // Remove category_id if it sneaked in; the column is `category`
     const { category_id: _drop, ...safe } = { ...picked, category_id: undefined }
 
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         ...safe,
         category, // canonical text slug
         store_id: auth.session.storeId, // always server-injected
-        price,
+        price: parsed.data.price,
       })
       .select("id")
       .single()

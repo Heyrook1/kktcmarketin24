@@ -80,17 +80,71 @@ export default async function UrunlerDetailPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: raw, error } = await supabase
-    .from("vendor_products")
-    .select(`
+  const primarySelect = `
       id, name, description, price, compare_price,
       category, image_url, images, tags, stock,
       is_active, created_at, store_id,
-      vendor_stores ( id, name, slug, description, logo_url, is_verified )
-    `)
+      vendor_stores ( id, name, slug, description, logo_url )
+    `
+
+  let raw: {
+    id: string
+    name: string
+    description: string | null
+    price: number
+    compare_price: number | null
+    category: string | null
+    image_url: string | null
+    images: string[] | null
+    tags: string[] | null
+    stock: number | null
+    created_at: string
+    store_id: string
+    vendor_stores?: {
+      id: string
+      name: string
+      slug: string
+      description: string | null
+      logo_url: string | null
+      is_verified?: boolean | null
+    } | {
+      id: string
+      name: string
+      slug: string
+      description: string | null
+      logo_url: string | null
+      is_verified?: boolean | null
+    }[] | null
+  } | null = null
+
+  let error: { message?: string } | null = null
+
+  const firstTry = await supabase
+    .from("vendor_products")
+    .select(primarySelect)
     .eq("id", id)
     .eq("is_active", true)
-    .single()
+    .maybeSingle()
+
+  raw = firstTry.data as typeof raw
+  error = firstTry.error ? { message: firstTry.error.message } : null
+
+  if (!raw && error?.message?.toLowerCase().includes("vendor_stores")) {
+    // Fallback for environments where nested relation metadata is not available.
+    const secondTry = await supabase
+      .from("vendor_products")
+      .select(`
+        id, name, description, price, compare_price,
+        category, image_url, images, tags, stock,
+        is_active, created_at, store_id
+      `)
+      .eq("id", id)
+      .eq("is_active", true)
+      .maybeSingle()
+
+    raw = secondTry.data as typeof raw
+    error = secondTry.error ? { message: secondTry.error.message } : null
+  }
 
   if (error || !raw) notFound()
 

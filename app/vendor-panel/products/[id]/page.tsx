@@ -227,7 +227,7 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
         const extraTags: string[] = []
 
         if(p.tags && Array.isArray(p.tags)) {
-            p.tags.forEach(tag => {
+            p.tags.forEach((tag: string) => {
                 if (tag.startsWith("sub:")) {
                     subcat = tag.substring(4)
                 } else if(tag.includes(":")) {
@@ -285,7 +285,7 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
     setError(null)
     if (!form.name.trim())       return setError("Ürün adı zorunludur.")
     if (!form.category_id)       return setError("Kategori seçiniz.")
-    if (Number(form.price) <= 0) return setError("Fiyat geçerli bir sayı olmalıdır.")
+    if (Number(form.price) < 1) return setError("Fiyat en az ₺1 olmalıdır.")
 
     const tags = buildTags()
 
@@ -387,7 +387,7 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
           <CardHeader className="pb-3"><CardTitle className="text-base">Fiyat & Stok</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label htmlFor="price">Satış Fiyatı (₺) *</Label><Input id="price" type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)} required /></div>
+              <div className="space-y-1.5"><Label htmlFor="price">Satış Fiyatı (₺) *</Label><Input id="price" type="number" min="1" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)} required /></div>
               <div className="space-y-1.5"><Label htmlFor="compare_price">Karşılaştırma Fiyatı (₺)</Label><Input id="compare_price" type="number" min="0" step="0.01" value={form.compare_price} onChange={(e) => set("compare_price", e.target.value)} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">

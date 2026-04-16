@@ -264,7 +264,7 @@ export default function VendorProductNewPage() {
     setError(null)
     if (!form.name.trim())       return setError("Ürün adı zorunludur.")
     if (!form.category_id)       return setError("Kategori seçiniz.")
-    if (Number(form.price) <= 0) return setError("Fiyat geçerli bir sayı olmalıdır.")
+    if (Number(form.price) < 1) return setError("Fiyat en az ₺1 olmalıdır.")
 
     const tags = buildTags()
 
@@ -381,7 +381,7 @@ export default function VendorProductNewPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="price">Satış Fiyatı (₺) *</Label>
                 <Input
-                  id="price" type="number" min="0" step="0.01" placeholder="0.00"
+                  id="price" type="number" min="1" step="0.01" placeholder="0.00"
                   value={form.price} onChange={(e) => set("price", e.target.value)} required
                 />
               </div>

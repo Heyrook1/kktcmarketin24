@@ -118,6 +118,17 @@ function CustomerMessageButton({ user }: { user: User | null }) {
   )
 }
 
+function MobileAccountButton({ user }: { user: User | null }) {
+  const href = user ? "/account" : "/login?next=/account"
+  return (
+    <Link href={href} aria-label={user ? "Hesabım" : "Giriş Yap"}>
+      <Button variant="ghost" size="icon" className="relative h-9 w-9">
+        <UserCircle className="h-5 w-5" />
+      </Button>
+    </Link>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // UserMenu
 // ---------------------------------------------------------------------------
@@ -392,7 +403,11 @@ export function Header() {
             {/* Mobile menu trigger */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="order-2 lg:order-none lg:hidden h-9 w-9 flex-shrink-0"
+                >
                   <LayoutGrid className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -566,13 +581,13 @@ export function Header() {
             </Sheet>
 
             {/* Logo */}
-            <Link href="/" className="flex-shrink-0">
+            <Link href="/" className="order-1 lg:order-none flex-shrink-0">
               <Image
                 src="/images/kktc-marketin24-logo.png"
                 alt="KKTC Marketin24"
                 width={140}
                 height={140}
-                className="h-11 w-auto"
+                className="h-9 md:h-11 w-auto"
                 priority
               />
             </Link>
@@ -611,10 +626,19 @@ export function Header() {
 
             {/* Right actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              <WishlistButton />
-              <CustomerMessageButton user={user} />
+              <div className="hidden md:block">
+                <WishlistButton />
+              </div>
+              <div className="hidden md:block">
+                <CustomerMessageButton user={user} />
+              </div>
               <DynamicCartButton />
-              <UserMenu user={user} />
+              <div className="md:hidden">
+                <MobileAccountButton user={user} />
+              </div>
+              <div className="hidden md:block">
+                <UserMenu user={user} />
+              </div>
             </div>
           </div>
         </div>
