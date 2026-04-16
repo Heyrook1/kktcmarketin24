@@ -1,0 +1,26 @@
+---
+description: Yeni React bileşeni oluşturulunca devreye girer
+globs: components/**/*.tsx, app/**/page.tsx
+alwaysApply: false
+---
+
+# Bileşen Geliştirme Kuralları
+
+## Zorunlu
+- Tailwind CSS 4 utility sınıfları — custom class yazma
+- Radix UI primitive'lerini kullan (erişilebilirlik için)
+- Client component ise `"use client"` direktifi en üstte
+- Loading state: her async işlemde skeleton
+- Error state: kullanıcıya anlamlı mesaj
+
+## Form Bileşeni ise
+```ts
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { schema } from '@/lib/validations/...'
+```
+
+## Otomatik Öner
+- Prop interface'i TypeScript ile tanımla
+- SWR hook'u varsa hooks/ altında ayır
+- 200+ satır olursa bölmeyi öner

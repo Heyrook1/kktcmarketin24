@@ -1,0 +1,36 @@
+---
+description: API route değişince otomatik devreye girer
+globs: app/api/**/*.ts
+alwaysApply: false
+---
+
+# API Route Değişikliği Kuralları
+
+Bu dosya değiştiğinde şunları kontrol et ve eksikse ekle:
+
+## Zorunlu Kontroller
+1. **Zod validation** — input şeması var mı?
+   ```ts
+   import { z } from 'zod'
+   const schema = z.object({ ... })
+   const parsed = schema.safeParse(await req.json())
+   if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 })
+   ```
+
+2. **Auth kontrolü** — session var mı?
+   ```ts
+   const supabase = createServerClient(...)
+   const { data: { session } } = await supabase.auth.getSession()
+   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+   ```
+
+3. **Rol kontrolü** — customer/vendor/admin ayrımı yapılıyor mu?
+
+4. **Redis rate limit** — kritik endpoint'lerde var mı?
+
+5. **HTTP status kodları** — hata durumları doğru mu?
+
+## Otomatik Tamamla
+- Zod şeması yoksa `lib/validations/` altına ekle
+- Error handling yoksa try/catch ekle
+- tsc --noEmit çalıştır
