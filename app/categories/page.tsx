@@ -7,6 +7,7 @@ import {
 import { categories } from "@/lib/data/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/server"
+import { isPublicCatalogProduct } from "@/lib/public-product-filter"
 
 export const dynamic = "force-dynamic"
 
@@ -25,14 +26,17 @@ export default async function CategoriesPage() {
   const supabase = await createClient()
   const { data: countRows } = await supabase
     .from("vendor_products")
-    .select("category")
+    .select("category, stock, tags, name")
     .eq("is_active", true)
 
   // Build a slug → count map from real DB data
   const countMap: Record<string, number> = {}
   if (countRows) {
     for (const row of countRows) {
-      if (row.category) {
+      if (
+        row.category &&
+        isPublicCatalogProduct({ stock: row.stock, tags: row.tags, name: row.name })
+      ) {
         countMap[row.category] = (countMap[row.category] ?? 0) + 1
       }
     }

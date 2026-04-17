@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { isPublicCatalogProduct } from "@/lib/public-product-filter"
 import type { Product } from "@/lib/data/products"
 
 /** Map a vendor_products DB row to the Product shape */
@@ -109,18 +110,25 @@ async function fetchProducts(opts: {
   limit?: number
   hasSale?: boolean
 }) {
+  const requestedLimit = opts.limit ?? 8
   const supabase = await createClient()
   let query = supabase
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
-    .limit(opts.limit ?? 8)
+    .gt("stock", 0)
+    .limit(requestedLimit * 4)
 
   if (opts.hasSale) query = query.not("compare_price", "is", null)
   query = query.order(opts.orderBy ?? "created_at", { ascending: opts.ascending ?? false })
 
   const { data } = await query
-  return (data ?? []).map((p) => toProduct(p as Parameters<typeof toProduct>[0]))
+  return (data ?? [])
+    .filter((row) =>
+      isPublicCatalogProduct({ stock: row.stock, tags: row.tags, name: row.name })
+    )
+    .slice(0, requestedLimit)
+    .map((p) => toProduct(p as Parameters<typeof toProduct>[0]))
 }
 
 async function fetchProductsWithFallback(opts: {

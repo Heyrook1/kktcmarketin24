@@ -3,7 +3,9 @@ import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { ProductsContent, ProductsContentSkeleton } from "@/app/products/products-content"
 import { categories } from "@/lib/data/categories"
+import { vendors } from "@/lib/data/vendors"
 import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
+import { isPublicCatalogProduct } from "@/lib/public-product-filter"
 
 /** Always read fresh product rows from Supabase (new listings show without waiting on ISR). */
 export const dynamic = "force-dynamic"
@@ -29,6 +31,7 @@ export default async function UrunlerPage() {
           "id, name, description, price, compare_price, category, image_url, images, tags, is_active, stock, created_at, store_id, vendor_stores(id, name, slug)"
         )
         .eq("is_active", true)
+        .gt("stock", 0)
         .order("created_at", { ascending: false })
         .limit(200),
       supabase
@@ -39,37 +42,55 @@ export default async function UrunlerPage() {
 
   if (prodErr) console.error("[urunler/page] DB error:", prodErr.message)
 
-  const initialProducts = (rawProducts ?? []).map((p) =>
-    mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
-  )
+  const initialProducts = (rawProducts ?? [])
+    .filter((row) =>
+      isPublicCatalogProduct({ stock: row.stock, tags: row.tags, name: row.name })
+    )
+    .map((p) =>
+      mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
+    )
 
   const usedCatIds = [...new Set(
     initialProducts.map((p) => p.categoryId).filter(Boolean),
   )]
   const initialCategories = usedCatIds.map((id) => {
-    const cat = categories.find((c) => c.id === id)
+    const matchedCategory = categories.find((category) => category.id === id || category.slug === id)
+
+    if (matchedCategory) {
+      return matchedCategory
+    }
+
     return {
       id,
-      slug:         cat?.slug ?? id,
-      name:         cat?.name ?? id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, " "),
-      description:  cat?.description ?? "",
-      image:        cat?.image ?? "",
-      productCount: initialProducts.filter((p) => p.categoryId === id).length,
+      slug: id,
+      name: id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, " "),
+      description: "",
+      image: "",
+      icon: "Smartphone",
     }
   })
 
-  const initialVendors = (rawStores ?? []).map((s) => ({
-    id:           s.id,
-    name:         s.name,
-    slug:         s.slug,
-    description:  "",
-    logo:         "",
-    rating:       0,
-    reviewCount:  0,
-    productCount: initialProducts.filter((p) => p.vendorId === s.id).length,
-    isVerified:   true,
-    createdAt:    "",
-  }))
+  const initialVendors = (rawStores ?? []).map((s) => {
+    const matchedVendor = vendors.find((vendor) => vendor.id === s.id || vendor.slug === s.slug)
+    if (matchedVendor) {
+      return matchedVendor
+    }
+
+    return {
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      description: "",
+      logo: "",
+      coverImage: "",
+      rating: 0,
+      joinedDate: "",
+      location: "",
+      categories: [],
+      socialLinks: {},
+      verified: true,
+    }
+  })
 
   return (
     <div className="container mx-auto px-4 py-8">
