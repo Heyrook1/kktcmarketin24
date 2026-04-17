@@ -25,7 +25,6 @@ jobs:
       - name: Claude Rakip Analizi
         uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           mode: agent
           direct_prompt: |
             Sen KKTC Marketin24 projesinin rekabet analiz ajanısın.
@@ -59,7 +58,6 @@ jobs:
       - name: Claude Teknik Borç Taraması
         uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           mode: agent
           direct_prompt: |
             CLAUDE.md'yi oku. Kod tabanını tara:
