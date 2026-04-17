@@ -53,6 +53,7 @@ export default function SellerApplicationPage() {
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const formId  = useId()
 
@@ -64,6 +65,7 @@ export default function SellerApplicationPage() {
   function set(field: keyof FormData, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }))
     setErrors((e) => ({ ...e, [field]: undefined }))
+    if (submitError) setSubmitError(null)
   }
 
   function validate(): boolean {
@@ -83,16 +85,36 @@ export default function SellerApplicationPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
+    setSubmitError(null)
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          let message = "Başvuru şu anda gönderilemedi. Lütfen tekrar deneyin."
+
+          try {
+            const payload = await response.json() as { error?: string }
+            if (payload.error) message = payload.error
+          } catch {
+            // Keep fallback error message when response body is unavailable.
+          }
+
+          setSubmitError(message)
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edip yeniden deneyin.")
+      }
     })
   }
 
@@ -347,9 +369,14 @@ export default function SellerApplicationPage() {
 
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
+                {submitError && (
+                  <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    {submitError}
+                  </p>
+                )}
 
                 <p className="text-center text-xs text-muted-foreground">
                   Bu form Cloudflare Turnstile ile korunmaktadır.

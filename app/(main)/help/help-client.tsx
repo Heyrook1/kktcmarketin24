@@ -11,6 +11,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { cn } from "@/lib/utils"
 
 // ─── FAQ data ────────────────────────────────────────────────────────────────
@@ -181,44 +187,13 @@ declare global {
   }
 }
 
-// ─── Accordion item ────────────────────────────────────────────────────────────
-
-function AccordionItem({ q, a, open, onToggle }: {
-  q: string; a: string; open: boolean; onToggle: () => void
-}) {
-  return (
-    <div className="border-b last:border-b-0">
-      <button
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-start justify-between gap-4 py-4 text-left text-sm font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-      >
-        <span className="leading-relaxed">{q}</span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground mt-0.5 transition-transform duration-200",
-            open && "rotate-180"
-          )}
-        />
-      </button>
-      <div
-        className={cn(
-          "overflow-hidden transition-all duration-200",
-          open ? "max-h-96 pb-4" : "max-h-0"
-        )}
-      >
-        <p className="text-sm text-muted-foreground leading-relaxed">{a}</p>
-      </div>
-    </div>
-  )
-}
-
 // ─── Contact form ─────────────────────────────────────────────────────────────
 
 function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -233,6 +208,7 @@ function ContactForm() {
   function set(field: keyof typeof form, value: string) {
     setForm(f => ({ ...f, [field]: value }))
     setErrors(e => ({ ...e, [field]: undefined }))
+    if (submitError) setSubmitError(null)
   }
 
   function validate(): boolean {
@@ -250,16 +226,34 @@ function ContactForm() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
+    setSubmitError(null)
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          let message = "Mesaj şu anda gönderilemedi. Lütfen tekrar deneyin."
+          try {
+            const payload = await response.json() as { error?: string }
+            if (payload.error) message = payload.error
+          } catch {
+            // Keep fallback message when response body cannot be parsed.
+          }
+          setSubmitError(message)
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edip yeniden deneyin.")
+      }
     })
   }
 
@@ -338,6 +332,11 @@ function ContactForm() {
             : <><MessageSquare className="h-4 w-4" />Mesaj Gönder</>
           }
         </Button>
+        {submitError && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {submitError}
+          </p>
+        )}
         <p className="text-center text-xs text-muted-foreground">
           Bu form Cloudflare Turnstile ile korunmaktadır.
         </p>
@@ -365,10 +364,6 @@ function FieldWrap({ label, id, required, error, children }: {
 export function HelpPageClient() {
   const [openItem, setOpenItem] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState("orders")
-
-  function toggleItem(id: string) {
-    setOpenItem(prev => prev === id ? null : id)
-  }
 
   const activeData = FAQ_SECTIONS.find(s => s.id === activeSection)
 
@@ -434,15 +429,26 @@ export function HelpPageClient() {
           {/* Accordion */}
           <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
             <div className="px-6">
-              {activeData?.items.map((item, i) => (
-                <AccordionItem
-                  key={i}
-                  q={item.q}
-                  a={item.a}
-                  open={openItem === `${activeSection}-${i}`}
-                  onToggle={() => toggleItem(`${activeSection}-${i}`)}
-                />
-              ))}
+              <Accordion
+                type="single"
+                collapsible
+                value={openItem ?? undefined}
+                onValueChange={(value) => setOpenItem(value || null)}
+              >
+                {activeData?.items.map((item, i) => {
+                  const value = `${activeSection}-${i}`
+                  return (
+                    <AccordionItem key={value} value={value}>
+                      <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline hover:text-primary">
+                        <span className="leading-relaxed">{item.q}</span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-4 text-sm text-muted-foreground leading-relaxed">
+                        {item.a}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
             </div>
           </div>
         </section>

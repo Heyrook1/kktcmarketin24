@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Eye, EyeOff, ShieldCheck, User, Mail, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -239,9 +240,13 @@ export function AuthGate() {
 
         <p className="text-center text-xs text-muted-foreground">
           Kayıt olarak{" "}
-          <a href="#" className="text-primary hover:underline">Kullanım Koşullarını</a>
+          <Link href="/terms" className="text-primary hover:underline">
+            Kullanım Koşullarını
+          </Link>
           {" "}ve{" "}
-          <a href="#" className="text-primary hover:underline">Gizlilik Politikasını</a>
+          <Link href="/privacy" className="text-primary hover:underline">
+            Gizlilik Politikasını
+          </Link>
           {" "}kabul etmiş olursunuz.
         </p>
       </div>
