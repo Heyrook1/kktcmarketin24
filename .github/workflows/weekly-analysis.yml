@@ -2,8 +2,8 @@ name: Haftalık Otonom Analiz
 
 on:
   schedule:
-    - cron: '0 6 * * 1'   # Her Pazartesi 06:00 UTC (09:00 KKTC)
-  workflow_dispatch:        # Manuel tetikleme butonu
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -26,6 +26,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           direct_prompt: |
             Sen KKTC Marketin24 projesinin rekabet analiz ajanısın.
             CLAUDE.md dosyasını oku ve proje bağlamını anla.
@@ -59,6 +60,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           mode: agent
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           direct_prompt: |
             CLAUDE.md'yi oku. Kod tabanını tara:
 
