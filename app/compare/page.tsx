@@ -53,7 +53,7 @@ const platforms: Platform[] = [
       multiVendor: true,
       localDelivery: true,
       securePayment: true,
-      mobileApp: true,
+      mobileApp: false,
       loyaltyProgram: true,
       customerSupport: "7/24 Canlı Destek",
       returnPolicy: "14 Gün İade",
@@ -194,7 +194,7 @@ const comparisonFeatures = [
   { key: "multiVendor", label: "Çoklu Satıcı", description: "Birden fazla satıcıdan ürün" },
   { key: "localDelivery", label: "KKTC Teslimatı", description: "Yerel adrese hızlı teslimat" },
   { key: "securePayment", label: "Güvenli Ödeme", description: "SSL şifreli güvenli ödeme" },
-  { key: "mobileApp", label: "Mobil Uygulama", description: "iOS ve Android uygulaması" },
+  { key: "mobileApp", label: "Native Mobil Uygulama", description: "iOS ve Android mağaza uygulamaları" },
   { key: "loyaltyProgram", label: "Sadakat Programı", description: "Puan ve indirim sistemi" },
 ]
 

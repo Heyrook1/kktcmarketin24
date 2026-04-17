@@ -22,8 +22,8 @@ const contactItems = [
   {
     icon: Phone,
     label: "Telefon",
-    value: "+90 392 000 00 00",
-    href: "tel:+903920000000",
+    value: "+90 533 873 43 17",
+    href: "tel:+905338734317",
   },
   {
     icon: MapPin,

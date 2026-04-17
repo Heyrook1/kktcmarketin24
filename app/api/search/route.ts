@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { parseSearchIntent } from "@/lib/smart-search"
+import { isPublicCatalogProduct } from "@/lib/public-product-filter"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "edge"
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
       { count: "exact" }
     )
     .eq("is_active", true)
+    .gt("stock", 0)
 
   // ── Full-text search via search_vector (tsvector) ─────────────────────────
   if (q.length >= 2) {
@@ -102,31 +104,35 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Normalise to Product shape ────────────────────────────────────────────
-  const products = (data ?? []).map((p) => {
-    const store = Array.isArray(p.vendor_stores)
-      ? (p.vendor_stores as any)[0]
-      : (p.vendor_stores as { id: string; name: string; slug: string } | null)
-    return {
-      id:            p.id,
-      name:          p.name,
-      slug:          p.id,
-      description:   p.description ?? "",
-      price:         Number(p.price),
-      originalPrice: p.compare_price ? Number(p.compare_price) : undefined,
-      images:        p.image_url ? [p.image_url] : ["/placeholder.svg"],
-      categoryId:    p.category ?? "",
-      vendorId:      p.store_id ?? "",
-      vendorName:    store?.name ?? "",
-      vendorSlug:    store?.slug ?? "",
-      rating:        0,
-      reviewCount:   0,
-      inStock:       (p.stock ?? 0) > 0,
-      stockCount:    p.stock ?? 0,
-      tags:          (p.tags as string[]) ?? [],
-      featured:      false,
-      createdAt:     p.created_at,
-    }
-  })
+  const products = (data ?? [])
+    .filter((p) =>
+      isPublicCatalogProduct({ stock: p.stock, tags: p.tags, name: p.name })
+    )
+    .map((p) => {
+      const store = Array.isArray(p.vendor_stores)
+        ? (p.vendor_stores as any)[0]
+        : (p.vendor_stores as { id: string; name: string; slug: string } | null)
+      return {
+        id:            p.id,
+        name:          p.name,
+        slug:          p.id,
+        description:   p.description ?? "",
+        price:         Number(p.price),
+        originalPrice: p.compare_price ? Number(p.compare_price) : undefined,
+        images:        p.image_url ? [p.image_url] : ["/placeholder.svg"],
+        categoryId:    p.category ?? "",
+        vendorId:      p.store_id ?? "",
+        vendorName:    store?.name ?? "",
+        vendorSlug:    store?.slug ?? "",
+        rating:        0,
+        reviewCount:   0,
+        inStock:       (p.stock ?? 0) > 0,
+        stockCount:    p.stock ?? 0,
+        tags:          (p.tags as string[]) ?? [],
+        featured:      false,
+        createdAt:     p.created_at,
+      }
+    })
 
   return NextResponse.json({
     products,
