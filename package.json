@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:qa": "node ./scripts/qa-smoke.mjs"
+    "test:qa": "node ./scripts/qa-smoke.mjs",
+    "orchestrator:start": "node --experimental-strip-types ./scripts/orchestrator.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
