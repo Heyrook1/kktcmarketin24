@@ -11,12 +11,13 @@ permissions:
   pull-requests: write
   id-token: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   competitor-analysis:
     name: Rakip & Pazar Analizi
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -25,6 +26,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: agent
           direct_prompt: |
             Sen KKTC Marketin24 projesinin rekabet analiz ajanısın.
             CLAUDE.md dosyasını oku ve proje bağlamını anla.
@@ -43,9 +45,8 @@ jobs:
             - Her eksik özellik için ayrı GitHub Issue aç
               Label: "competitor-analysis", "enhancement"
               Priority: P0/P1/P2
-            - Özet raporu PR comment olarak da ekle
 
-            EN ÖNEMLİ: Her öneri için efor (S/M/L) ve etki (düşük/orta/yüksek) belirt.
+            Her öneri için efor (S/M/L) ve etki (düşük/orta/yüksek) belirt.
             Quick-win (S efor + yüksek etki) olanları "quick-win" label'ıyla işaretle.
 
   technical-debt:
@@ -59,17 +60,18 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: agent
           direct_prompt: |
             CLAUDE.md'yi oku. Kod tabanını tara:
 
             1. TypeScript: any kullanımı, tip eksikliği
             2. Zod validation eksik API route'lar
-            3. 200+ satır bileşenler → refactor adayları
+            3. 200+ satır bileşenler — refactor adayları
             4. Supabase N+1 sorgu riskleri
             5. Redis cache'lenmesi gereken ama cache'lenmeyen endpoint'ler
-            6. Tekrarlayan kod → lib/ katmanına taşınabilecekler
-            7. BUG listesi (CLAUDE.md'deki açık bug'lar) — hangisi hâlâ açık?
+            6. Tekrarlayan kod — lib/ katmanına taşınabilecekler
+            7. CLAUDE.md'deki açık BUG listesi — hangisi hâlâ açık?
 
-            Her sorun için GitHub Issue aç:
+            Her sorun için GitHub Issue aç.
             Label: "tech-debt"
             Kolay olanları "good-first-issue" ekle.
