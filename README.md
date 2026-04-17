@@ -24,6 +24,23 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Orchestrator (otonom yazilim takimi)
+
+Projede zamanlanmis bir orkestrator scripti bulunur:
+
+```bash
+pnpm orchestrator
+```
+
+Bu script su rutinleri calistirir:
+
+- `09:00`: QA site taramasi + backend API sagligi
+- `14:00`: frontend UI kontrol + backend Supabase kontrol
+- `22:00`: frontend eksik sayfa kontrolu + QA kalite kontrol
+
+Script ilk baslangicta da bir kez sabah rutinini hemen calistirir ve loglari
+`docs/agent-logs/orchestrator.log` dosyasina yazar.
+
 ## Learn More
 
 To learn more, take a look at the following resources:
