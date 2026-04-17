@@ -53,6 +53,7 @@ export default function SellerApplicationPage() {
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const formId  = useId()
 
@@ -86,13 +87,24 @@ export default function SellerApplicationPage() {
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
+    setSubmitError(null)
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          setSubmitError("Başvurunuz şu anda alınamadı. Lütfen tekrar deneyin.")
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Bağlantı hatası oluştu. İnternetinizi kontrol edip tekrar deneyin.")
+      }
     })
   }
 
@@ -345,9 +357,15 @@ export default function SellerApplicationPage() {
                   {errors.agree && <p className="text-xs text-destructive pl-6">{errors.agree}</p>}
                 </div>
 
+                {submitError && (
+                  <p className="text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
+                    {submitError}
+                  </p>
+                )}
+
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
 
