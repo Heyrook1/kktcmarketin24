@@ -4,13 +4,18 @@ import { appendFileSync, existsSync, mkdirSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
-import backend from "./agents/backend-agent.ts"
-import frontend from "./agents/frontend-agent.ts"
-import qa from "./agents/qa-agent.ts"
-
 type AgentContext = {
   projectDir: string
   log: (message: string) => void
+}
+
+type AgentModule = {
+  tamTarama?: (context: AgentContext) => Promise<void>
+  kaliteKontrol?: (context: AgentContext) => Promise<void>
+  apiSagligi?: (context: AgentContext) => Promise<void>
+  supabaseKontrol?: (context: AgentContext) => Promise<void>
+  uiKontrol?: (context: AgentContext) => Promise<void>
+  eksikSayfalar?: (context: AgentContext) => Promise<void>
 }
 
 const currentFilePath = fileURLToPath(import.meta.url)
@@ -45,6 +50,36 @@ const agentContext: AgentContext = {
   log,
 }
 
+let loadedAgentsPromise:
+  | Promise<{
+      backend: AgentModule
+      frontend: AgentModule
+      qa: AgentModule
+    }>
+  | null = null
+
+async function loadAgents(): Promise<{
+  backend: AgentModule
+  frontend: AgentModule
+  qa: AgentModule
+}> {
+  if (loadedAgentsPromise) {
+    return loadedAgentsPromise
+  }
+
+  loadedAgentsPromise = Promise.all([
+    import(new URL("./agents/backend-agent.ts", import.meta.url).href),
+    import(new URL("./agents/frontend-agent.ts", import.meta.url).href),
+    import(new URL("./agents/qa-agent.ts", import.meta.url).href),
+  ]).then(([backendModule, frontendModule, qaModule]) => ({
+    backend: backendModule.default as AgentModule,
+    frontend: frontendModule.default as AgentModule,
+    qa: qaModule.default as AgentModule,
+  }))
+
+  return loadedAgentsPromise
+}
+
 async function guvenliCalistir(
   gorevIsmi: string,
   gorev: (context: AgentContext) => Promise<void>,
@@ -61,23 +96,38 @@ async function guvenliCalistir(
 }
 
 async function sabahRutini(): Promise<void> {
+  const { backend, qa } = await loadAgents()
   log("=== MORNING ROUTINE STARTED ===")
-  await guvenliCalistir("QA -> Site taramasi", qa.tamTarama)
-  await guvenliCalistir("Backend -> API sagligi", backend.apiSagligi)
+  if (qa.tamTarama) {
+    await guvenliCalistir("QA -> Site taramasi", qa.tamTarama)
+  }
+  if (backend.apiSagligi) {
+    await guvenliCalistir("Backend -> API sagligi", backend.apiSagligi)
+  }
   log("=== MORNING ROUTINE FINISHED ===")
 }
 
 async function ogleRutini(): Promise<void> {
+  const { backend, frontend } = await loadAgents()
   log("=== MIDDAY ROUTINE STARTED ===")
-  await guvenliCalistir("Frontend -> UI kontrol", frontend.uiKontrol)
-  await guvenliCalistir("Backend -> Supabase kontrol", backend.supabaseKontrol)
+  if (frontend.uiKontrol) {
+    await guvenliCalistir("Frontend -> UI kontrol", frontend.uiKontrol)
+  }
+  if (backend.supabaseKontrol) {
+    await guvenliCalistir("Backend -> Supabase kontrol", backend.supabaseKontrol)
+  }
   log("=== MIDDAY ROUTINE FINISHED ===")
 }
 
 async function geceRutini(): Promise<void> {
+  const { frontend, qa } = await loadAgents()
   log("=== NIGHT ROUTINE STARTED ===")
-  await guvenliCalistir("Frontend -> Eksik sayfalar", frontend.eksikSayfalar)
-  await guvenliCalistir("QA -> Kalite kontrol", qa.kaliteKontrol)
+  if (frontend.eksikSayfalar) {
+    await guvenliCalistir("Frontend -> Eksik sayfalar", frontend.eksikSayfalar)
+  }
+  if (qa.kaliteKontrol) {
+    await guvenliCalistir("QA -> Kalite kontrol", qa.kaliteKontrol)
+  }
   log("=== NIGHT ROUTINE FINISHED ===")
 }
 
