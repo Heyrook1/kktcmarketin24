@@ -11,7 +11,7 @@ const priceSchema = z
   .min(1, "Fiyat en az ₺1 olmalıdır.")
 
 const nullableNumberSchema = z
-  .union([z.coerce.number().finite(), z.null()])
+  .union([z.coerce.number().finite().min(1, "Karşılaştırma fiyatı en az ₺1 olmalıdır."), z.null()])
   .optional()
 
 const stringArraySchema = z

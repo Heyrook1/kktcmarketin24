@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { z } from "zod"
 
 function getAdmin() {
   return createAdminClient(
@@ -17,6 +18,8 @@ const ACTION_TO_STATUS: Record<string, string> = {
   complete: "completed",
 }
 
+const returnIdSchema = z.string().uuid("Geçersiz iade kimliği.")
+
 const RETURN_ALLOWED_TRANSITIONS: Record<string, string[]> = {
   requested: ["approved", "rejected"],
   approved: ["completed"],
@@ -29,7 +32,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params
+    const { id: rawId } = await params
+    const parsedId = returnIdSchema.safeParse(rawId)
+    if (!parsedId.success) {
+      return NextResponse.json({ error: parsedId.error.issues[0]?.message ?? "Geçersiz iade kimliği." }, { status: 400 })
+    }
+    const id = parsedId.data
 
     // ── Auth ───────────────────────────────────────────────────────────────
     const supabase = await createServerClient()
@@ -106,7 +114,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params
+    const { id: rawId } = await params
+    const parsedId = returnIdSchema.safeParse(rawId)
+    if (!parsedId.success) {
+      return NextResponse.json({ error: parsedId.error.issues[0]?.message ?? "Geçersiz iade kimliği." }, { status: 400 })
+    }
+    const id = parsedId.data
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -120,6 +133,17 @@ export async function GET(
 
     if (error || !data)
       return NextResponse.json({ error: "Bulunamadı." }, { status: 404 })
+
+    const { data: store } = await admin
+      .from("vendor_stores")
+      .select("id")
+      .eq("id", data.store_id)
+      .eq("owner_id", user.id)
+      .single()
+
+    if (!store) {
+      return NextResponse.json({ error: "Bu iade size ait değil." }, { status: 403 })
+    }
 
     return NextResponse.json({ return: data })
   } catch (err) {
