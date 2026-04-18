@@ -5,12 +5,13 @@ import Link from "next/link"
 import Script from "next/script"
 import {
   Store, ChevronRight, CheckCircle2, Mail, Clock,
-  Loader2, ShieldCheck, TrendingUp, Users, Globe,
+  Loader2, ShieldCheck, TrendingUp, Users, Globe, AlertCircle,
   LayoutDashboard, ArrowRight, LogIn,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 interface FormData {
@@ -53,6 +54,7 @@ export default function SellerApplicationPage() {
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const formId  = useId()
 
@@ -83,16 +85,27 @@ export default function SellerApplicationPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
+    setSubmissionError(null)
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          setSubmissionError("Başvuru şu anda alınamadı. Lütfen birkaç dakika içinde tekrar deneyin.")
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmissionError("Bağlantı sorunu nedeniyle başvuru gönderilemedi. Lütfen tekrar deneyin.")
+      }
     })
   }
 
@@ -159,11 +172,11 @@ export default function SellerApplicationPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex w-full flex-col gap-2 shrink-0 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
               <Button
                 asChild
                 size="sm"
-                className="gap-2 bg-white text-primary hover:bg-white/90 font-semibold shadow-sm"
+                className="w-full gap-2 bg-white text-primary hover:bg-white/90 font-semibold shadow-sm sm:w-auto"
               >
                 <Link href="/login?next=/vendor-panel">
                   <LogIn className="h-4 w-4" />
@@ -174,7 +187,7 @@ export default function SellerApplicationPage() {
                 asChild
                 size="sm"
                 variant="ghost"
-                className="gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
+                className="w-full gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 sm:w-auto"
               >
                 <Link href="/vendor-login">
                   Daha fazla
@@ -345,9 +358,29 @@ export default function SellerApplicationPage() {
                   {errors.agree && <p className="text-xs text-destructive pl-6">{errors.agree}</p>}
                 </div>
 
+                {submissionError && (
+                  <div
+                    className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    <p className="flex items-start gap-2 text-xs text-destructive">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>{submissionError}</span>
+                    </p>
+                  </div>
+                )}
+
+                {isPending && (
+                  <div className="space-y-2" aria-hidden="true">
+                    <Skeleton className="h-3.5 w-4/5" />
+                    <Skeleton className="h-3.5 w-3/5" />
+                  </div>
+                )}
+
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
 

@@ -173,7 +173,7 @@ export default function TermsPage() {
           </nav>
 
           {/* Content */}
-          <article className="lg:col-span-3 space-y-10">
+          <article className="space-y-10">
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-primary leading-relaxed">
               Bu şartlar platformumuzu kullanmadan önce dikkatlice okunmalıdır. Platformu kullanmaya devam ederek bu şartları kabul etmiş sayılırsınız.
             </div>
