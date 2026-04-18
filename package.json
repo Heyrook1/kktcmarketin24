@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:qa": "node ./scripts/qa-smoke.mjs"
+    "test:qa": "node ./scripts/qa-smoke.mjs",
+    "orchestrator:start": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types ./scripts/orchestrator.ts",
+    "orchestrator:once": "ORCHESTRATOR_RUN_ONCE=1 node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types ./scripts/orchestrator.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
