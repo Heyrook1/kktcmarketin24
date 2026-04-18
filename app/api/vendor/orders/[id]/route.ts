@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient as createAdmin } from "@supabase/supabase-js"
 import { assertVendorOrderOwnership } from "@/lib/vendor-auth"
 import { assertAdminAuth } from "@/lib/admin-auth"
+import { z } from "zod"
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -14,6 +15,60 @@ function adminClient() {
     { auth: { autoRefreshToken: false, persistSession: false } },
   )
 }
+
+const vendorOrderRowSchema = z.object({
+  id: z.string().uuid(),
+  order_id: z.string().uuid().nullable().optional(),
+  store_id: z.string().uuid(),
+  customer_name: z.string(),
+  customer_email: z.string(),
+  items_count: z.number(),
+  total: z.number(),
+  status: z.string(),
+  tracking_number: z.string().nullable().optional(),
+  created_at: z.string(),
+})
+
+const parentOrderSchema = z.object({
+  id: z.string().uuid(),
+  order_number: z.string().nullable(),
+  payment_status: z.string().nullable(),
+  customer_phone: z.string().nullable(),
+  coupon_code: z.string().nullable(),
+  subtotal: z.number().nullable(),
+  shipping_fee: z.number().nullable(),
+  discount_amount: z.number().nullable(),
+  total: z.number().nullable(),
+  created_at: z.string(),
+  delivery_address: z.record(z.unknown()).nullable(),
+})
+
+const orderItemSchema = z.object({
+  id: z.string().uuid(),
+  product_name: z.string(),
+  image_url: z.string().nullable(),
+  quantity: z.number(),
+  unit_price: z.number(),
+  line_total: z.number(),
+  store_id: z.string().uuid(),
+})
+
+const historyWideSchema = z.object({
+  id: z.string().uuid(),
+  old_status: z.string().nullable(),
+  new_status: z.string(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  vendor_order_id: z.string().uuid().nullable().optional(),
+})
+
+const historyLegacySchema = z.object({
+  id: z.string().uuid(),
+  old_status: z.string().nullable(),
+  new_status: z.string(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+})
 
 export async function GET(_: Request, { params }: RouteContext) {
   try {
@@ -29,19 +84,6 @@ export async function GET(_: Request, { params }: RouteContext) {
 
     const admin = adminClient()
 
-    type VendorOrderRow = {
-      id: string
-      order_id?: string | null
-      store_id: string
-      customer_name: string
-      customer_email: string
-      items_count: number
-      total: number
-      status: string
-      tracking_number?: string | null
-      created_at: string
-    }
-
     const selectWide =
       "id, order_id, store_id, customer_name, customer_email, items_count, total, status, tracking_number, created_at"
     const selectMid =
@@ -49,15 +91,16 @@ export async function GET(_: Request, { params }: RouteContext) {
     const selectMin =
       "id, store_id, customer_name, customer_email, items_count, total, status, created_at"
 
-    let vendorOrder: VendorOrderRow | null = null
+    let vendorOrder: z.infer<typeof vendorOrderRowSchema> | null = null
     for (const select of [selectWide, selectMid, selectMin]) {
       const { data, error } = await admin
         .from("vendor_orders")
         .select(select)
         .eq("id", id)
         .maybeSingle()
-      if (!error && data) {
-        vendorOrder = data as VendorOrderRow
+      const parsedVendorOrder = vendorOrderRowSchema.safeParse(data)
+      if (!error && parsedVendorOrder.success) {
+        vendorOrder = parsedVendorOrder.data
         break
       }
     }
@@ -73,28 +116,8 @@ export async function GET(_: Request, { params }: RouteContext) {
       .eq("id", vendorOrder.store_id)
       .maybeSingle()
 
-    let order: {
-      id: string
-      order_number: string | null
-      payment_status: string | null
-      customer_phone: string | null
-      coupon_code: string | null
-      subtotal: number | null
-      shipping_fee: number | null
-      discount_amount: number | null
-      total: number | null
-      created_at: string
-      delivery_address: Record<string, unknown> | null
-    } | null = null
-    let items: Array<{
-      id: string
-      product_name: string
-      image_url: string | null
-      quantity: number
-      unit_price: number
-      line_total: number
-      store_id: string
-    }> = []
+    let order: z.infer<typeof parentOrderSchema> | null = null
+    let items: Array<z.infer<typeof orderItemSchema>> = []
     let history: Array<{
       id: string
       old_status: string | null
@@ -109,14 +132,18 @@ export async function GET(_: Request, { params }: RouteContext) {
         .select("id, order_number, payment_status, customer_phone, coupon_code, subtotal, shipping_fee, discount_amount, total, created_at, delivery_address")
         .eq("id", orderId)
         .maybeSingle()
-      order = (parentOrder as typeof order) ?? null
+      const parsedParentOrder = parentOrderSchema.safeParse(parentOrder)
+      order = parsedParentOrder.success ? parsedParentOrder.data : null
 
       const { data: orderItems } = await admin
         .from("order_items")
         .select("id, product_name, image_url, quantity, unit_price, line_total, store_id")
         .eq("order_id", orderId)
         .eq("store_id", vendorOrder.store_id)
-      items = (orderItems ?? []) as typeof items
+      items = (orderItems ?? [])
+        .map((row) => orderItemSchema.safeParse(row))
+        .filter((row): row is { success: true; data: z.infer<typeof orderItemSchema> } => row.success)
+        .map((row) => row.data)
 
       const historyWide = await admin
         .from("order_status_history")
@@ -126,13 +153,16 @@ export async function GET(_: Request, { params }: RouteContext) {
         .limit(40)
       if (!historyWide.error && historyWide.data) {
         history = (historyWide.data ?? [])
-          .filter((h) => !h.vendor_order_id || h.vendor_order_id === id)
-          .map((h) => ({
-            id: h.id,
-            old_status: h.old_status ?? null,
-            new_status: h.new_status,
-            notes: h.notes ?? null,
-            created_at: h.created_at,
+          .map((row) => historyWideSchema.safeParse(row))
+          .filter((row): row is { success: true; data: z.infer<typeof historyWideSchema> } => row.success)
+          .map((row) => row.data)
+          .filter((row) => !row.vendor_order_id || row.vendor_order_id === id)
+          .map((row) => ({
+            id: row.id,
+            old_status: row.old_status,
+            new_status: row.new_status,
+            notes: row.notes,
+            created_at: row.created_at,
           }))
       } else {
         const historyLegacy = await admin
@@ -141,13 +171,16 @@ export async function GET(_: Request, { params }: RouteContext) {
           .eq("order_id", orderId)
           .order("created_at", { ascending: false })
           .limit(40)
-        history = (historyLegacy.data ?? []).map((h) => ({
-          id: h.id,
-          old_status: h.old_status ?? null,
-          new_status: h.new_status,
-          notes: h.notes ?? null,
-          created_at: h.created_at,
-        }))
+        history = (historyLegacy.data ?? [])
+          .map((row) => historyLegacySchema.safeParse(row))
+          .filter((row): row is { success: true; data: z.infer<typeof historyLegacySchema> } => row.success)
+          .map((row) => ({
+            id: row.data.id,
+            old_status: row.data.old_status,
+            new_status: row.data.new_status,
+            notes: row.data.notes,
+            created_at: row.data.created_at,
+          }))
       }
     }
 
@@ -170,7 +203,7 @@ export async function GET(_: Request, { params }: RouteContext) {
         discount_amount: Number(order?.discount_amount ?? 0),
         total: Number(order?.total ?? vendorOrder.total ?? 0),
         created_at: order?.created_at ?? vendorOrder.created_at,
-        delivery_address: (order?.delivery_address ?? null) as Record<string, unknown> | null,
+        delivery_address: order?.delivery_address ?? null,
         items,
         history,
       },

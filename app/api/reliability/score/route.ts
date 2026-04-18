@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { getReliabilityScore, approveSecondaryVerification } from '@/lib/reliability'
+import { extractRoleName } from '@/lib/extract-role-name'
 import { z } from 'zod'
 
 function sb() {
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    const roleName = (profile?.roles as { name: string } | null)?.name
+    const roleName = extractRoleName(profile?.roles)
     const isAdmin = roleName === 'admin' || roleName === 'super_admin'
 
     if (!store && !isAdmin) {
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    const roleName = (profile?.roles as { name: string } | null)?.name
+    const roleName = extractRoleName(profile?.roles)
     if (roleName !== 'admin' && roleName !== 'super_admin') {
       return NextResponse.json({ error: 'Yalnızca yöneticiler ikincil doğrulamayı onaylayabilir.' }, { status: 403 })
     }

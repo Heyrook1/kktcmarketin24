@@ -63,6 +63,9 @@ export async function GET(req: NextRequest) {
     }
 
     const eventIds = events.map((e) => e.id)
+    const attemptCountByEventId = new Map(
+      events.map((event) => [event.id, event.attempts ?? 0]),
+    )
 
     // Mark as processing (prevents duplicate delivery if worker runs concurrently)
     await supabase
@@ -128,11 +131,11 @@ export async function GET(req: NextRequest) {
           .eq('id', id)
 
         // Increment attempts counter
-        const event = events.find((e) => e.id === id)
-        if (event) {
+        const previousAttempts = attemptCountByEventId.get(id)
+        if (previousAttempts !== undefined) {
           await supabase
             .from('outbox_events')
-            .update({ attempts: (event.attempts ?? 0) + 1 })
+            .update({ attempts: previousAttempts + 1 })
             .eq('id', id)
         }
       }
