@@ -3,12 +3,13 @@
 import { useState, useEffect, useTransition } from "react"
 import {
   Tag, Gift, Copy, Check, Plus, Clock, CheckCircle, XCircle,
-  Percent, Truck, BadgeDollarSign, FlaskConical, Loader2, RefreshCw,
+  Percent, Truck, BadgeDollarSign, FlaskConical, Loader2, RefreshCw, AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAccountStore, Coupon, Gift as GiftType, CouponType } from "@/lib/store/account-store"
 import { cn } from "@/lib/utils"
 import { claimTestCoupon, getUserCoupons } from "@/app/actions/coupons"
@@ -158,17 +159,34 @@ export function CouponsTab({ userId }: { userId: string }) {
   const { coupons, gifts, addCoupon, setCoupons, addOrUpdateCoupon } = useAccountStore()
   const [code, setCode] = useState("")
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [isFetching, setIsFetching] = useState(false)
 
   // On mount, sync real coupons from DB into the Zustand store
   useEffect(() => {
-    setIsFetching(true)
-    getUserCoupons()
-      .then((dbCoupons) => {
+    let isMounted = true
+
+    async function syncCoupons() {
+      setIsFetching(true)
+      setLoadError(null)
+      try {
+        const dbCoupons = await getUserCoupons()
+        if (!isMounted) return
         if (dbCoupons.length > 0) setCoupons(dbCoupons)
-      })
-      .finally(() => setIsFetching(false))
+      } catch {
+        if (!isMounted) return
+        setLoadError("Kuponlar yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.")
+      } finally {
+        if (!isMounted) return
+        setIsFetching(false)
+      }
+    }
+
+    void syncCoupons()
+    return () => {
+      isMounted = false
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
@@ -276,6 +294,18 @@ export function CouponsTab({ userId }: { userId: string }) {
             {msg.text}
           </p>
         )}
+        {loadError && (
+          <div
+            className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2"
+            role="alert"
+            aria-live="polite"
+          >
+            <p className="flex items-start gap-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{loadError}</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -289,7 +319,13 @@ export function CouponsTab({ userId }: { userId: string }) {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="coupons" className="mt-4 space-y-3">
-          {coupons.length === 0 ? (
+          {isFetching && coupons.length === 0 ? (
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </div>
+          ) : coupons.length === 0 ? (
             <div className="rounded-xl border py-14 text-center">
               <Tag className="mx-auto h-9 w-9 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground">Henuz kuponunuz yok.</p>
@@ -299,7 +335,12 @@ export function CouponsTab({ userId }: { userId: string }) {
           )}
         </TabsContent>
         <TabsContent value="gifts" className="mt-4 space-y-3">
-          {gifts.length === 0 ? (
+          {isFetching && gifts.length === 0 ? (
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </div>
+          ) : gifts.length === 0 ? (
             <div className="rounded-xl border py-14 text-center">
               <Gift className="mx-auto h-9 w-9 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground">Henuz hediyeniz yok.</p>
