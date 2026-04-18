@@ -32,4 +32,25 @@ To learn more, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 - [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
 
+## Autonomous orchestrator
+
+This repository includes a TypeScript orchestrator for routine autonomous checks.
+
+Run once immediately (without keeping the scheduler alive):
+
+```bash
+npm run orchestrator:once
+```
+
+Run continuously with minute-based scheduling:
+
+```bash
+npm run orchestrator:start
+```
+
+The orchestrator logs to `docs/agent-logs/orchestrator.log` and runs:
+- 09:00: QA scan + backend API health checks
+- 14:00: frontend UI structure checks + backend connection checks
+- 22:00: critical page existence checks + QA quality checks
+
 <a href="https://v0.app/chat/api/kiro/clone/Heyrook1/kktcmarketin24" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
