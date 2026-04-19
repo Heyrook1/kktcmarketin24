@@ -6,12 +6,18 @@ import Link from "next/link"
 import {
   ChevronDown, Mail, Phone, MapPin, MessageSquare,
   Package, RotateCcw, Truck, ShieldCheck, CreditCard,
-  HelpCircle, CheckCircle2, Loader2, Clock,
+  HelpCircle, CheckCircle2, Loader2, Clock, AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 // ─── FAQ data ────────────────────────────────────────────────────────────────
 
@@ -183,42 +189,11 @@ declare global {
 
 // ─── Accordion item ────────────────────────────────────────────────────────────
 
-function AccordionItem({ q, a, open, onToggle }: {
-  q: string; a: string; open: boolean; onToggle: () => void
-}) {
-  return (
-    <div className="border-b last:border-b-0">
-      <button
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-start justify-between gap-4 py-4 text-left text-sm font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-      >
-        <span className="leading-relaxed">{q}</span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground mt-0.5 transition-transform duration-200",
-            open && "rotate-180"
-          )}
-        />
-      </button>
-      <div
-        className={cn(
-          "overflow-hidden transition-all duration-200",
-          open ? "max-h-96 pb-4" : "max-h-0"
-        )}
-      >
-        <p className="text-sm text-muted-foreground leading-relaxed">{a}</p>
-      </div>
-    </div>
-  )
-}
-
-// ─── Contact form ─────────────────────────────────────────────────────────────
-
 function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -233,6 +208,7 @@ function ContactForm() {
   function set(field: keyof typeof form, value: string) {
     setForm(f => ({ ...f, [field]: value }))
     setErrors(e => ({ ...e, [field]: undefined }))
+    setSubmitError("")
   }
 
   function validate(): boolean {
@@ -249,17 +225,29 @@ function ContactForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError("")
     if (!validate()) return
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        const payload = await response.json().catch(() => null) as { ok?: boolean } | null
+        if (!payload?.ok) {
+          throw new Error("invalid-response")
+        }
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Mesaj gönderilemedi. Lütfen tekrar deneyin.")
+      }
     })
   }
 
@@ -330,6 +318,12 @@ function ContactForm() {
           {turnstileError && (
             <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması tamamlanmadı. Lütfen kutucuğu doldurun.</p>
           )}
+          {submitError && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-destructive" role="alert">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {submitError}
+            </p>
+          )}
         </div>
 
         <Button type="submit" disabled={isPending} className="w-full gap-2 rounded-xl h-11 font-semibold">
@@ -363,12 +357,7 @@ function FieldWrap({ label, id, required, error, children }: {
 // ─── Main page component ──────────────────────────────────────────────────────
 
 export function HelpPageClient() {
-  const [openItem, setOpenItem] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState("orders")
-
-  function toggleItem(id: string) {
-    setOpenItem(prev => prev === id ? null : id)
-  }
 
   const activeData = FAQ_SECTIONS.find(s => s.id === activeSection)
 
@@ -417,7 +406,7 @@ export function HelpPageClient() {
           {/* Category tabs */}
           <div className="flex flex-wrap gap-2 justify-center mb-6">
             {FAQ_SECTIONS.map(({ id, icon: Icon, title }) => (
-              <button key={id} onClick={() => { setActiveSection(id); setOpenItem(null) }}
+              <button key={id} onClick={() => setActiveSection(id)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors",
                   activeSection === id
@@ -434,15 +423,18 @@ export function HelpPageClient() {
           {/* Accordion */}
           <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
             <div className="px-6">
-              {activeData?.items.map((item, i) => (
-                <AccordionItem
-                  key={i}
-                  q={item.q}
-                  a={item.a}
-                  open={openItem === `${activeSection}-${i}`}
-                  onToggle={() => toggleItem(`${activeSection}-${i}`)}
-                />
-              ))}
+              <Accordion type="single" collapsible className="w-full">
+                {activeData?.items.map((item, index) => (
+                  <AccordionItem key={`${activeSection}-${index}`} value={`${activeSection}-${index}`}>
+                    <AccordionTrigger className="text-left">
+                      {item.q}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <p className="text-sm leading-relaxed text-muted-foreground">{item.a}</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </div>
           </div>
         </section>

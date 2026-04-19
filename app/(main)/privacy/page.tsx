@@ -10,9 +10,7 @@ export const metadata: Metadata = {
 
 const LAST_UPDATED = "22 Mart 2026"
 
-// Named top-level anchors: data-collected, usage, third-party, cookies, user-rights
 const SECTIONS = [
-  // ── 1. Veri Sorumlusu ───────────────────────────────────────────────────
   {
     id: "toplanan-veriler",
     title: "1. Toplanan Veriler",
@@ -25,7 +23,6 @@ const SECTIONS = [
       "Redis geçici verileri: sepet içeriği, stok rezervasyonu ve OTP kodları maksimum 15 dakika veya oturum süresince tutulur; ardından otomatik silinir.",
     ],
   },
-  // ── 3. Kullanım Amaçları ────────────────────────────────────────────────
   {
     id: "kullanim-amaci",
     title: "2. Kullanım Amacı",
@@ -38,7 +35,6 @@ const SECTIONS = [
       "Dolandırıcılık, bot saldırısı ve kötüye kullanımın önlenmesi.",
     ],
   },
-  // ── 4. Üçüncü Taraf Paylaşımı ───────────────────────────────────────────
   {
     id: "hukuki-dayanak",
     title: "3. Hukuki Dayanak (KVKK)",
@@ -71,7 +67,6 @@ const SECTIONS = [
       "Yetkili kamu kurum ve kuruluşları: yasal talep halinde.",
     ],
   },
-  // ── 5. Çerezler ─────────────────────────────────────────────────────────
   {
     id: "saklama-sureleri",
     title: "7. Saklama Süreleri",
@@ -83,7 +78,6 @@ const SECTIONS = [
       "Pazarlama rızası geri alındığında ilgili veriler 30 gün içinde silinir.",
     ],
   },
-  // ── 6. Kullanıcı Hakları ────────────────────────────────────────────────
   {
     id: "haklariniz",
     title: "8. Haklarınız",
@@ -109,52 +103,45 @@ const SECTIONS = [
 ]
 
 const QUICK_LINKS = [
-  { id: "toplanan-veriler",  label: "Toplanan Veriler" },
-  { id: "kullanim-amaci",    label: "Kullanım Amacı" },
-  { id: "veri-paylasimi",    label: "Üçüncü Taraf Paylaşımı" },
-  { id: "cerezler",          label: "Çerezler" },
-  { id: "haklariniz",        label: "Kullanıcı Hakları" },
+  { id: "toplanan-veriler", label: "Toplanan Veriler" },
+  { id: "kullanim-amaci", label: "Kullanım Amacı" },
+  { id: "veri-paylasimi", label: "Üçüncü Taraf Paylaşımı" },
+  { id: "cerezler", label: "Çerezler" },
+  { id: "haklariniz", label: "Kullanıcı Hakları" },
 ]
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-background">
-
-      {/* Dark navy header — matches /terms design */}
       <section
         className="border-b px-4 py-12 md:py-16"
         style={{ background: "oklch(0.22 0.06 255)", color: "white" }}
       >
         <div className="container mx-auto max-w-5xl">
-
-          {/* Back button */}
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors mb-6"
+            className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-white/70 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Önceki Sayfaya Dön
           </Link>
 
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium mb-4">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium">
             <Shield className="h-3.5 w-3.5" />
             Gizlilik
           </div>
 
-          <h1 className="text-3xl font-bold text-balance md:text-4xl">
-            Gizlilik Politikası
-          </h1>
-          <p className="mt-2 text-white/65 text-sm">
+          <h1 className="text-3xl font-bold text-balance md:text-4xl">Gizlilik Politikası</h1>
+          <p className="mt-2 text-sm text-white/65">
             Son güncelleme: {LAST_UPDATED} &nbsp;·&nbsp; KVKK Uyumlu
           </p>
 
-          {/* Quick-jump anchor pills */}
           <div className="mt-6 flex flex-wrap gap-2">
             {QUICK_LINKS.map(({ id, label }) => (
               <a
                 key={id}
                 href={`#${id}`}
-                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 transition-colors hover:bg-white/20 hover:text-white"
               >
                 {label}
               </a>
@@ -165,33 +152,28 @@ export default function PrivacyPage() {
 
       <div className="container mx-auto max-w-5xl px-4 py-10 md:py-14">
         <div className="grid gap-10 lg:grid-cols-4">
-
-          {/* Table of Contents */}
           <nav aria-label="İçindekiler" className="hidden lg:block">
-            <div className="sticky top-20 rounded-xl border bg-card p-4 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            <div className="sticky top-20 space-y-1 rounded-xl border bg-card p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 İçindekiler
               </p>
-              {SECTIONS.map((s) => (
+              {SECTIONS.map((section) => (
                 <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  className="block text-xs text-muted-foreground hover:text-primary transition-colors py-0.5 leading-relaxed"
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="block py-0.5 text-xs leading-relaxed text-muted-foreground transition-colors hover:text-primary"
                 >
-                  {s.title}
+                  {section.title}
                 </a>
               ))}
             </div>
           </nav>
 
-          {/* Main content */}
-          <article className="lg:col-span-3 space-y-12">
-
-            {/* KVKK notice banner */}
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-primary leading-relaxed">
+          <article className="space-y-12 lg:col-span-3">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-primary">
               Bu politika, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamındaki
-              aydınlatma yükümlülüğümüz çerçevesinde hazırlanmıştır. Platformumuzu kullanarak
-              bu politikayı okuduğunuzu ve kabul ettiğinizi beyan edersiniz.
+              aydınlatma yükümlülüğümüz çerçevesinde hazırlanmıştır. Platformumuzu kullanarak bu
+              politikayı okuduğunuzu ve kabul ettiğinizi beyan edersiniz.
             </div>
 
             {SECTIONS.map(({ id, title, content, items }) => (
@@ -201,18 +183,16 @@ export default function PrivacyPage() {
                 aria-labelledby={`${id}-heading`}
                 className="space-y-3 scroll-mt-20"
               >
-                <h2 id={`${id}-heading`} className="text-lg font-semibold border-b pb-2">
+                <h2 id={`${id}-heading`} className="border-b pb-2 text-lg font-semibold">
                   {title}
                 </h2>
-                {content && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
-                )}
+                {content && <p className="text-sm leading-relaxed text-muted-foreground">{content}</p>}
                 {items && (
                   <ul className="space-y-2">
-                    {items.map((item, i) => (
+                    {items.map((item, index) => (
                       <li
-                        key={i}
-                        className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed"
+                        key={index}
+                        className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
                       >
                         <span
                           className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60"
@@ -226,12 +206,12 @@ export default function PrivacyPage() {
               </section>
             ))}
 
-            <div className="border-t pt-8 flex flex-col sm:flex-row gap-3 justify-between items-start">
+            <div className="flex flex-col items-start justify-between gap-3 border-t pt-8 sm:flex-row">
               <p className="text-xs text-muted-foreground">
                 Sorularınız için:{" "}
                 <a
                   href="mailto:info@marketin24.com"
-                  className="text-primary underline underline-offset-2"
+                  className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
                 >
                   info@marketin24.com
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -244,7 +224,6 @@ export default function PrivacyPage() {
                 Kullanım Şartları &rarr;
               </Link>
             </div>
-
           </article>
         </div>
       </div>

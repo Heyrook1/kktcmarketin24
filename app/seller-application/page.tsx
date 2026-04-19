@@ -6,7 +6,7 @@ import Script from "next/script"
 import {
   Store, ChevronRight, CheckCircle2, Mail, Clock,
   Loader2, ShieldCheck, TrendingUp, Users, Globe,
-  LayoutDashboard, ArrowRight, LogIn,
+  LayoutDashboard, ArrowRight, LogIn, AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,6 +53,7 @@ export default function SellerApplicationPage() {
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const formRef = useRef<HTMLFormElement>(null)
   const formId  = useId()
 
@@ -64,6 +65,7 @@ export default function SellerApplicationPage() {
   function set(field: keyof FormData, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }))
     setErrors((e) => ({ ...e, [field]: undefined }))
+    setSubmitError("")
   }
 
   function validate(): boolean {
@@ -82,17 +84,29 @@ export default function SellerApplicationPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError("")
     if (!validate()) return
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        const payload = await response.json().catch(() => null) as { ok?: boolean } | null
+        if (!payload?.ok) {
+          throw new Error("invalid-response")
+        }
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Başvuru gönderilemedi. Lütfen tekrar deneyin.")
+      }
     })
   }
 
@@ -159,11 +173,11 @@ export default function SellerApplicationPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 sm:shrink-0">
               <Button
                 asChild
                 size="sm"
-                className="gap-2 bg-white text-primary hover:bg-white/90 font-semibold shadow-sm"
+                className="w-full gap-2 bg-white text-primary hover:bg-white/90 font-semibold shadow-sm sm:w-auto"
               >
                 <Link href="/login?next=/vendor-panel">
                   <LogIn className="h-4 w-4" />
@@ -174,7 +188,7 @@ export default function SellerApplicationPage() {
                 asChild
                 size="sm"
                 variant="ghost"
-                className="gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
+                className="w-full gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 sm:w-auto"
               >
                 <Link href="/vendor-login">
                   Daha fazla
@@ -328,6 +342,12 @@ export default function SellerApplicationPage() {
                       Güvenlik doğrulaması tamamlanmadı. Lütfen kutucuğu doldurun.
                     </p>
                   )}
+                  {submitError && (
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-destructive" role="alert">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {submitError}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -347,7 +367,7 @@ export default function SellerApplicationPage() {
 
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
 

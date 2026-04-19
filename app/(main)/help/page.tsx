@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { HelpPageClient } from "./help-client"
+import { HelpPageClient } from "@/app/help/help-client"
 
 export const metadata: Metadata = {
   title: "Yardım Merkezi | Marketin24",
