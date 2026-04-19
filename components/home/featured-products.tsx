@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
 import type { Product } from "@/lib/data/products"
 
+const DEMO_PRODUCT_TAG_FILTER = '{"demo"}'
+
 /** Map a vendor_products DB row to the Product shape */
 function toProduct(p: {
   id: string
@@ -114,6 +116,9 @@ async function fetchProducts(opts: {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("tags", "cs", DEMO_PRODUCT_TAG_FILTER)
+    .not("name", "ilike", "%demo%")
     .limit(opts.limit ?? 8)
 
   if (opts.hasSale) query = query.not("compare_price", "is", null)
