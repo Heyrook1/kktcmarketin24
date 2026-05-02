@@ -53,6 +53,7 @@ export default function SellerApplicationPage() {
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const formRef = useRef<HTMLFormElement>(null)
   const formId  = useId()
 
@@ -64,6 +65,7 @@ export default function SellerApplicationPage() {
   function set(field: keyof FormData, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }))
     setErrors((e) => ({ ...e, [field]: undefined }))
+    setSubmitError("")
   }
 
   function validate(): boolean {
@@ -82,17 +84,27 @@ export default function SellerApplicationPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError("")
     if (!validate()) return
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Başvuru gönderilemedi.")
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Başvurunuz gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.")
+      }
     })
   }
 
@@ -345,9 +357,15 @@ export default function SellerApplicationPage() {
                   {errors.agree && <p className="text-xs text-destructive pl-6">{errors.agree}</p>}
                 </div>
 
+                {submitError && (
+                  <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {submitError}
+                  </p>
+                )}
+
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
 
