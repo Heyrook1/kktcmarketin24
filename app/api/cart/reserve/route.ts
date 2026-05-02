@@ -8,14 +8,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { reserveStock } from "@/lib/stock-reservation"
+import { z } from "zod"
+
+const reserveSchema = z.object({
+  cartId: z.string().trim().min(1),
+  productId: z.string().trim().min(1),
+  quantity: z.coerce.number().int().min(1),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { cartId, productId, quantity } = await req.json()
-
-    if (!cartId || !productId || !quantity || quantity < 1) {
+    const body = await req.json().catch(() => null)
+    const parsedBody = reserveSchema.safeParse(body)
+    if (!parsedBody.success) {
       return NextResponse.json({ error: "Geçersiz istek parametreleri." }, { status: 400 })
     }
+    const { cartId, productId, quantity } = parsedBody.data
 
     const supabase = await createClient()
 
@@ -41,8 +49,7 @@ export async function POST(req: NextRequest) {
     await reserveStock(cartId, productId, quantity)
 
     return NextResponse.json({ ok: true, reserved: quantity })
-  } catch (err) {
-    console.error("[stock-reserve]", err)
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 })
   }
 }
