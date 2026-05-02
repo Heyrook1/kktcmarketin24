@@ -114,6 +114,9 @@ async function fetchProducts(opts: {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
+    .not("name", "ilike", "%test%")
     .limit(opts.limit ?? 8)
 
   if (opts.hasSale) query = query.not("compare_price", "is", null)
