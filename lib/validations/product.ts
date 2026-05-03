@@ -10,8 +10,8 @@ const priceSchema = z
   .finite()
   .min(1, "Fiyat en az ₺1 olmalıdır.")
 
-const nullableNumberSchema = z
-  .union([z.coerce.number().finite(), z.null()])
+const nullablePriceSchema = z
+  .union([z.coerce.number().finite().min(1, "Karşılaştırma fiyatı en az ₺1 olmalıdır."), z.null()])
   .optional()
 
 const stringArraySchema = z
@@ -22,7 +22,7 @@ export const productCreateSchema = z.object({
   name: nonEmptyTrimmedString,
   description: trimmedString.optional().nullable(),
   price: priceSchema,
-  compare_price: nullableNumberSchema,
+  compare_price: nullablePriceSchema,
   category: nonEmptyTrimmedString,
   image_url: trimmedString.optional().nullable(),
   images: stringArraySchema.optional(),

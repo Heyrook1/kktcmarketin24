@@ -7,15 +7,31 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { releaseReservation, releaseAllReservations } from "@/lib/stock-reservation"
+import { z } from "zod"
+
+const ReleaseReservationSchema = z.object({
+  cartId: z.string().trim().min(1, "cartId zorunludur."),
+  productId: z.string().uuid("Geçersiz ürün kimliği.").optional(),
+})
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { cartId, productId } = await req.json()
-
-    if (!cartId) {
-      return NextResponse.json({ error: "cartId zorunludur." }, { status: 400 })
+    let raw: unknown
+    try {
+      raw = await req.json()
+    } catch {
+      return NextResponse.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 })
     }
 
+    const parsed = ReleaseReservationSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Geçersiz istek parametreleri." },
+        { status: 400 },
+      )
+    }
+
+    const { cartId, productId } = parsed.data
     if (productId) {
       await releaseReservation(cartId, productId)
     } else {

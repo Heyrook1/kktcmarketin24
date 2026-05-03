@@ -4,7 +4,7 @@
  * DELETE /api/cart/server  — clear the server-side cart
  *
  * Cart is stored in Redis, keyed to the authenticated user's session:
- *   cart:session:{userId}
+ *   cart:{userId}:session
  *
  * Only productId + quantity are stored — prices are NEVER persisted here.
  * All prices are re-fetched from vendor_products at checkout confirm time.
@@ -14,12 +14,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { redis } from "@/lib/redis"
+import { redisKeys } from "@/lib/redis-keys"
+import { z } from "zod"
 
 const CART_TTL_SECONDS = 60 * 60 * 24 * 7 // 7 days
-
-function cartKey(userId: string) {
-  return `cart:session:${userId}`
-}
+const CartSyncSchema = z.object({
+  cartId: z.string().trim().min(1, "cartId zorunludur."),
+  items: z.array(
+    z.object({
+      productId: z.string().uuid("Geçersiz ürün kimliği."),
+      quantity: z.coerce.number().int().min(1).max(99),
+    }),
+  ).max(50),
+  couponCode: z.string().trim().max(32).optional().nullable(),
+})
 
 export interface ServerCartPayload {
   cartId: string
@@ -35,7 +43,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 })
 
-    const raw = await redis.get<ServerCartPayload>(cartKey(user.id))
+    const raw = await redis.get<ServerCartPayload>(redisKeys.cartSession(user.id))
     return NextResponse.json({ cart: raw ?? null })
   } catch (err) {
     console.error("[cart-server GET]", err)
@@ -49,27 +57,28 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 })
 
-    const body = await req.json() as {
-      cartId: string
-      items: { productId: string; quantity: number }[]
-      couponCode?: string
+    let raw: unknown
+    try {
+      raw = await req.json()
+    } catch {
+      return NextResponse.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 })
     }
 
-    if (!body.cartId || !Array.isArray(body.items)) {
-      return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 })
+    const parsed = CartSyncSchema.safeParse(raw)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Geçersiz istek."
+      return NextResponse.json({ error: message }, { status: 400 })
     }
 
     // Strip to productId + quantity only — prices are NEVER stored
     const payload: ServerCartPayload = {
-      cartId: body.cartId,
-      items: body.items
-        .filter((i) => i.productId && Number(i.quantity) > 0)
-        .map(({ productId, quantity }) => ({ productId, quantity: Number(quantity) })),
-      couponCode: body.couponCode ?? null,
+      cartId: parsed.data.cartId,
+      items: parsed.data.items.map(({ productId, quantity }) => ({ productId, quantity })),
+      couponCode: parsed.data.couponCode ?? null,
       updatedAt: new Date().toISOString(),
     }
 
-    await redis.set(cartKey(user.id), payload, { ex: CART_TTL_SECONDS })
+    await redis.set(redisKeys.cartSession(user.id), payload, { ex: CART_TTL_SECONDS })
 
     return NextResponse.json({ ok: true })
   } catch (err) {
@@ -84,7 +93,7 @@ export async function DELETE() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 })
 
-    await redis.del(cartKey(user.id))
+    await redis.del(redisKeys.cartSession(user.id))
 
     return NextResponse.json({ ok: true })
   } catch (err) {

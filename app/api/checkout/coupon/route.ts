@@ -8,13 +8,27 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { z } from "zod"
+
+const CouponSchema = z.object({
+  code: z.string().trim().min(1, "Kupon kodu gereklidir.").max(32, "Kupon kodu en fazla 32 karakter olabilir."),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { code } = await req.json()
-    if (!code || typeof code !== "string") {
-      return NextResponse.json({ valid: false, message: "Kupon kodu gereklidir." }, { status: 400 })
+    let raw: unknown
+    try {
+      raw = await req.json()
+    } catch {
+      return NextResponse.json({ valid: false, message: "Geçersiz istek gövdesi." }, { status: 400 })
     }
+
+    const parsed = CouponSchema.safeParse(raw)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Geçersiz kupon kodu."
+      return NextResponse.json({ valid: false, message }, { status: 400 })
+    }
+    const { code } = parsed.data
 
     const supabase = await createClient()
     const { data: coupon, error } = await supabase

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Redis } from '@upstash/redis'
+import { redisKeys } from '@/lib/redis-keys'
 
 // Edge runtime — runs at the CDN edge for IP-accurate rate limiting
 export const runtime = 'edge'
@@ -48,7 +49,7 @@ async function verifyTurnstile(token: string, ip: string): Promise<{ ok: boolean
 
 // ── Rate limiter (Redis sliding window) ────────────────────────────────────
 async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining: number }> {
-  const key = `rl:contact:${ip}`
+  const key = redisKeys.rateLimit('ip', ip, 'seller_application')
   const now = Date.now()
   const windowStart = now - WINDOW_SEC * 1000
 
