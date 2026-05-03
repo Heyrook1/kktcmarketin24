@@ -124,6 +124,8 @@ export function SearchPageClient() {
     [urlQ, urlCategory, urlSort, urlPage]
   )
 
+  const currentSearchPath = buildUrl({})
+
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchResults = useCallback(async (params: URLSearchParams) => {
     if (abortRef.current) abortRef.current.abort()
@@ -403,7 +405,7 @@ export function SearchPageClient() {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      href="#"
+                      href={urlPage > 1 ? buildUrl({ page: urlPage - 1 }) : currentSearchPath}
                       onClick={(e) => { e.preventDefault(); if (urlPage > 1) handlePage(urlPage - 1) }}
                       className={cn(urlPage <= 1 && "pointer-events-none opacity-40")}
                     />
@@ -417,7 +419,7 @@ export function SearchPageClient() {
                     ) : (
                       <PaginationItem key={item}>
                         <PaginationLink
-                          href="#"
+                          href={buildUrl({ page: item })}
                           isActive={item === urlPage}
                           onClick={(e) => { e.preventDefault(); handlePage(item as number) }}
                         >
@@ -429,7 +431,7 @@ export function SearchPageClient() {
 
                   <PaginationItem>
                     <PaginationNext
-                      href="#"
+                      href={urlPage < results.totalPages ? buildUrl({ page: urlPage + 1 }) : currentSearchPath}
                       onClick={(e) => { e.preventDefault(); if (urlPage < results.totalPages) handlePage(urlPage + 1) }}
                       className={cn(urlPage >= results.totalPages && "pointer-events-none opacity-40")}
                     />

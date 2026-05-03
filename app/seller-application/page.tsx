@@ -50,6 +50,7 @@ const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000
 export default function SellerApplicationPage() {
   const [form, setForm]             = useState<FormData>(INITIAL)
   const [errors, setErrors]         = useState<Partial<Record<keyof FormData, string>>>({})
+  const [submitError, setSubmitError] = useState("")
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
@@ -82,17 +83,28 @@ export default function SellerApplicationPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError("")
     if (!validate()) return
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          setSubmitError("Başvurunuz gönderilemedi. Lütfen bilgilerinizi kontrol edip tekrar deneyin.")
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Başvurunuz gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.")
+      }
     })
   }
 
@@ -330,6 +342,12 @@ export default function SellerApplicationPage() {
                   )}
                 </div>
 
+                {submitError && (
+                  <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {submitError}
+                  </p>
+                )}
+
                 <div className="space-y-1">
                   <label className="flex items-start gap-2.5 cursor-pointer group">
                     <input type="checkbox" checked={form.agree}
@@ -347,7 +365,7 @@ export default function SellerApplicationPage() {
 
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
 

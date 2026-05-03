@@ -218,6 +218,7 @@ function AccordionItem({ q, a, open, onToggle }: {
 function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
+  const [submitError, setSubmitError] = useState("")
   const [turnstileError, setTurnstileError] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -249,17 +250,28 @@ function ContactForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitError("")
     if (!validate()) return
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          setSubmitError("Mesajınız gönderilemedi. Lütfen bilgilerinizi kontrol edip tekrar deneyin.")
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Mesajınız gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.")
+      }
     })
   }
 
@@ -331,6 +343,12 @@ function ContactForm() {
             <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması tamamlanmadı. Lütfen kutucuğu doldurun.</p>
           )}
         </div>
+
+        {submitError && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {submitError}
+          </p>
+        )}
 
         <Button type="submit" disabled={isPending} className="w-full gap-2 rounded-xl h-11 font-semibold">
           {isPending
