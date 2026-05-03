@@ -10,6 +10,7 @@ import { getCategoryById } from "@/lib/data/categories"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { isDemoProduct } from "@/lib/public-product-filters"
 import type { Product } from "@/lib/data/products"
 
 export const dynamic = "force-dynamic"
@@ -25,9 +26,10 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id,name,slug)")
     .eq("id", id)
+    .eq("is_active", true)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error || !data || isDemoProduct(data)) return null
 
   const dbImages: string[] = (data.images as string[] | null) ?? []
   const allImages = dbImages.length > 0
@@ -125,7 +127,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     .limit(4)
 
   const related: Product[] = await Promise.all(
-    (relatedRaw ?? []).map((r) => getProductFromDB(r.id).then((p) => p!))
+    (relatedRaw ?? [])
+      .filter((row) => !isDemoProduct(row))
+      .map((r) => getProductFromDB(r.id).then((p) => p!))
   ).then((arr) => arr.filter(Boolean) as Product[])
 
   const vendor   = getVendorById(product.vendorId)

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { isPublicInStockProduct } from "@/lib/public-product-filters"
 import { parseSearchIntent } from "@/lib/smart-search"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
       { count: "exact" }
     )
     .eq("is_active", true)
+    .gt("stock", 0)
 
   // ── Full-text search via search_vector (tsvector) ─────────────────────────
   if (q.length >= 2) {
@@ -126,7 +128,7 @@ export async function GET(req: NextRequest) {
       featured:      false,
       createdAt:     p.created_at,
     }
-  })
+  }).filter(isPublicInStockProduct)
 
   return NextResponse.json({
     products,

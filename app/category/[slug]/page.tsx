@@ -7,6 +7,7 @@ import { ProductGrid } from "@/components/product/product-grid"
 import { getCategoryBySlug, categories } from "@/lib/data/categories"
 import { createClient } from "@/lib/supabase/server"
 import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
+import { isPublicInStockProduct } from "@/lib/public-product-filters"
 import type { Product } from "@/lib/data/products"
 
 export const dynamic = "force-dynamic"
@@ -51,6 +52,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       "id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id, name, slug)"
     )
     .eq("is_active", true)
+    .gt("stock", 0)
     .eq("category", category.id)
     .order("created_at", { ascending: false })
     .limit(200)
@@ -59,7 +61,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   let products: Product[] = (rawRows ?? []).map((p) =>
     mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
-  )
+  ).filter(isPublicInStockProduct)
 
   if (sub) {
     products = products.filter((p) => p.tags?.includes(sub))

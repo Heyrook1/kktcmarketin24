@@ -14,6 +14,7 @@ import { getVendorReviews, getVendorAverageRating } from "@/lib/data/vendor-revi
 import { createClient } from "@/lib/supabase/server"
 import type { Product } from "@/lib/data/products"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { isPublicProduct } from "@/lib/public-product-filters"
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>
@@ -132,7 +133,7 @@ export default async function VendorPage({ params }: VendorPageProps) {
   let vendorForUi =
     (staticVendor
       ? (() => {
-          const staticProducts = getProductsByVendor(staticVendor.id)
+          const staticProducts = getProductsByVendor(staticVendor.id).filter(isPublicProduct)
           const staticReviewsRaw = getVendorReviews(staticVendor.id)
           const staticReviews: ReviewForUi[] = staticReviewsRaw.map((r) => ({
             id: r.id,
@@ -191,7 +192,9 @@ export default async function VendorPage({ params }: VendorPageProps) {
         .limit(50),
     ])
 
-    const safeProducts = (productsRaw ?? []).map((r) => toDbProduct(r as any))
+    const safeProducts = (productsRaw ?? [])
+      .filter((r) => isPublicProduct(r as Parameters<typeof isPublicProduct>[0]))
+      .map((r) => toDbProduct(r as any))
     products = safeProducts
     vendorProductCount = safeProducts.length
 

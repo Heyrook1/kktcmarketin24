@@ -6,6 +6,7 @@ import { ProductGrid } from "@/components/product/product-grid"
 import { normalizeCat } from "@/lib/normalize-product-category"
 import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
+import { isDemoProduct, isPublicInStockProduct } from "@/lib/public-product-filters"
 import type { Product } from "@/lib/data/products"
 
 interface Props {
@@ -124,6 +125,7 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .select(primarySelect)
     .eq("id", id)
     .eq("is_active", true)
+    .gt("stock", 0)
     .maybeSingle()
 
   raw = firstTry.data as typeof raw
@@ -140,13 +142,14 @@ export default async function UrunlerDetailPage({ params }: Props) {
       `)
       .eq("id", id)
       .eq("is_active", true)
+      .gt("stock", 0)
       .maybeSingle()
 
     raw = secondTry.data as typeof raw
     error = secondTry.error ? { message: secondTry.error.message } : null
   }
 
-  if (error || !raw) notFound()
+  if (error || !raw || isDemoProduct(raw)) notFound()
 
   // Increment view count (fire-and-forget)
   supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
@@ -176,13 +179,14 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
     .eq("category", raw.category)
     .neq("id", id)
     .limit(4)
 
   const related: Product[] = (relatedRaw ?? []).map((r) =>
     toProduct(r as Parameters<typeof toProduct>[0])
-  )
+  ).filter(isPublicInStockProduct)
 
   return (
     <div className="container mx-auto px-4 py-8">

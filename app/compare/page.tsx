@@ -53,9 +53,9 @@ const platforms: Platform[] = [
       multiVendor: true,
       localDelivery: true,
       securePayment: true,
-      mobileApp: true,
-      loyaltyProgram: true,
-      customerSupport: "7/24 Canlı Destek",
+      mobileApp: false,
+      loyaltyProgram: false,
+      customerSupport: "Yardım Merkezi ve Telefon",
       returnPolicy: "14 Gün İade",
       deliveryTime: "1-3 Gün",
       vendorCount: "8+ Onaylı Satıcı",
@@ -72,7 +72,7 @@ const platforms: Platform[] = [
       "KKTC'ye özel hızlı teslimat",
       "Onaylı ve güvenilir satıcılar",
       "Rekabetçi fiyatlar",
-      "7/24 müşteri desteği",
+      "Yardım merkezi ve telefon desteği",
     ],
     cons: [
       "Yeni platform",
@@ -194,8 +194,6 @@ const comparisonFeatures = [
   { key: "multiVendor", label: "Çoklu Satıcı", description: "Birden fazla satıcıdan ürün" },
   { key: "localDelivery", label: "KKTC Teslimatı", description: "Yerel adrese hızlı teslimat" },
   { key: "securePayment", label: "Güvenli Ödeme", description: "SSL şifreli güvenli ödeme" },
-  { key: "mobileApp", label: "Mobil Uygulama", description: "iOS ve Android uygulaması" },
-  { key: "loyaltyProgram", label: "Sadakat Programı", description: "Puan ve indirim sistemi" },
 ]
 
 function FeatureIcon({ available }: { available: boolean }) {
