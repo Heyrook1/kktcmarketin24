@@ -3,8 +3,7 @@ import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { ProductsContent, ProductsContentSkeleton } from "@/app/products/products-content"
 import { categories } from "@/lib/data/categories"
-import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
-import { isPublicProduct } from "@/lib/public-product-filters"
+import { mapPublicVendorProductRows } from "@/lib/map-vendor-product-list"
 
 /** Always read fresh product rows from Supabase (new listings show without waiting on ISR). */
 export const dynamic = "force-dynamic"
@@ -41,11 +40,7 @@ export default async function UrunlerPage() {
 
   if (prodErr) console.error("[urunler/page] DB error:", prodErr.message)
 
-  const initialProducts = (rawProducts ?? [])
-    .filter((p) => isPublicProduct(p))
-    .map((p) =>
-      mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
-    )
+  const initialProducts = mapPublicVendorProductRows(rawProducts ?? [])
 
   const usedCatIds = [...new Set(
     initialProducts.map((p) => p.categoryId).filter(Boolean),

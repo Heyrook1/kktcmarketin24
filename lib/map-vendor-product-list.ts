@@ -1,7 +1,6 @@
 import { buildSearchAliases } from "@/lib/smart-search"
 import { normalizeCat } from "@/lib/normalize-product-category"
 import type { Product } from "@/lib/data/products"
-import { isPublicProduct } from "@/lib/public-product-filters"
 
 type VendorStoreEmbed = { id: string; name: string; slug: string } | null
 
@@ -60,8 +59,3 @@ export function mapVendorProductRowToListProduct(p: RawVendorProductListRow): Pr
   }
 }
 
-export function mapPublicVendorProductRows(rows: RawVendorProductListRow[]): ProductListItem[] {
-  return rows
-    .filter(isPublicProduct)
-    .map((row) => mapVendorProductRowToListProduct(row))
-}
