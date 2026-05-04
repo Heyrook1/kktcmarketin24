@@ -26,6 +26,10 @@
 - Yardim destek formu ve satici basvuru formu artik `fetch` basarisiz oldugunda basarili gonderilmis gibi davranmiyor; anlamli hata mesaji gosteriyor.
 - Yeni global `app/error.tsx`, yakalanmayan route hatalari icin tekrar dene aksiyonu sunuyor.
 
+## Dogrulama
+
+- `pnpm typecheck && pnpm lint` calistirilmak istendi, ancak ortamda `pnpm` ve `node` komutlari bulunmadigi icin dogrulama tamamlanamadi.
+
 ## 200+ Satir Bilesenler ve Refactor Onerileri
 
 Asagidaki liste otomatik satir sayimina gore olusturuldu. Oncelik, is mantigi ve UI'nin ayni dosyada yogunlastigi dosyalara verilmeli.
