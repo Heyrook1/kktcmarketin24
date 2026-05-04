@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
       { count: "exact" }
     )
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
 
   // ── Full-text search via search_vector (tsvector) ─────────────────────────
   if (q.length >= 2) {

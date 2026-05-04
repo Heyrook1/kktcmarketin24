@@ -124,6 +124,8 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .select(primarySelect)
     .eq("id", id)
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
     .maybeSingle()
 
   raw = firstTry.data as typeof raw
@@ -140,6 +142,8 @@ export default async function UrunlerDetailPage({ params }: Props) {
       `)
       .eq("id", id)
       .eq("is_active", true)
+      .gt("stock", 0)
+      .not("name", "ilike", "%demo%")
       .maybeSingle()
 
     raw = secondTry.data as typeof raw
@@ -176,6 +180,8 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
     .eq("category", raw.category)
     .neq("id", id)
     .limit(4)

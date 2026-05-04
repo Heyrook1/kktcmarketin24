@@ -25,6 +25,9 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id,name,slug)")
     .eq("id", id)
+    .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
     .maybeSingle()
 
   if (error || !data) return null
@@ -120,6 +123,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
     .eq("category", product.categoryId)
     .neq("id", id)
     .limit(4)
