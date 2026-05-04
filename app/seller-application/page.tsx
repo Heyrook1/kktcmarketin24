@@ -53,6 +53,7 @@ export default function SellerApplicationPage() {
   const [submitted, setSubmitted]   = useState(false)
   const [isPending, startTransition] = useTransition()
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const formRef = useRef<HTMLFormElement>(null)
   const formId  = useId()
 
@@ -64,6 +65,7 @@ export default function SellerApplicationPage() {
   function set(field: keyof FormData, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }))
     setErrors((e) => ({ ...e, [field]: undefined }))
+    setSubmitError("")
   }
 
   function validate(): boolean {
@@ -86,13 +88,22 @@ export default function SellerApplicationPage() {
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
+    setSubmitError("")
     startTransition(async () => {
-      await fetch("/api/seller-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/seller-application", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Başvuru gönderilemedi. Lütfen tekrar deneyin.")
+        }
+        setSubmitted(true)
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Başvuru gönderilemedi. Lütfen tekrar deneyin.")
+      }
     })
   }
 
@@ -347,9 +358,15 @@ export default function SellerApplicationPage() {
 
                 <Button type="submit" disabled={isPending} className="w-full rounded-xl gap-2 h-11 text-sm font-semibold">
                   {isPending
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />G��nderiliyor...</>
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
                     : <><ChevronRight className="h-4 w-4" />Başvuruyu Gönder</>}
                 </Button>
+
+                {submitError && (
+                  <p className="rounded-lg bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+                    {submitError}
+                  </p>
+                )}
 
                 <p className="text-center text-xs text-muted-foreground">
                   Bu form Cloudflare Turnstile ile korunmaktadır.
