@@ -51,6 +51,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       "id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id, name, slug)"
     )
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
     .eq("category", category.id)
     .order("created_at", { ascending: false })
     .limit(200)

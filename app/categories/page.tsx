@@ -27,6 +27,8 @@ export default async function CategoriesPage() {
     .from("vendor_products")
     .select("category")
     .eq("is_active", true)
+    .gt("stock", 0)
+    .not("name", "ilike", "%demo%")
 
   // Build a slug → count map from real DB data
   const countMap: Record<string, number> = {}

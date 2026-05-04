@@ -53,7 +53,7 @@ const platforms: Platform[] = [
       multiVendor: true,
       localDelivery: true,
       securePayment: true,
-      mobileApp: true,
+      mobileApp: false,
       loyaltyProgram: true,
       customerSupport: "7/24 Canlı Destek",
       returnPolicy: "14 Gün İade",

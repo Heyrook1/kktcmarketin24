@@ -180,6 +180,8 @@ export default async function VendorPage({ params }: VendorPageProps) {
         )
         .eq("store_id", storeRaw.id)
         .eq("is_active", true)
+        .gt("stock", 0)
+        .not("name", "ilike", "%demo%")
         .order("created_at", { ascending: false })
         .limit(200),
       supabase
