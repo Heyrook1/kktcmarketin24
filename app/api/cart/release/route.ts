@@ -7,15 +7,24 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { releaseReservation, releaseAllReservations } from "@/lib/stock-reservation"
+import { z } from "zod"
+
+const releaseReservationSchema = z.object({
+  cartId: z.string().trim().min(1, "cartId zorunludur."),
+  productId: z.string().uuid("productId geçersiz.").optional().nullable(),
+})
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { cartId, productId } = await req.json()
-
-    if (!cartId) {
-      return NextResponse.json({ error: "cartId zorunludur." }, { status: 400 })
+    const parsed = releaseReservationSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Geçersiz istek parametreleri." },
+        { status: 400 }
+      )
     }
 
+    const { cartId, productId } = parsed.data
     if (productId) {
       await releaseReservation(cartId, productId)
     } else {
@@ -23,8 +32,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch (err) {
-    console.error("[stock-release]", err)
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 })
   }
 }

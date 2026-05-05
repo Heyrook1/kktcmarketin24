@@ -8,19 +8,25 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { z } from "zod"
+
+const couponRequestSchema = z.object({
+  code: z.string().trim().min(1, "Kupon kodu gereklidir.").max(64, "Kupon kodu çok uzun."),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { code } = await req.json()
-    if (!code || typeof code !== "string") {
-      return NextResponse.json({ valid: false, message: "Kupon kodu gereklidir." }, { status: 400 })
+    const parsed = couponRequestSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Geçersiz kupon isteği."
+      return NextResponse.json({ valid: false, message }, { status: 400 })
     }
 
     const supabase = await createClient()
     const { data: coupon, error } = await supabase
       .from("coupons")
       .select("id, code, type, value, description, min_order_amount, max_uses, current_uses, expires_at, is_active")
-      .eq("code", code.trim().toUpperCase())
+      .eq("code", parsed.data.code.toUpperCase())
       .eq("is_active", true)
       .maybeSingle()
 
@@ -46,8 +52,7 @@ export async function POST(req: NextRequest) {
       description: coupon.description,
       min_order_amount: coupon.min_order_amount,
     })
-  } catch (err) {
-    console.error("[coupon-validate]", err)
+  } catch {
     return NextResponse.json({ valid: false, message: "Sunucu hatası." }, { status: 500 })
   }
 }

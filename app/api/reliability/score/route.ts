@@ -12,6 +12,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { getReliabilityScore, approveSecondaryVerification } from '@/lib/reliability'
+import { z } from 'zod'
+
+const reliabilityScoreQuerySchema = z.object({
+  customerId: z.string().uuid('customerId geçerli bir UUID olmalıdır.'),
+})
+
+const approveVerificationSchema = z.object({
+  userId: z.string().uuid('userId geçerli bir UUID olmalıdır.'),
+})
 
 function sb() {
   return createClient(
@@ -21,61 +30,73 @@ function sb() {
 }
 
 export async function GET(request: NextRequest) {
-  const supabaseUser = await createServerClient()
-  const { data: { user } } = await supabaseUser.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz.' }, { status: 401 })
+  try {
+    const supabaseUser = await createServerClient()
+    const { data: { user } } = await supabaseUser.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Yetkisiz.' }, { status: 401 })
 
-  const customerId = request.nextUrl.searchParams.get('customerId')
-  if (!customerId) return NextResponse.json({ error: 'customerId gerekli.' }, { status: 400 })
+    const parsed = reliabilityScoreQuerySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams.entries()))
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Geçersiz istek.' }, { status: 400 })
+    }
 
-  const admin = sb()
+    const admin = sb()
 
-  // Must be a vendor or admin
-  const { data: store } = await admin
-    .from('vendor_stores')
-    .select('id')
-    .eq('owner_id', user.id)
-    .maybeSingle()
+    // Must be a vendor or admin
+    const { data: store } = await admin
+      .from('vendor_stores')
+      .select('id')
+      .eq('owner_id', user.id)
+      .maybeSingle()
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('role_id, roles(name)')
-    .eq('id', user.id)
-    .maybeSingle()
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role_id, roles(name)')
+      .eq('id', user.id)
+      .maybeSingle()
 
-  const roleName = (profile?.roles as { name: string } | null)?.name
-  const isAdmin = roleName === 'admin'
+    const roleName = (profile?.roles as { name: string } | null)?.name
+    const isAdmin = roleName === 'admin'
 
-  if (!store && !isAdmin) {
-    return NextResponse.json({ error: 'Sadece satıcılar veya yöneticiler puan sorgulayabilir.' }, { status: 403 })
+    if (!store && !isAdmin) {
+      return NextResponse.json({ error: 'Sadece satıcılar veya yöneticiler puan sorgulayabilir.' }, { status: 403 })
+    }
+
+    const score = await getReliabilityScore(parsed.data.customerId)
+    if (!score) return NextResponse.json({ error: 'Müşteri bulunamadı.' }, { status: 404 })
+
+    return NextResponse.json({ ok: true, score })
+  } catch {
+    return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 })
   }
-
-  const score = await getReliabilityScore(customerId)
-  if (!score) return NextResponse.json({ error: 'Müşteri bulunamadı.' }, { status: 404 })
-
-  return NextResponse.json({ ok: true, score })
 }
 
 export async function POST(request: NextRequest) {
-  const supabaseUser = await createServerClient()
-  const { data: { user } } = await supabaseUser.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz.' }, { status: 401 })
+  try {
+    const supabaseUser = await createServerClient()
+    const { data: { user } } = await supabaseUser.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Yetkisiz.' }, { status: 401 })
 
-  const admin = sb()
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('role_id, roles(name)')
-    .eq('id', user.id)
-    .maybeSingle()
+    const admin = sb()
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role_id, roles(name)')
+      .eq('id', user.id)
+      .maybeSingle()
 
-  const roleName = (profile?.roles as { name: string } | null)?.name
-  if (roleName !== 'admin') {
-    return NextResponse.json({ error: 'Yalnızca yöneticiler ikincil doğrulamayı onaylayabilir.' }, { status: 403 })
+    const roleName = (profile?.roles as { name: string } | null)?.name
+    if (roleName !== 'admin') {
+      return NextResponse.json({ error: 'Yalnızca yöneticiler ikincil doğrulamayı onaylayabilir.' }, { status: 403 })
+    }
+
+    const parsed = approveVerificationSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Geçersiz istek.' }, { status: 400 })
+    }
+
+    await approveSecondaryVerification(parsed.data.userId, user.id)
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 })
   }
-
-  const body = await request.json()
-  if (!body.userId) return NextResponse.json({ error: 'userId gerekli.' }, { status: 400 })
-
-  await approveSecondaryVerification(body.userId, user.id)
-  return NextResponse.json({ ok: true })
 }
