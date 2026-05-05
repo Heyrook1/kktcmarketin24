@@ -18,6 +18,7 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ url, title, description }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}${url}` : url
   const encodedUrl = encodeURIComponent(shareUrl)
@@ -28,9 +29,11 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
+      setCopyError(false)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("Failed to copy:", err)
+    } catch {
+      setCopyError(true)
+      setTimeout(() => setCopyError(false), 2000)
     }
   }
 
@@ -89,7 +92,9 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
               <span className="sr-only">Copy link</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{copied ? "Copied!" : "Copy link"}</TooltipContent>
+          <TooltipContent>
+            {copyError ? "Link kopyalanamadı" : copied ? "Kopyalandı!" : "Linki kopyala"}
+          </TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>
