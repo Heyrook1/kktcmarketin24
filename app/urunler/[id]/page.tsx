@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { ProductDetail } from "@/app/products/[id]/product-detail"
 import { ProductGrid } from "@/components/product/product-grid"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { applyPublicProductFilters, isPubliclyVisibleProduct } from "@/lib/public-product-visibility"
 import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
 import type { Product } from "@/lib/data/products"
@@ -19,10 +20,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient()
   const { data } = await supabase
     .from("vendor_products")
-    .select("name, description, image_url")
+    .select("name, description, image_url, stock, tags")
     .eq("id", id)
     .single()
-  if (!data) return { title: "Ürün Bulunamadı | Marketin24" }
+  if (!data || !isPubliclyVisibleProduct(data)) return { title: "Ürün Bulunamadı | Marketin24" }
   return {
     title: `${data.name} | Marketin24`,
     description: data.description ?? undefined,
@@ -147,6 +148,7 @@ export default async function UrunlerDetailPage({ params }: Props) {
   }
 
   if (error || !raw) notFound()
+  if (!isPubliclyVisibleProduct(raw)) notFound()
 
   // Increment view count (fire-and-forget)
   supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
@@ -172,12 +174,14 @@ export default async function UrunlerDetailPage({ params }: Props) {
   const category = getCategoryById(product.categoryId)
 
   // Related products — same category, exclude current
-  const { data: relatedRaw } = await supabase
+  const relatedQuery = supabase
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
     .eq("category", raw.category)
     .neq("id", id)
+
+  const { data: relatedRaw } = await applyPublicProductFilters(relatedQuery)
     .limit(4)
 
   const related: Product[] = (relatedRaw ?? []).map((r) =>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { applyPublicProductFilters } from "@/lib/public-product-visibility"
 import { parseSearchIntent } from "@/lib/smart-search"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
       { count: "exact" }
     )
     .eq("is_active", true)
+  query = applyPublicProductFilters(query)
 
   // ── Full-text search via search_vector (tsvector) ─────────────────────────
   if (q.length >= 2) {

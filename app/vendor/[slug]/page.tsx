@@ -14,6 +14,7 @@ import { getVendorReviews, getVendorAverageRating } from "@/lib/data/vendor-revi
 import { createClient } from "@/lib/supabase/server"
 import type { Product } from "@/lib/data/products"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { applyPublicProductFilters, filterPubliclyVisibleProducts } from "@/lib/public-product-visibility"
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>
@@ -180,6 +181,8 @@ export default async function VendorPage({ params }: VendorPageProps) {
         )
         .eq("store_id", storeRaw.id)
         .eq("is_active", true)
+        .gt("stock", 0)
+        .not("tags", "cs", `{"demo"}`)
         .order("created_at", { ascending: false })
         .limit(200),
       supabase
@@ -191,7 +194,7 @@ export default async function VendorPage({ params }: VendorPageProps) {
         .limit(50),
     ])
 
-    const safeProducts = (productsRaw ?? []).map((r) => toDbProduct(r as any))
+    const safeProducts = filterPubliclyVisibleProducts(productsRaw ?? []).map((r) => toDbProduct(r as any))
     products = safeProducts
     vendorProductCount = safeProducts.length
 

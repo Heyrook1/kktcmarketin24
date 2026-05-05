@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { ProductsContent, ProductsContentSkeleton } from "@/app/products/products-content"
 import { categories } from "@/lib/data/categories"
 import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
+import { applyPublicProductFilters } from "@/lib/public-product-visibility"
 
 /** Always read fresh product rows from Supabase (new listings show without waiting on ISR). */
 export const dynamic = "force-dynamic"
@@ -23,12 +24,12 @@ export default async function UrunlerPage() {
 
   const [{ data: rawProducts, error: prodErr }, { data: rawStores }] =
     await Promise.all([
-      supabase
+      applyPublicProductFilters(supabase
         .from("vendor_products")
         .select(
           "id, name, description, price, compare_price, category, image_url, images, tags, is_active, stock, created_at, store_id, vendor_stores(id, name, slug)"
         )
-        .eq("is_active", true)
+        .eq("is_active", true))
         .order("created_at", { ascending: false })
         .limit(200),
       supabase

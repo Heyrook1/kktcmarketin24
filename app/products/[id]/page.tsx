@@ -10,6 +10,7 @@ import { getCategoryById } from "@/lib/data/categories"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { applyPublicProductFilters, isPubliclyVisibleProduct } from "@/lib/public-product-visibility"
 import type { Product } from "@/lib/data/products"
 
 export const dynamic = "force-dynamic"
@@ -25,9 +26,11 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id,name,slug)")
     .eq("id", id)
+    .eq("is_active", true)
     .maybeSingle()
 
   if (error || !data) return null
+  if (!isPubliclyVisibleProduct(data)) return null
 
   const dbImages: string[] = (data.images as string[] | null) ?? []
   const allImages = dbImages.length > 0
@@ -116,12 +119,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
   supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
 
   // Related DB products — same category
-  const { data: relatedRaw } = await supabase
-    .from("vendor_products")
-    .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
-    .eq("is_active", true)
-    .eq("category", product.categoryId)
-    .neq("id", id)
+  const relatedQuery = supabase
+      .from("vendor_products")
+      .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
+      .eq("is_active", true)
+      .eq("category", product.categoryId)
+      .neq("id", id)
+  const { data: relatedRaw } = await applyPublicProductFilters(relatedQuery)
     .limit(4)
 
   const related: Product[] = await Promise.all(
