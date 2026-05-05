@@ -1,11 +1,16 @@
 {
-  "name": "my-project",
-  "version": "0.1.0",
+  "name": "marketin24-agent-team",
+  "version": "1.0.0",
+  "description": "Marketin24 otonom yazılım takımı",
   "private": true,
+  "main": "orchestrator.js",
   "scripts": {
-    "dev": "next dev",
+    "start": "node orchestrator.js",
+    "dev": "node orchestrator.js",
     "build": "next build",
-    "start": "next start",
+    "next:dev": "next dev",
+    "next:start": "next start",
+    "pm2": "pm2 start orchestrator.js --name marketin24-team",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:qa": "node ./scripts/qa-smoke.mjs"
@@ -50,6 +55,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
     "date-fns": "4.1.0",
+    "dotenv": "^17.4.2",
     "embla-carousel-react": "8.6.0",
     "input-otp": "1.4.2",
     "lucide-react": "^0.564.0",
