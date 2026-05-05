@@ -7,6 +7,7 @@ import {
 import { categories } from "@/lib/data/categories"
 import { Card, CardContent } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/server"
+import { applyPublicProductFilters } from "@/lib/public-product-visibility"
 
 export const dynamic = "force-dynamic"
 
@@ -23,10 +24,11 @@ export const metadata: Metadata = {
 export default async function CategoriesPage() {
   // Fetch real product counts from Supabase grouped by category
   const supabase = await createClient()
-  const { data: countRows } = await supabase
+  const countQuery = supabase
     .from("vendor_products")
-    .select("category")
+    .select("category, stock, tags")
     .eq("is_active", true)
+  const { data: countRows } = await applyPublicProductFilters(countQuery)
 
   // Build a slug → count map from real DB data
   const countMap: Record<string, number> = {}
