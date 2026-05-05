@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { assertVendorOrderOwnership } from "@/lib/vendor-auth"
 import { assertAdminAuth } from "@/lib/admin-auth"
 import { recordDeliveryEvent, type DeliveryEventType } from "@/lib/reliability"
+import { z } from "zod"
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -14,6 +15,11 @@ const VALID_EVENT_TYPES: DeliveryEventType[] = [
   "cancelled_after_dispatch",
   "door_refused",
 ]
+
+const deliveryEventSchema = z.object({
+  eventType: z.enum(VALID_EVENT_TYPES as [DeliveryEventType, ...DeliveryEventType[]]),
+  notes: z.string().trim().max(500).optional(),
+})
 
 function adminClient() {
   return createClient(
@@ -51,113 +57,112 @@ function pickBestParentOrder(
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const { id: vendorOrderId } = await params
-
-  let body: { eventType?: string; notes?: string }
   try {
-    body = await req.json()
+    const { id: vendorOrderId } = await params
+    const parsed = deliveryEventSchema.safeParse(await req.json().catch(() => null))
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Geçersiz etkinlik türü." }, { status: 400 })
+    }
+
+    const { eventType, notes } = parsed.data
+
+    const vendorAuth = await assertVendorOrderOwnership(vendorOrderId)
+    let actorUserId: string | null = vendorAuth.ok ? vendorAuth.session.userId : null
+
+    if (!actorUserId) {
+      const adminAuth = await assertAdminAuth()
+      if (!adminAuth.ok) {
+        return NextResponse.json({ error: vendorAuth.message }, { status: vendorAuth.status })
+      }
+      actorUserId = adminAuth.userId
+    }
+
+    const admin = adminClient()
+
+    const selectWide = "id, order_id, store_id, customer_email, total, created_at"
+    const selectLegacy = "id, store_id, customer_email, total, created_at"
+    let vendorOrder: VendorOrderLookup | null = null
+
+    for (const sel of [selectWide, selectLegacy]) {
+      const { data, error } = await admin
+        .from("vendor_orders")
+        .select(sel)
+        .eq("id", vendorOrderId)
+        .maybeSingle()
+      if (!error && data) {
+        vendorOrder = data as VendorOrderLookup
+        break
+      }
+    }
+
+    if (!vendorOrder) {
+      return NextResponse.json({ error: "Sipariş satırı bulunamadı." }, { status: 404 })
+    }
+
+    let parentOrderId = vendorOrder.order_id ?? null
+    let customerId: string | null = null
+
+    if (parentOrderId) {
+      const { data: parent } = await admin
+        .from("orders")
+        .select("id, customer_id")
+        .eq("id", parentOrderId)
+        .maybeSingle()
+      customerId = parent?.customer_id ?? null
+    }
+
+    // Legacy fallback: resolve parent order by email + total + close created_at window.
+    if (!parentOrderId || !customerId) {
+      const { data: candidates } = await admin
+        .from("orders")
+        .select("id, customer_id, total, created_at")
+        .eq("customer_email", vendorOrder.customer_email)
+        .order("created_at", { ascending: false })
+        .limit(50)
+
+      const best = pickBestParentOrder(
+        (candidates ?? []).map((o) => ({
+          id: o.id,
+          total: Number(o.total),
+          created_at: o.created_at,
+          customer_id: o.customer_id ?? null,
+        })),
+        Number(vendorOrder.total),
+        vendorOrder.created_at
+      )
+
+      parentOrderId = best?.id ?? null
+      customerId = best?.customer_id ?? null
+    }
+
+    if (!parentOrderId || !customerId) {
+      return NextResponse.json(
+        { error: "Bu sipariş satırı için ana sipariş eşleştirilemedi. Lütfen durum güncelleme menüsünü kullanın." },
+        { status: 422 }
+      )
+    }
+
+    if (!actorUserId) {
+      return NextResponse.json({ error: "Yetki doğrulaması başarısız." }, { status: 403 })
+    }
+
+    const result = await recordDeliveryEvent(
+      parentOrderId,
+      vendorOrder.store_id,
+      customerId,
+      eventType,
+      actorUserId,
+      notes
+    )
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error ?? "İşlem başarısız." }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, score: result.score, parentOrderId })
   } catch {
-    return NextResponse.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 })
+    return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 })
   }
-
-  const eventType = body.eventType as DeliveryEventType
-  if (!VALID_EVENT_TYPES.includes(eventType)) {
-    return NextResponse.json({ error: "Geçersiz etkinlik türü." }, { status: 400 })
-  }
-
-  const vendorAuth = await assertVendorOrderOwnership(vendorOrderId)
-  let actorUserId: string | null = vendorAuth.ok ? vendorAuth.session.userId : null
-
-  if (!actorUserId) {
-    const adminAuth = await assertAdminAuth()
-    if (!adminAuth.ok) {
-      return NextResponse.json({ error: vendorAuth.message }, { status: vendorAuth.status })
-    }
-    actorUserId = adminAuth.userId
-  }
-
-  const admin = adminClient()
-
-  const selectWide = "id, order_id, store_id, customer_email, total, created_at"
-  const selectLegacy = "id, store_id, customer_email, total, created_at"
-  let vendorOrder: VendorOrderLookup | null = null
-
-  for (const sel of [selectWide, selectLegacy]) {
-    const { data, error } = await admin
-      .from("vendor_orders")
-      .select(sel)
-      .eq("id", vendorOrderId)
-      .maybeSingle()
-    if (!error && data) {
-      vendorOrder = data as VendorOrderLookup
-      break
-    }
-  }
-
-  if (!vendorOrder) {
-    return NextResponse.json({ error: "Sipariş satırı bulunamadı." }, { status: 404 })
-  }
-
-  let parentOrderId = vendorOrder.order_id ?? null
-  let customerId: string | null = null
-
-  if (parentOrderId) {
-    const { data: parent } = await admin
-      .from("orders")
-      .select("id, customer_id")
-      .eq("id", parentOrderId)
-      .maybeSingle()
-    customerId = parent?.customer_id ?? null
-  }
-
-  // Legacy fallback: resolve parent order by email + total + close created_at window.
-  if (!parentOrderId || !customerId) {
-    const { data: candidates } = await admin
-      .from("orders")
-      .select("id, customer_id, total, created_at")
-      .eq("customer_email", vendorOrder.customer_email)
-      .order("created_at", { ascending: false })
-      .limit(50)
-
-    const best = pickBestParentOrder(
-      (candidates ?? []).map((o) => ({
-        id: o.id,
-        total: Number(o.total),
-        created_at: o.created_at,
-        customer_id: o.customer_id ?? null,
-      })),
-      Number(vendorOrder.total),
-      vendorOrder.created_at
-    )
-
-    parentOrderId = best?.id ?? null
-    customerId = best?.customer_id ?? null
-  }
-
-  if (!parentOrderId || !customerId) {
-    return NextResponse.json(
-      { error: "Bu sipariş satırı için ana sipariş eşleştirilemedi. Lütfen durum güncelleme menüsünü kullanın." },
-      { status: 422 }
-    )
-  }
-
-  if (!actorUserId) {
-    return NextResponse.json({ error: "Yetki doğrulaması başarısız." }, { status: 403 })
-  }
-
-  const result = await recordDeliveryEvent(
-    parentOrderId,
-    vendorOrder.store_id,
-    customerId,
-    eventType,
-    actorUserId,
-    body.notes
-  )
-
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error ?? "İşlem başarısız." }, { status: 500 })
-  }
-
-  return NextResponse.json({ ok: true, score: result.score, parentOrderId })
 }
 
