@@ -120,11 +120,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   // Related DB products — same category
   const relatedQuery = supabase
-      .from("vendor_products")
-      .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
-      .eq("is_active", true)
-      .eq("category", product.categoryId)
-      .neq("id", id)
+    .from("vendor_products")
+    .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
+    .eq("is_active", true)
+    .eq("category", product.categoryId)
+    .neq("id", id)
   const { data: relatedRaw } = await applyPublicProductFilters(relatedQuery)
     .limit(4)
 

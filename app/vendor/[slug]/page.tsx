@@ -14,7 +14,7 @@ import { getVendorReviews, getVendorAverageRating } from "@/lib/data/vendor-revi
 import { createClient } from "@/lib/supabase/server"
 import type { Product } from "@/lib/data/products"
 import { normalizeCat } from "@/lib/normalize-product-category"
-import { applyPublicProductFilters, filterPubliclyVisibleProducts } from "@/lib/public-product-visibility"
+import { filterPubliclyVisibleProducts } from "@/lib/public-product-visibility"
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>
