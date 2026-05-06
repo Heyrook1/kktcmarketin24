@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "outDir": "dist-orchestrator",
+    "rootDir": "scripts",
+    "target": "ES2022",
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/orchestrator.ts",
+    "scripts/agents/**/*.ts"
+  ]
+}
