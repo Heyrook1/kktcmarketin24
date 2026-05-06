@@ -46,7 +46,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   if (!category) notFound()
 
   const supabase = await createClient()
-  const { data: rawRows, error } = await supabase
+  const { data: rawRows } = await supabase
     .from("vendor_products")
     .select(
       "id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id, name, slug)"
@@ -57,8 +57,6 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     .not("tags", "ov", "{demo,test,sample,placeholder}")
     .order("created_at", { ascending: false })
     .limit(200)
-
-  if (error) console.error("[category/page] DB error:", error.message)
 
   let products: Product[] = (rawRows ?? [])
     .map((p) => mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0]))

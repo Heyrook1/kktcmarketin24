@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default async function UrunlerPage() {
   const supabase = await createClient()
 
-  const [{ data: rawProducts, error: prodErr }, { data: rawStores }] =
+  const [{ data: rawProducts }, { data: rawStores }] =
     await Promise.all([
       supabase
         .from("vendor_products")
@@ -39,8 +39,6 @@ export default async function UrunlerPage() {
         .select("id, name, slug")
         .eq("is_active", true),
     ])
-
-  if (prodErr) console.error("[urunler/page] DB error:", prodErr.message)
 
   const initialProducts = (rawProducts ?? [])
     .map((p) => mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0]))

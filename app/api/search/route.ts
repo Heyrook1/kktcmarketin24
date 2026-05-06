@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
     )
     .eq("is_active", true)
     .gt("stock", 0)
+    .not("tags", "ov", "{demo,test,sample,placeholder}")
 
   // ── Full-text search via search_vector (tsvector) ─────────────────────────
   if (q.length >= 2) {
@@ -99,8 +100,7 @@ export async function GET(req: NextRequest) {
   const { data, count, error } = await query
 
   if (error) {
-    console.error("[v0] /api/search error:", error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: "Arama sonuçları alınamadı." }, { status: 500 })
   }
 
   // ── Normalise to Product shape ────────────────────────────────────────────
