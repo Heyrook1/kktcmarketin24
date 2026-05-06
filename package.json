@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:qa": "node ./scripts/qa-smoke.mjs",
     "orchestrator:build": "tsc -p tsconfig.orchestrator.json",
-    "orchestrator:start": "pnpm orchestrator:build && node ./dist-orchestrator/orchestrator.js"
+    "orchestrator:start": "tsc -p tsconfig.orchestrator.json && node ./dist-orchestrator/orchestrator.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

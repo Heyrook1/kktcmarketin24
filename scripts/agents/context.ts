@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process"
-import { constants } from "node:fs"
+import { constants, existsSync } from "node:fs"
 import { access } from "node:fs/promises"
 import path from "node:path"
 
@@ -26,6 +26,11 @@ const DEFAULT_FETCH_TIMEOUT_MS = 10_000
 export function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return String(error)
+}
+
+export function detectPackageManager(projectDir: string): PackageManager {
+  if (!existsSync(path.join(projectDir, "pnpm-lock.yaml"))) return "npm"
+  return process.env.npm_execpath?.includes("pnpm") ? "pnpm" : "npm"
 }
 
 export async function assertFilesExist(context: AgentContext, relativePaths: string[]): Promise<void> {

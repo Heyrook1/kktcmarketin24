@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, appendFileSync, readFileSync } from "node:fs"
 import path from "node:path"
 
 import { apiSagligi, supabaseKontrol } from "./agents/backend-agent"
-import { type AgentContext, type PackageManager, toErrorMessage } from "./agents/context"
+import { type AgentContext, detectPackageManager, toErrorMessage } from "./agents/context"
 import { eksikSayfalar, uiKontrol } from "./agents/frontend-agent"
 import { kaliteKontrol, tamTarama } from "./agents/qa-agent"
 
@@ -15,7 +15,7 @@ const orchestratorLogPath = path.join(logDir, "orchestrator.log")
 loadEnvFile(path.join(projectDir, ".env"))
 loadEnvFile(path.join(projectDir, ".env.local"))
 
-const packageManager: PackageManager = existsSync(path.join(projectDir, "pnpm-lock.yaml")) ? "pnpm" : "npm"
+const packageManager = detectPackageManager(projectDir)
 
 const context: AgentContext = {
   projectDir,
