@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { constants, existsSync } from "node:fs"
 import { access } from "node:fs/promises"
 import path from "node:path"
@@ -29,8 +29,11 @@ export function toErrorMessage(error: unknown): string {
 }
 
 export function detectPackageManager(projectDir: string): PackageManager {
-  if (!existsSync(path.join(projectDir, "pnpm-lock.yaml"))) return "npm"
-  return process.env.npm_execpath?.includes("pnpm") ? "pnpm" : "npm"
+  const hasPnpmLockfile = existsSync(path.join(projectDir, "pnpm-lock.yaml"))
+  const pnpmCheck = spawnSync("pnpm", ["--version"], { stdio: "ignore" })
+  if (hasPnpmLockfile && pnpmCheck.status === 0) return "pnpm"
+
+  return "npm"
 }
 
 export async function assertFilesExist(context: AgentContext, relativePaths: string[]): Promise<void> {
