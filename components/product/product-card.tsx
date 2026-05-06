@@ -11,7 +11,7 @@ import { useWishlistStore } from "@/lib/store/wishlist-store"
 import type { Product } from "@/lib/data/products"
 import { TR_COLOR_HEX } from "@/lib/tag-taxonomy"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 interface ProductCardProps {
   product: Product
@@ -23,10 +23,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const { addItem: addWishlist, removeItem: removeWishlist, items: wishlistItems } = useWishlistStore()
   const [addedToCart, setAddedToCart] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [imgIndex, setImgIndex] = useState(0)
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  const secondImg = product.images[1] ?? product.images[2] ?? null
 
 
   const isInStock = typeof product.inStock === "boolean"
@@ -91,15 +94,34 @@ export function ProductCard({ product, className }: ProductCardProps) {
       className
     )}>
       {/* Image container */}
-      <div className="relative block overflow-hidden bg-secondary/30">
-        <Link href={`/products/${product.id}`} className="block aspect-square overflow-hidden">
+      <div
+        className="relative block overflow-hidden bg-secondary/30"
+        onMouseEnter={() => { if (secondImg) setImgIndex(1) }}
+        onMouseLeave={() => setImgIndex(0)}
+      >
+        <Link href={`/products/${product.id}`} className="block aspect-square overflow-hidden relative">
           <Image
             src={product.images[0]}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className={cn(
+              "object-cover transition-all duration-500",
+              secondImg ? (imgIndex === 0 ? "opacity-100 scale-100" : "opacity-0 scale-105") : "group-hover:scale-110"
+            )}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
+          {secondImg && (
+            <Image
+              src={secondImg}
+              alt={product.name}
+              fill
+              className={cn(
+                "object-cover transition-all duration-500",
+                imgIndex === 1 ? "opacity-100 scale-100" : "opacity-0 scale-105"
+              )}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          )}
         </Link>
 
         {/* Out of stock overlay */}
