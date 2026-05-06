@@ -391,12 +391,15 @@ function SpecTable({ product }: { product: Product }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function ProductDetail({ product, vendor, category }: ProductDetailProps) {
-  const [quantity, setQuantity]         = useState(1)
-  const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [quantity, setQuantity]           = useState(1)
+  const [selectedSize, setSelectedSize]   = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
-  const [liveStock, setLiveStock]       = useState(product.stockCount)
-  const [isMounted, setIsMounted]       = useState(false)
-  const { addItem, openCart }           = useCartStore()
+  const [selectedVolume, setSelectedVolume] = useState<string | null>(null)
+  const [activePrice, setActivePrice]     = useState(product.price)
+  const [liveStock, setLiveStock]         = useState(product.stockCount)
+  const [isMounted, setIsMounted]         = useState(false)
+  const [variantError, setVariantError]   = useState<string | null>(null)
+  const { addItem, openCart }             = useCartStore()
   const { addItem: addWishlist, removeItem: removeWishlist, items: wishlistItems } = useWishlistStore()
   const router  = useRouter()
   const reviews = getProductReviews(product.id)
@@ -405,7 +408,14 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
 
   const isWishlisted = isMounted ? wishlistItems.some((i) => i.id === product.id) : false
 
-  // Simulate live stock ticking down
+  // When a volume with a different price is selected, update active price
+  useEffect(() => {
+    if (!product.volumes || !selectedVolume) { setActivePrice(product.price); return }
+    const vol = product.volumes.find((v) => v.label === selectedVolume)
+    setActivePrice(vol?.price ?? product.price)
+  }, [selectedVolume, product.volumes, product.price])
+
+  // Simulate live stock ticking
   useEffect(() => {
     const id = setInterval(() => {
       if (Math.random() > 0.97 && liveStock > 0) setLiveStock((p) => Math.max(0, p - 1))
@@ -413,38 +423,93 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
     return () => clearInterval(id)
   }, [liveStock])
 
+  // Combined stock: color + size — pick the most specific one available
   const activeStock = (() => {
-    if (product.sizes  && selectedSize)  return product.sizes.find((s) => s.size === selectedSize)?.stock  ?? liveStock
-    if (product.colors && selectedColor) return product.colors.find((c) => c.name === selectedColor)?.stock ?? liveStock
+    if (product.sizes && selectedSize) {
+      const s = product.sizes.find((s) => s.size === selectedSize)
+      if (s) return s.stock
+    }
+    if (product.colors && selectedColor) {
+      const c = product.colors.find((c) => c.name === selectedColor)
+      if (c) return c.stock
+    }
+    if (product.volumes && selectedVolume) {
+      const v = product.volumes.find((v) => v.label === selectedVolume)
+      if (v) return v.stock
+    }
     return liveStock
   })()
 
-  const stockStatus = (() => {
-    if (activeStock === 0)   return { label: "Tükendi",              color: "text-red-500",   bg: "bg-red-50 border-red-200",     dot: "bg-red-500" }
-    if (activeStock <= 3)    return { label: `Son ${activeStock} adet!`,  color: "text-red-500",   bg: "bg-red-50 border-red-200",     dot: "bg-red-500 animate-pulse" }
-    if (activeStock <= 10)   return { label: `${activeStock} adet kaldı`, color: "text-amber-600", bg: "bg-amber-50 border-amber-200", dot: "bg-amber-500 animate-pulse" }
-    return                          { label: "Stokta var",            color: "text-green-600", bg: "bg-green-50 border-green-200", dot: "bg-green-500" }
+  // Dynamic stock label based on what's selected
+  const stockLabel = (() => {
+    const parts: string[] = []
+    if (selectedColor) parts.push(`${selectedColor} renkte`)
+    if (selectedSize)  parts.push(`${selectedSize} bedende`)
+    if (selectedVolume) parts.push(`${selectedVolume}`)
+    if (activeStock === 0) return `${parts.length ? parts.join(" ") + " — " : ""}Tükendi`
+    if (activeStock <= 3)  return `${parts.length ? parts.join(" ") + " — " : ""}Son ${activeStock} adet!`
+    if (activeStock <= 10) return `${parts.length ? parts.join(" ") + " — " : ""}${activeStock} adet kaldı`
+    return parts.length ? `${parts.join(", ")} — Stokta var` : "Stokta var"
   })()
 
-  const hasDiscount    = !!(product.originalPrice && product.originalPrice > product.price)
-  const discountPercent = hasDiscount ? Math.round((1 - product.price / product.originalPrice!) * 100) : 0
+  const stockStatus = (() => {
+    if (activeStock === 0)  return { color: "text-red-500",   bg: "bg-red-50 border-red-200",     dot: "bg-red-500" }
+    if (activeStock <= 3)   return { color: "text-red-500",   bg: "bg-red-50 border-red-200",     dot: "bg-red-500 animate-pulse" }
+    if (activeStock <= 10)  return { color: "text-amber-600", bg: "bg-amber-50 border-amber-200", dot: "bg-amber-500 animate-pulse" }
+    return                         { color: "text-green-600", bg: "bg-green-50 border-green-200", dot: "bg-green-500" }
+  })()
 
-  const handleAddToCart = () => { addItem(product, quantity); openCart() }
-  const handleBuyNow    = () => { addItem(product, quantity); router.push("/checkout") }
-  const handleWishlist  = () => isWishlisted ? removeWishlist(product.id) : addWishlist(product)
+  const hasDiscount     = !!(product.originalPrice && product.originalPrice > activePrice)
+  const discountPercent = hasDiscount ? Math.round((1 - activePrice / product.originalPrice!) * 100) : 0
 
-  // Filter out internal prefixed tags for display
+  const validateVariants = (): boolean => {
+    if (product.sizes?.length && !selectedSize) {
+      setVariantError("Lütfen beden seçiniz")
+      return false
+    }
+    if (product.colors?.length && !selectedColor) {
+      setVariantError("Lütfen renk seçiniz")
+      return false
+    }
+    if (product.volumes?.length && !selectedVolume) {
+      setVariantError("Lütfen boyut seçiniz")
+      return false
+    }
+    setVariantError(null)
+    return true
+  }
+
+  const handleAddToCart = () => {
+    if (!validateVariants()) return
+    addItem(product, quantity)
+    openCart()
+  }
+  const handleBuyNow = () => {
+    if (!validateVariants()) return
+    addItem(product, quantity)
+    router.push("/checkout")
+  }
+  const handleWishlist = () => isWishlisted ? removeWishlist(product.id) : addWishlist(product)
+
   const visibleTags = product.tags.filter((t) =>
     !t.toLowerCase().match(/^(color|size|gender|brand|type|subtype):/)
   )
 
-  // Delivery date estimate (next business day)
   const deliveryDate = (() => {
     const d = new Date()
     d.setDate(d.getDate() + (d.getHours() < 15 ? 1 : 2))
     if (d.getDay() === 0) d.setDate(d.getDate() + 1)
     if (d.getDay() === 6) d.setDate(d.getDate() + 2)
     return d.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })
+  })()
+
+  // Images: if selected color has its own images, use those
+  const galleryImages = (() => {
+    if (selectedColor && product.colors) {
+      const c = product.colors.find((c) => c.name === selectedColor)
+      if (c?.images?.length) return c.images
+    }
+    return product.images
   })()
 
   return (
@@ -467,7 +532,7 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
       <div className="grid lg:grid-cols-2 gap-8 lg:gap-14">
         {/* ── Left: Gallery ── */}
         <ProductGallery
-          images={product.images}
+          images={galleryImages}
           productName={product.name}
           hasDiscount={hasDiscount}
           discountPercent={discountPercent}
@@ -520,9 +585,8 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
 
           {/* Price section */}
           <div className="rounded-2xl bg-secondary/30 border border-border/60 p-4 space-y-3">
-            {/* Price */}
             <div className="flex items-end gap-3 flex-wrap">
-              <PriceDisplay price={product.price} originalPrice={product.originalPrice} size="lg" />
+              <PriceDisplay price={activePrice} originalPrice={product.originalPrice} size="lg" />
               {hasDiscount && (
                 <span className="text-sm text-green-600 font-semibold bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
                   %{discountPercent} indirim
@@ -530,7 +594,6 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
               )}
             </div>
 
-            {/* Delivery estimate */}
             <div className="flex items-center gap-2 text-sm">
               <Truck className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="text-muted-foreground">
@@ -539,13 +602,12 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
               </span>
             </div>
 
-            {/* Stock */}
             <div className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium", stockStatus.bg)}>
               <span className={cn("h-2 w-2 rounded-full flex-shrink-0", stockStatus.dot)} />
               <Package className={cn("h-4 w-4", stockStatus.color)} />
-              <span className={stockStatus.color}>{stockStatus.label}</span>
+              <span className={stockStatus.color}>{stockLabel}</span>
               {activeStock > 0 && activeStock <= 20 && (
-                <div className="ml-auto flex items-center gap-1.5">
+                <div className="ml-auto">
                   <div className="h-1.5 w-20 bg-border/60 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700"
@@ -563,7 +625,7 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
           {/* Social proof */}
           <ProductDetailSocialProof
             productId={product.id}
-            selectedVariant={selectedColor ?? selectedSize ?? null}
+            selectedVariant={selectedColor ?? selectedSize ?? selectedVolume ?? null}
             inStock={activeStock > 0}
           />
 
@@ -631,105 +693,216 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
 
           <Separator className="my-5" />
 
-          {/* Size selector */}
-          {product.sizes && product.sizes.length > 0 && (
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-bold">Beden Seçin</span>
-                  {selectedSize && <Badge variant="secondary" className="text-xs">{selectedSize}</Badge>}
-                </div>
-                <button className="text-xs text-primary hover:underline flex items-center gap-1">
-                  Beden Rehberi <Info className="h-3 w-3" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {product.sizes.map((s) => {
-                  const unavailable = !s.available || s.stock === 0
-                  const lowStock    = s.stock > 0 && s.stock <= 3
-                  return (
-                    <button
-                      key={s.size}
-                      onClick={() => setSelectedSize(s.size)}
-                      disabled={unavailable}
-                      className={cn(
-                        "relative min-w-[44px] px-3.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-150",
-                        selectedSize === s.size
-                          ? "border-primary bg-primary text-primary-foreground shadow-md"
-                          : unavailable
-                          ? "border-border/40 text-muted-foreground/40 line-through cursor-not-allowed bg-secondary/20"
-                          : "border-border hover:border-primary/60 hover:bg-secondary/60 text-foreground"
-                      )}
-                    >
-                      {s.size}
-                      {lowStock && !unavailable && (
-                        <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold shadow">{s.stock}</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-              {selectedSize && (() => {
-                const s = product.sizes!.find((s) => s.size === selectedSize)
-                return s && s.stock <= 5 && s.stock > 0 ? (
-                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1.5 font-medium">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Bu bedende son {s.stock} adet!
-                  </p>
-                ) : null
-              })()}
-            </div>
-          )}
+          {/* ── Variant selectors ── */}
+          <div className="space-y-5">
 
-          {/* Color selector */}
-          {product.colors && product.colors.length > 0 && (
-            <div className="mb-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Palette className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-bold">Renk Seçin</span>
-                {selectedColor && <Badge variant="secondary" className="text-xs">{selectedColor}</Badge>}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {product.colors.map((c) => {
-                  const isLight = c.hex === "#ffffff" || c.hex === "#fef3c7" || c.hex === "#d4a574"
-                  const isSelected = selectedColor === c.name
-                  return (
-                    <button
-                      key={c.name}
-                      onClick={() => setSelectedColor(c.name)}
-                      title={`${c.name} (${c.stock} adet)`}
-                      className={cn(
-                        "group/color flex flex-col items-center gap-1.5",
-                        c.stock === 0 && "opacity-40 cursor-not-allowed"
-                      )}
-                      disabled={c.stock === 0}
-                    >
-                      <span
+            {/* Color selector */}
+            {product.colors && product.colors.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-bold text-foreground">Renk:</span>
+                    {selectedColor
+                      ? <span className="text-sm font-semibold text-primary">{selectedColor}</span>
+                      : <span className="text-sm text-muted-foreground">Seçiniz</span>}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {product.colors.map((c) => {
+                    const isLight = c.hex === "#ffffff" || c.hex === "#f3f4f6" || c.hex === "#fef3c7"
+                    const isSelected = selectedColor === c.name
+                    const outOfStock = c.stock === 0
+                    return (
+                      <button
+                        key={c.name}
+                        onClick={() => { setSelectedColor(c.name); setVariantError(null) }}
+                        disabled={outOfStock}
+                        title={`${c.name}${outOfStock ? " — Tükendi" : ` — ${c.stock} adet`}`}
                         className={cn(
-                          "relative h-10 w-10 rounded-full border-2 transition-all duration-200 shadow-sm",
+                          "group/color flex flex-col items-center gap-1.5 transition-all duration-150",
+                          outOfStock && "opacity-40 cursor-not-allowed"
+                        )}
+                      >
+                        <span className={cn(
+                          "relative flex h-11 w-11 items-center justify-center rounded-full border-2 shadow-sm transition-all duration-200",
                           isSelected
                             ? "border-primary ring-2 ring-primary/30 ring-offset-2 scale-110 shadow-md"
-                            : isLight ? "border-border hover:border-primary/50 hover:scale-105" : "border-transparent hover:border-primary/50 hover:scale-105"
+                            : isLight
+                            ? "border-border hover:border-primary/60 hover:scale-105"
+                            : "border-transparent hover:border-white/70 hover:scale-105"
                         )}
-                        style={{ backgroundColor: c.hex }}
-                      >
-                        {isSelected && (
-                          <Check className={cn("absolute inset-0 m-auto h-4 w-4", isLight ? "text-foreground" : "text-white")} />
-                        )}
-                      </span>
-                      <span className={cn("text-[10px] font-medium transition-colors", isSelected ? "text-primary" : "text-muted-foreground group-hover/color:text-foreground")}>{c.name}</span>
-                    </button>
+                          style={{ backgroundColor: c.hex }}
+                        >
+                          {isSelected && (
+                            <Check className={cn("h-4 w-4 drop-shadow-sm", isLight ? "text-foreground" : "text-white")} />
+                          )}
+                          {outOfStock && !isSelected && (
+                            <span className="absolute inset-0 rounded-full" style={{ background: "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.2) 3px,rgba(0,0,0,0.2) 4px)" }} />
+                          )}
+                        </span>
+                        <span className={cn("text-[10px] font-medium leading-none", isSelected ? "text-primary" : "text-muted-foreground")}>
+                          {c.name}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedColor && (() => {
+                  const c = product.colors!.find((c) => c.name === selectedColor)!
+                  if (!c) return null
+                  if (c.stock === 0) return (
+                    <p className="text-xs text-red-600 mt-2 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Bu renk tükendi
+                    </p>
                   )
-                })}
+                  if (c.stock <= 5) return (
+                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {selectedColor} renkte son {c.stock} adet kaldı!
+                    </p>
+                  )
+                  return null
+                })()}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Size selector */}
+            {product.sizes && product.sizes.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Ruler className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-bold text-foreground">Beden:</span>
+                    {selectedSize
+                      ? <span className="text-sm font-semibold text-primary">{selectedSize}</span>
+                      : <span className="text-sm text-muted-foreground">Seçiniz</span>}
+                  </div>
+                  <button className="text-xs text-primary hover:underline flex items-center gap-1">
+                    Beden Rehberi <Info className="h-3 w-3" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((s) => {
+                    const unavailable = !s.available || s.stock === 0
+                    const lowStock = s.stock > 0 && s.stock <= 3
+                    const isSelected = selectedSize === s.size
+                    return (
+                      <button
+                        key={s.size}
+                        onClick={() => { setSelectedSize(s.size); setVariantError(null) }}
+                        disabled={unavailable}
+                        title={unavailable ? `${s.size} — Tükendi` : `${s.size} — ${s.stock} adet`}
+                        className={cn(
+                          "relative min-w-[52px] px-3.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-150",
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground shadow-md"
+                            : unavailable
+                            ? "border-border/40 text-muted-foreground/40 line-through cursor-not-allowed bg-secondary/20"
+                            : "border-border hover:border-primary/60 hover:bg-secondary/60 text-foreground"
+                        )}
+                      >
+                        {s.size}
+                        {lowStock && !unavailable && (
+                          <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold shadow-sm">
+                            {s.stock}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedSize && (() => {
+                  const s = product.sizes!.find((s) => s.size === selectedSize)!
+                  if (!s || s.stock > 5) return null
+                  if (s.stock === 0) return (
+                    <p className="text-xs text-red-600 mt-2 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {selectedSize} beden tükendi
+                    </p>
+                  )
+                  return (
+                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {selectedSize} bedende son {s.stock} adet kaldı!
+                    </p>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* Volume / capacity selector */}
+            {product.volumes && product.volumes.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-bold text-foreground">Boyut / Kapasite:</span>
+                  {selectedVolume
+                    ? <span className="text-sm font-semibold text-primary">{selectedVolume}</span>
+                    : <span className="text-sm text-muted-foreground">Seçiniz</span>}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {product.volumes.map((v) => {
+                    const unavailable = !v.available || v.stock === 0
+                    const isSelected  = selectedVolume === v.label
+                    return (
+                      <button
+                        key={v.label}
+                        onClick={() => { setSelectedVolume(v.label); setVariantError(null) }}
+                        disabled={unavailable}
+                        title={unavailable ? `${v.label} — Tükendi` : `${v.label} — ${v.stock} adet`}
+                        className={cn(
+                          "relative flex flex-col items-center px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-150",
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground shadow-md"
+                            : unavailable
+                            ? "border-border/40 text-muted-foreground/40 cursor-not-allowed bg-secondary/20"
+                            : "border-border hover:border-primary/60 hover:bg-secondary/60 text-foreground"
+                        )}
+                      >
+                        <span>{v.label}</span>
+                        {v.price && (
+                          <span className={cn("text-[10px] font-normal mt-0.5", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                            {v.price.toLocaleString("tr-TR")} ₺
+                          </span>
+                        )}
+                        {unavailable && (
+                          <span className={cn("text-[9px] mt-0.5", isSelected ? "text-primary-foreground/60" : "text-red-400")}>Tükendi</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedVolume && (() => {
+                  const v = product.volumes!.find((v) => v.label === selectedVolume)!
+                  if (!v || v.stock > 5) return null
+                  if (v.stock === 0) return (
+                    <p className="text-xs text-red-600 mt-2 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {selectedVolume} boyutu tükendi
+                    </p>
+                  )
+                  return (
+                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {selectedVolume} için son {v.stock} adet kaldı!
+                    </p>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* Variant validation error */}
+            {variantError && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200 animate-in slide-in-from-top-1 duration-200">
+                <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-red-600">{variantError}</span>
+              </div>
+            )}
+
+          </div>
+
+          <Separator className="my-5" />
 
           {/* Quantity + Add to cart */}
           {activeStock > 0 ? (
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
-                {/* Quantity */}
                 <div className="flex items-center rounded-xl border overflow-hidden bg-secondary/20 self-start">
                   <button
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -747,7 +920,6 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                {/* Add to cart */}
                 <Button
                   size="lg"
                   className="flex-1 gap-2 h-11 rounded-xl font-bold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
@@ -757,7 +929,6 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
                   Sepete Ekle
                 </Button>
               </div>
-              {/* Buy now */}
               <Button
                 size="lg"
                 variant="outline"
@@ -767,8 +938,6 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
                 <Zap className="h-4 w-4" />
                 Hemen Al
               </Button>
-
-              {/* Urgency */}
               {activeStock > 0 && activeStock <= 5 && (
                 <p className="text-xs font-semibold text-red-600 flex items-center gap-1.5 animate-pulse">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
@@ -783,12 +952,10 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
             </div>
           )}
 
-          {/* Installment table */}
           <div className="mt-4">
-            <InstallmentTable price={product.price} />
+            <InstallmentTable price={activePrice} />
           </div>
 
-          {/* Vendor card (inline, compact) */}
           <div className="mt-5 rounded-xl border border-border/60 bg-secondary/20 px-4 py-3 flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-bold text-sm">
               {vendor?.name?.slice(0, 1) ?? "M"}
@@ -808,7 +975,6 @@ export function ProductDetail({ product, vendor, category }: ProductDetailProps)
             )}
           </div>
 
-          {/* Share + Tags */}
           <div className="mt-5 flex flex-col gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">Paylaş:</span>

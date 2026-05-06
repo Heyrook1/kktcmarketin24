@@ -8,6 +8,14 @@ export interface ProductColor {
   name: string
   hex: string
   stock: number
+  images?: string[]  // color-specific gallery images
+}
+
+export interface ProductVolume {
+  label: string      // "30 ml", "50 ml", "100 ml", "128 GB"
+  stock: number
+  available: boolean
+  price?: number     // if volume has a different price
 }
 
 export interface Product {
@@ -27,9 +35,9 @@ export interface Product {
   tags: string[]
   featured: boolean
   createdAt: string
-  // New dynamic properties
   sizes?: ProductSize[]
   colors?: ProductColor[]
+  volumes?: ProductVolume[]
   specifications?: Record<string, string>
   material?: string
   weight?: string
@@ -425,12 +433,16 @@ export const products: Product[] = [
   },
   {
     id: "gb-003",
-    name: "Luxury Perfume 50ml",
-    slug: "luxury-perfume-50ml",
-    description: "Elegant fragrance with notes of jasmine, vanilla, and sandalwood. Long-lasting scent.",
-    price: 1899,
-    originalPrice: 2299,
-    images: ["https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&h=600&fit=crop"],
+    name: "Luxury Perfume",
+    slug: "luxury-perfume",
+    description: "Yasemin, vanilya ve sandal ağacı notalarıyla zarif bir parfüm. Uzun süre kalıcı koku, her özel an için ideal.",
+    price: 1299,
+    originalPrice: 1599,
+    images: [
+      "https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=600&h=600&fit=crop",
+    ],
     categoryId: "beauty",
     vendorId: "glowbeauty",
     rating: 4.7,
@@ -439,7 +451,23 @@ export const products: Product[] = [
     stockCount: 80,
     tags: ["perfume", "fragrance", "luxury"],
     featured: true,
-    createdAt: "2024-01-20"
+    createdAt: "2024-01-20",
+    volumes: [
+      { label: "30 ml",  stock: 25, available: true,  price: 899  },
+      { label: "50 ml",  stock: 40, available: true,  price: 1299 },
+      { label: "100 ml", stock: 15, available: true,  price: 1899 },
+      { label: "200 ml", stock: 0,  available: false, price: 2999 },
+    ],
+    specifications: {
+      "Koku Ailesi": "Çiçeksi & Odunsu",
+      "Nota (Üst)": "Bergamot, Limon",
+      "Nota (Orta)": "Yasemin, Gül",
+      "Nota (Alt)": "Sandal Ağacı, Vanilya, Misk",
+      "Kalıcılık": "8-12 saat",
+      "Konsantrasyon": "Eau de Parfum (%20)",
+      "Ülke": "Fransa",
+    },
+    warranty: "Orijinal ürün garantisi",
   },
   {
     id: "gb-004",
