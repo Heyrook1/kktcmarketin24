@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     .eq('id', user.id)
     .maybeSingle()
 
-  const roleName = (profile?.roles as { name: string } | null)?.name
+  const roleName = (profile?.roles as unknown as { name: string } | null)?.name
   const isAdmin = roleName === 'admin'
 
   if (!store && !isAdmin) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id)
     .maybeSingle()
 
-  const roleName = (profile?.roles as { name: string } | null)?.name
+  const roleName = (profile?.roles as unknown as { name: string } | null)?.name
   if (roleName !== 'admin') {
     return NextResponse.json({ error: 'Yalnızca yöneticiler ikincil doğrulamayı onaylayabilir.' }, { status: 403 })
   }

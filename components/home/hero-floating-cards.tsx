@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import { ShieldCheck, CreditCard, Users, TrendingUp, Star, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -30,7 +30,7 @@ function useLiveCounter(initial: number, min: number, max: number, intervalMs: n
 interface FloatingCardProps {
   icon: React.ReactNode
   label: string
-  value: string | number
+  value: React.ReactNode
   subtext?: string
   accent?: string
   className?: string

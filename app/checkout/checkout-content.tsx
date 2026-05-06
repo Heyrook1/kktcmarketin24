@@ -171,6 +171,21 @@ export function CheckoutContent({ user, profile }: CheckoutContentProps) {
         {/* ── LEFT: Delivery form ── */}
         <div className="lg:col-span-2 space-y-5">
 
+          {!isLoggedIn && (
+            <div className="flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-4">
+              <Lock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">Sipariş verebilmek için giriş yapın</p>
+                <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
+                  Kapıda ödeme ile sipariş verebilmek için hesabınıza giriş yapmanız zorunludur.
+                </p>
+                <Button size="sm" className="mt-3" asChild>
+                  <a href="/login?next=/checkout">Giriş Yap</a>
+                </Button>
+              </div>
+            </div>
+          )}
+
           {serverError && (
             <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3">
               <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />

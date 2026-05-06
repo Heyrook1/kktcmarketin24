@@ -100,7 +100,7 @@ export async function getUserCoupons(): Promise<Coupon[]> {
   return data
     .filter((row) => row.coupon)
     .map((row) =>
-      mapCoupon(row.coupon as Record<string, unknown>, row.used_at as string | null)
+      mapCoupon(row.coupon as unknown as Record<string, unknown>, row.used_at as string | null)
     )
 }
 

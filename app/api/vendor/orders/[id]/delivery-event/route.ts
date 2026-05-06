@@ -71,7 +71,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!actorUserId) {
     const adminAuth = await assertAdminAuth()
     if (!adminAuth.ok) {
-      return NextResponse.json({ error: vendorAuth.message }, { status: vendorAuth.status })
+      return NextResponse.json({ error: (vendorAuth as { message?: string }).message ?? "Unauthorized" }, { status: (vendorAuth as { status?: number }).status ?? 403 })
     }
     actorUserId = adminAuth.userId
   }
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       .eq("id", vendorOrderId)
       .maybeSingle()
     if (!error && data) {
-      vendorOrder = data as VendorOrderLookup
+      vendorOrder = data as unknown as VendorOrderLookup
       break
     }
   }

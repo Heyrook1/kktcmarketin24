@@ -8,8 +8,17 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
 import './globals.css'
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const syne  = Syne({ subsets: ["latin"], variable: "--font-syne", weight: ["400","500","600","700","800"] })
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+})
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-syne",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: {

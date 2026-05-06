@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PROTECTED_PATHS = ['/account', '/orders', '/checkout', '/messaging']
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -39,7 +41,31 @@ export async function updateSession(request: NextRequest) {
   // with the Supabase client, your users may be randomly logged out.
   const {
     data: { user },
+    error: getUserError,
   } = await supabase.auth.getUser()
+
+  // Invalid/expired refresh token — clear the session cookies so the user
+  // is treated as logged-out instead of being stuck in a broken state.
+  if (
+    getUserError &&
+    (getUserError.message?.includes('Refresh Token Not Found') ||
+      getUserError.message?.includes('Invalid Refresh Token') ||
+      getUserError.code === 'refresh_token_not_found')
+  ) {
+    const url = request.nextUrl.clone()
+    const isProtected = PROTECTED_PATHS.some((p) => url.pathname.startsWith(p))
+    const response = isProtected
+      ? NextResponse.redirect(new URL('/login', request.url))
+      : NextResponse.next({ request })
+
+    // Clear Supabase auth cookies
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith('sb-')) {
+        response.cookies.delete(cookie.name)
+      }
+    }
+    return response
+  }
 
   if (
     // if the user is not logged in and the app path, in this case, /protected, is accessed, redirect to the login page

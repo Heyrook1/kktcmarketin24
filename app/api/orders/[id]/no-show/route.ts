@@ -50,7 +50,7 @@ export async function POST(
     .eq('id', user.id)
     .maybeSingle()
 
-  const roleName = (profile?.roles as { name: string } | null)?.name
+  const roleName = (profile?.roles as unknown as { name: string } | null)?.name
   const isAdmin = roleName === 'admin'
 
   if (!isAdmin) {

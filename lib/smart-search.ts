@@ -74,7 +74,6 @@ const CATEGORY_MAP: Record<string, { key: string; slug: string }> = {
   αθλητικά:     { key: "spor",       slug: "sports" },
   σπίτι:        { key: "ev-bahce",   slug: "home-garden" },
   σπορ:         { key: "spor",       slug: "sports" },
-  σπίτι:        { key: "ev-bahce",   slug: "home-garden" },
   κήπος:        { key: "ev-bahce",   slug: "home-garden" },
   παιδιά:       { key: "cocuk",      slug: "kids-baby" },
   βρέφος:       { key: "cocuk",      slug: "kids-baby" },

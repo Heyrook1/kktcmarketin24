@@ -94,12 +94,12 @@ export function VendorProfileSheet({ vendorId, open, onOpenChange }: VendorProfi
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span className="font-bold text-sm">{vendor.rating}</span>
                 </div>
-                <span className="text-xs text-muted-foreground mt-0.5">{vendor.reviewCount} yorum</span>
+                <span className="text-xs text-muted-foreground mt-0.5">{(vendor as import("@/lib/data/vendors").Vendor & { reviewCount?: number }).reviewCount ?? 0} yorum</span>
               </div>
               <div className="flex flex-col items-center p-3 rounded-xl bg-secondary/50 text-center">
                 <div className="flex items-center gap-1">
                   <Package className="h-3.5 w-3.5 text-primary" />
-                  <span className="font-bold text-sm">{vendor.productCount}</span>
+                  <span className="font-bold text-sm">{(vendor as import("@/lib/data/vendors").Vendor & { productCount?: number }).productCount ?? 0}</span>
                 </div>
                 <span className="text-xs text-muted-foreground mt-0.5">Ürün</span>
               </div>

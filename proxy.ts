@@ -47,7 +47,23 @@ export async function proxy(request: NextRequest) {
   )
 
   // Refresh session — this is the only getUser() call we make
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: getUserError } = await supabase.auth.getUser()
+
+  // Invalid/expired refresh token → clear sb- cookies so the user is treated
+  // as logged-out instead of being stuck in a broken auth loop.
+  if (
+    getUserError &&
+    (getUserError.message?.includes('Refresh Token Not Found') ||
+      getUserError.message?.includes('Invalid Refresh Token') ||
+      (getUserError as { code?: string }).code === 'refresh_token_not_found')
+  ) {
+    const rule = ROLE_PROTECTED.find((r) => pathname.startsWith(r.path))
+    const target = rule ? redirectToLogin(request, response, pathname) : response
+    for (const cookie of request.cookies.getAll()) {
+      if (cookie.name.startsWith('sb-')) target.cookies.delete(cookie.name)
+    }
+    return target
+  }
 
   // Find whether this path is protected and what roles are required
   const rule = ROLE_PROTECTED.find((r) => pathname.startsWith(r.path))

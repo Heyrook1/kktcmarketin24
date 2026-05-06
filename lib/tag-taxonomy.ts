@@ -161,8 +161,53 @@ export const ATTRIBUTE_TAGS: Record<string, string> = {
   flagship: "Flagship", "yeni-sezon": "Yeni Sezon",
 }
 
+export const FILTER_PREFIXES = ["gender", "size", "color", "brand", "type", "subtype"] as const
+export type FilterPrefix = typeof FILTER_PREFIXES[number]
+
+export const TR_COLOR_HEX: Record<string, string> = {
+  siyah:       "#1a1a1a",
+  beyaz:       "#ffffff",
+  kırmızı:     "#ef4444",
+  kirmizi:     "#ef4444",
+  mavi:        "#3b82f6",
+  "açık mavi": "#7dd3fc",
+  lacivert:    "#1e3a5f",
+  yeşil:       "#22c55e",
+  yesil:       "#22c55e",
+  gri:         "#6b7280",
+  sarı:        "#eab308",
+  sari:        "#eab308",
+  turuncu:     "#f97316",
+  mor:         "#a855f7",
+  pembe:       "#ec4899",
+  kahverengi:  "#92400e",
+  bej:         "#d4a574",
+  krem:        "#fef3c7",
+  haki:        "#737523",
+  bordo:       "#9f1239",
+  altın:       "#d97706",
+  altin:       "#d97706",
+  gümüş:       "#9ca3af",
+  gumus:       "#9ca3af",
+}
+
 // Get display label + color for any tag
 export function getTagMeta(tag: string): { label: string; color: "blue" | "purple" | "gray" | "green" | "orange" } {
+  // Handle prefixed filter tags: "gender:erkek" → { label: "Erkek", color: "blue" }
+  const colonIdx = tag.indexOf(":")
+  if (colonIdx !== -1) {
+    const prefix = tag.slice(0, colonIdx) as FilterPrefix
+    if ((FILTER_PREFIXES as readonly string[]).includes(prefix)) {
+      const value = tag.slice(colonIdx + 1)
+      const label = value.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+      const colorMap: Record<FilterPrefix, "blue" | "purple" | "gray" | "green" | "orange"> = {
+        gender: "blue", size: "gray", color: "orange",
+        brand: "purple", type: "green", subtype: "green",
+      }
+      return { label, color: colorMap[prefix] }
+    }
+  }
+
   // Check category
   if (TAG_TAXONOMY[tag]) {
     return { label: TAG_TAXONOMY[tag].label, color: TAG_TAXONOMY[tag].color }

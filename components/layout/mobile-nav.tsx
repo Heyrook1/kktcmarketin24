@@ -12,7 +12,7 @@ const navItems = [
   { href: "/", icon: Home, label: "Ana Sayfa" },
   { href: "/categories", icon: LayoutGrid, label: "Kategoriler" },
   { href: "/wishlist", icon: Heart, label: "Favoriler", showWishlistBadge: true },
-  { href: "/account", icon: UserCircle, label: "Hesabim" },
+  { href: "/account", icon: UserCircle, label: "Hesabım" },
   { href: "/cart", icon: ShoppingCart, label: "Sepet", showBadge: true },
 ]
 

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Ersan\\\\Desktop\\\\kktcmarketin24\\\\app\" -Directory | Where-Object { $_.Name -in @\\(\"returns\",\"orders\",\"messaging\",\"vendor-admin\",\"order-confirmation\"\\) } | Select-Object Name, FullName)",
+      "PowerShell(cmd /c \"dir c:\\\\Users\\\\Ersan\\\\Desktop\\\\kktcmarketin24\\\\app /AD /B\")",
+      "PowerShell(cmd /c \"dir c:\\\\Users\\\\Ersan\\\\Desktop\\\\kktcmarketin24\\\\lib\\\\supabase /B\")"
+    ]
+  }
+}

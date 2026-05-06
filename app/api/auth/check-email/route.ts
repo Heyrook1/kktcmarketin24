@@ -36,10 +36,12 @@ export async function POST(req: NextRequest) {
 
     // listUsers doesn't support email filter directly in all versions,
     // so we use getUserByEmail which is the most reliable approach.
-    const { data: userData, error: userError } =
-      await admin.auth.admin.getUserByEmail(email)
+    const { data: listData, error: userError } =
+      await admin.auth.admin.listUsers()
 
-    if (userError || !userData?.user) {
+    const exists = !userError && listData?.users?.some((u) => u.email === email)
+
+    if (!exists) {
       return NextResponse.json({ exists: false }, { status: 200 })
     }
 

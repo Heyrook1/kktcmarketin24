@@ -102,7 +102,7 @@ export default function VendorsPage() {
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       <span className="font-medium">{vendor.rating}</span>
                       <span className="text-sm text-muted-foreground">
-                        ({vendor.reviewCount} değerlendirme)
+                        ({(vendor as import("@/lib/data/vendors").Vendor & { reviewCount?: number }).reviewCount ?? 0} değerlendirme)
                       </span>
                     </div>
 

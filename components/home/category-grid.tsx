@@ -1,72 +1,118 @@
 import Link from "next/link"
+import Image from "next/image"
 import {
-  Smartphone, Shirt, Home, Sparkles, Dumbbell,
-  Baby, Watch, ShoppingBasket, Heart, BookOpen,
-  ArrowRight,
+  ArrowRight, SlidersHorizontal,
 } from "lucide-react"
 import { categories } from "@/lib/data/categories"
 import { cn } from "@/lib/utils"
 
-const ICON_META: Record<string, { Icon: React.ElementType; bg: string; fg: string; hoverBg: string }> = {
-  "electronics": { Icon: Smartphone,     bg: "bg-blue-100 dark:bg-blue-950",    fg: "text-blue-600 dark:text-blue-400",    hoverBg: "group-hover:bg-blue-600"    },
-  "fashion":     { Icon: Shirt,          bg: "bg-rose-100 dark:bg-rose-950",    fg: "text-rose-600 dark:text-rose-400",    hoverBg: "group-hover:bg-rose-500"    },
-  "home-garden": { Icon: Home,           bg: "bg-amber-100 dark:bg-amber-950",  fg: "text-amber-600 dark:text-amber-400",  hoverBg: "group-hover:bg-amber-500"   },
-  "beauty":      { Icon: Sparkles,       bg: "bg-purple-100 dark:bg-purple-950",fg: "text-purple-600 dark:text-purple-400",hoverBg: "group-hover:bg-purple-500"  },
-  "sports":      { Icon: Dumbbell,       bg: "bg-green-100 dark:bg-green-950",  fg: "text-green-600 dark:text-green-400",  hoverBg: "group-hover:bg-green-600"   },
-  "kids-baby":   { Icon: Baby,           bg: "bg-sky-100 dark:bg-sky-950",      fg: "text-sky-600 dark:text-sky-400",      hoverBg: "group-hover:bg-sky-500"     },
-  "jewelry":     { Icon: Watch,          bg: "bg-yellow-100 dark:bg-yellow-950",fg: "text-yellow-600 dark:text-yellow-400",hoverBg: "group-hover:bg-yellow-500"  },
-  "groceries":   { Icon: ShoppingBasket, bg: "bg-lime-100 dark:bg-lime-950",    fg: "text-lime-700 dark:text-lime-400",    hoverBg: "group-hover:bg-lime-600"    },
-  "health":      { Icon: Heart,          bg: "bg-red-100 dark:bg-red-950",      fg: "text-red-600 dark:text-red-400",      hoverBg: "group-hover:bg-red-500"     },
-  "books":       { Icon: BookOpen,       bg: "bg-orange-100 dark:bg-orange-950",fg: "text-orange-600 dark:text-orange-400",hoverBg: "group-hover:bg-orange-500"  },
+interface CategoryGridProps {
+  selectedCategory: string | null
+  onSelectCategory: (id: string | null) => void
+  onFilterClick: () => void
+  isFilterOpen: boolean
 }
 
-export function CategoryGrid() {
+export function CategoryGrid({
+  selectedCategory,
+  onSelectCategory,
+  onFilterClick,
+  isFilterOpen,
+}: CategoryGridProps) {
   return (
-    <section className="border-b bg-background">
-      <div className="container mx-auto px-3 md:px-4">
-        <div className="flex items-center gap-2 overflow-x-auto py-3 scrollbar-hide">
-          {categories.map((cat) => {
-            const meta = ICON_META[cat.id] ?? {
-              Icon: Sparkles,
-              bg: "bg-secondary",
-              fg: "text-foreground",
-              hoverBg: "group-hover:bg-primary",
-            }
-            return (
-              <Link
-                key={cat.id}
-                href={`/urunler?category=${cat.slug}`}
-                className={cn(
-                  "group flex-shrink-0 flex items-center gap-2 rounded-full border px-3 py-1.5",
-                  "text-sm font-medium transition-all duration-150 whitespace-nowrap",
-                  "bg-background border-border text-foreground",
-                  "hover:border-transparent hover:shadow-sm",
-                )}
-              >
-                <span className={cn(
-                  "flex items-center justify-center h-6 w-6 rounded-full transition-colors duration-150 flex-shrink-0",
-                  meta.bg,
-                  meta.hoverBg,
-                )}>
-                  <meta.Icon className={cn(
-                    "h-3.5 w-3.5 transition-colors duration-150",
-                    meta.fg,
-                    "group-hover:text-white",
-                  )} />
-                </span>
-                <span className="group-hover:text-primary transition-colors">{cat.name}</span>
-              </Link>
-            )
-          })}
-          <Link
-            href="/urunler"
-            className="flex-shrink-0 flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-4 py-1.5 text-sm font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-150 whitespace-nowrap ml-1"
-          >
-            {"Tüm Kategoriler"}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+    <div className="w-full bg-background pt-3 pb-2 shadow-sm">
+      <div className="container mx-auto px-4">
+        <div className="flex items-start gap-4 overflow-x-auto py-2 scrollbar-hide">
+        
+        {/* Filter Toggle Button */}
+        <button
+          onClick={onFilterClick}
+          className="flex flex-col items-center gap-2 group flex-shrink-0 w-[72px]"
+        >
+          <div className={cn(
+            "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 border-2",
+            isFilterOpen 
+              ? "border-primary p-0.5 shadow-md" 
+              : "border-border bg-card group-hover:border-primary/50 group-hover:bg-secondary/80"
+          )}>
+            <div className={cn(
+              "w-full h-full rounded-full flex items-center justify-center",
+              isFilterOpen ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground group-hover:text-primary"
+            )}>
+              <SlidersHorizontal className="h-6 w-6" />
+            </div>
+          </div>
+          <span className={cn(
+            "text-[11px] font-semibold text-center whitespace-nowrap transition-colors",
+            isFilterOpen ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground"
+          )}>
+            Filtrele
+          </span>
+        </button>
+
+        {/* All Categories Button */}
+        <button
+          onClick={() => onSelectCategory(null)}
+          className="flex flex-col items-center gap-2 group flex-shrink-0 w-[72px]"
+        >
+          <div className={cn(
+            "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 border-2",
+            selectedCategory === null 
+              ? "border-primary p-0.5 shadow-md" 
+              : "border-border bg-card group-hover:border-primary/50 group-hover:bg-secondary/80"
+          )}>
+            <div className={cn(
+              "w-full h-full rounded-full flex items-center justify-center font-bold text-sm",
+              selectedCategory === null ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground group-hover:text-primary"
+            )}>
+              Tümü
+            </div>
+          </div>
+          <span className={cn(
+            "text-[11px] font-semibold text-center whitespace-nowrap transition-colors",
+            selectedCategory === null ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground"
+          )}>
+            Tüm Ürünler
+          </span>
+        </button>
+
+        {/* Categories (Story-style) */}
+        {categories.map((cat) => {
+          const isSelected = selectedCategory === cat.id
+
+          return (
+            <button
+              key={cat.id}
+              onClick={() => onSelectCategory(cat.id)}
+              className="flex flex-col items-center gap-2 group flex-shrink-0 w-[76px]"
+            >
+              <div className={cn(
+                "w-16 h-16 rounded-full transition-all duration-200 border-[3px] overflow-hidden",
+                isSelected 
+                  ? "border-primary p-0.5 shadow-md" 
+                  : "border-transparent bg-secondary group-hover:border-primary/40 group-hover:shadow-sm"
+              )}>
+                <div className="w-full h-full rounded-full overflow-hidden relative">
+                  <Image
+                    src={cat.image}
+                    alt={cat.name}
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-300"
+                    sizes="64px"
+                  />
+                </div>
+              </div>
+              <span className={cn(
+                "text-[11px] font-medium text-center line-clamp-2 leading-tight transition-colors px-1",
+                isSelected ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground",
+              )}>
+                {cat.name}
+              </span>
+            </button>
+          )
+        })}
         </div>
       </div>
-    </section>
+    </div>
   )
 }

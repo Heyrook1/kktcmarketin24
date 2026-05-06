@@ -56,7 +56,7 @@ export function Footer() {
           <div>
             <h3 className="mb-4 text-sm font-semibold">Kategoriler</h3>
             <ul className="flex flex-col gap-2">
-              {categories.slice(0, 6).map((category) => (
+              {categories.map((category) => (
                 <li key={category.id}>
                   <Link
                     href={`/urunler?category=${category.slug}`}
@@ -137,10 +137,10 @@ export function Footer() {
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <a
-                  href="tel:+905338734317"
+                  href="tel:+903928734317"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
-                  +90 533 873 43 17
+                  +90 392 873 43 17
                 </a>
               </li>
               <li className="flex items-center gap-3">

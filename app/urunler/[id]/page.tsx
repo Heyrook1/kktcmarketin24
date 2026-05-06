@@ -151,23 +151,31 @@ export default async function UrunlerDetailPage({ params }: Props) {
   // Increment view count (fire-and-forget)
   supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
 
-  const storeRaw = Array.isArray(raw.vendor_stores) ? raw.vendor_stores[0] : raw.vendor_stores
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawAny = raw as any as { vendor_stores?: unknown; store_id: string; category?: string; id: string }
+  const storeRaw = Array.isArray(rawAny.vendor_stores) ? (rawAny.vendor_stores as { id: string; name: string; slug: string; description?: string | null; logo_url?: string | null; is_verified?: boolean | null }[])[0] : (rawAny.vendor_stores as { id: string; name: string; slug: string; description?: string | null; logo_url?: string | null; is_verified?: boolean | null } | null | undefined)
 
   const product = toProduct(raw as Parameters<typeof toProduct>[0])
 
   // Try to get vendor from static data first (has more detail); fall back to DB row
-  const vendor = getVendorById(raw.store_id) ?? (storeRaw ? {
+  const vendor = getVendorById(rawAny.store_id) ?? (storeRaw ? {
     id:           storeRaw.id,
     name:         storeRaw.name,
     slug:         storeRaw.slug,
     description:  storeRaw.description ?? "",
     logo:         storeRaw.logo_url ?? "",
+    coverImage:   "",
     rating:       0,
     reviewCount:  0,
     productCount: 0,
     isVerified:   storeRaw.is_verified ?? false,
+    verified:     storeRaw.is_verified ?? false,
+    joinedDate:   "",
+    location:     "KKTC",
+    categories:   [] as string[],
+    socialLinks:  {},
     createdAt:    "",
-  } : undefined)
+  } : undefined) as import("@/lib/data/vendors").Vendor | undefined
 
   const category = getCategoryById(product.categoryId)
 
@@ -176,7 +184,7 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
-    .eq("category", raw.category)
+    .eq("category", rawAny.category ?? "")
     .neq("id", id)
     .limit(4)
 

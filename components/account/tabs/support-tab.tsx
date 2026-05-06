@@ -152,6 +152,7 @@ export function SupportTab({ userId }: { userId: string }) {
     setTimeout(() => {
       createTicket({
         subject: newForm.subject,
+        status: "open",
         category: newForm.category as SupportCategory,
         relatedOrderId: newForm.relatedOrderId || undefined,
         initialMessage: newForm.initialMessage,

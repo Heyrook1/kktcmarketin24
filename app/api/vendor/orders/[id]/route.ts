@@ -56,7 +56,7 @@ export async function GET(_: Request, { params }: RouteContext) {
       .eq("id", id)
       .maybeSingle()
     if (!error && data) {
-      vendorOrder = data as VendorOrderRow
+      vendorOrder = data as unknown as VendorOrderRow
       break
     }
   }
@@ -72,7 +72,7 @@ export async function GET(_: Request, { params }: RouteContext) {
     .eq("id", vendorOrder.store_id)
     .maybeSingle()
 
-  let order: {
+  type ParentOrder = {
     id: string
     order_number: string | null
     payment_status: string | null
@@ -84,7 +84,8 @@ export async function GET(_: Request, { params }: RouteContext) {
     total: number | null
     created_at: string
     delivery_address: Record<string, unknown> | null
-  } | null = null
+  }
+  let order: ParentOrder | null = null
   let items: Array<{
     id: string
     product_name: string
@@ -108,7 +109,7 @@ export async function GET(_: Request, { params }: RouteContext) {
       .select("id, order_number, payment_status, customer_phone, coupon_code, subtotal, shipping_fee, discount_amount, total, created_at, delivery_address")
       .eq("id", orderId)
       .maybeSingle()
-    order = (parentOrder as typeof order) ?? null
+    order = (parentOrder as unknown as ParentOrder) ?? null
 
     const { data: orderItems } = await admin
       .from("order_items")

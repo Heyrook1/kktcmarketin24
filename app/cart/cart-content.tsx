@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/format"
 import { getVendorById } from "@/lib/data/vendors"
 import { cn } from "@/lib/utils"
 import { CartDiscountPicker } from "@/components/cart/cart-discount-picker"
+import type { Product } from "@/lib/data/products"
 
 export function CartContent() {
   const {
@@ -44,6 +45,7 @@ export function CartContent() {
         <p className="text-muted-foreground mb-6">Henüz sepetinize ürün eklemediniz</p>
         <Button asChild size="lg">
           <Link href="/urunler">
+            Alışverişe Başla
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
@@ -97,9 +99,9 @@ export function CartContent() {
                         {product.name}
                       </Link>
 
-                      {(product.selectedVariant || product.variant) && (
+                      {((product as Product & { selectedVariant?: string; variant?: string }).selectedVariant || (product as Product & { variant?: string }).variant) && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {product.selectedVariant ?? product.variant}
+                          {(product as Product & { selectedVariant?: string; variant?: string }).selectedVariant ?? (product as Product & { variant?: string }).variant}
                         </p>
                       )}
 

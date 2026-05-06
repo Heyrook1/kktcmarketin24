@@ -20,6 +20,7 @@ import { createClient as createAdmin }  from "@supabase/supabase-js"
 import { z }                            from "zod"
 import { checkCheckoutGate }            from "@/lib/reliability"
 import { insertOutboxEvent }            from "@/lib/checkout/outbox"
+import { sendOrderPlacedNotifications } from "@/lib/email/send-order-placed-notifications"
 
 // ── Service-role client (bypasses RLS) ────────────────────────────────────────
 function sb() {
@@ -564,6 +565,8 @@ export async function POST(req: NextRequest) {
       customerName: deliveryAddress.fullName,
     })
   }
+
+  sendOrderPlacedNotifications(orderId).catch(() => {})
 
   return NextResponse.json({ ok: true, orderId, orderNumber, serverTotal, discountAmount }, { status: 201 })
 }

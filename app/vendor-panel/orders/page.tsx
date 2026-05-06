@@ -96,7 +96,7 @@ export default async function VendorOrdersPage({ searchParams }: VendorOrdersPag
         .in("store_id", storeIds)
         .order("created_at", { ascending: false })
       if (!error && data) {
-        items = data as VoRow[]
+        items = data as unknown as VoRow[]
         break
       }
     }
