@@ -10,6 +10,7 @@ import { getCategoryById } from "@/lib/data/categories"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { isPubliclyVisibleProduct } from "@/lib/product-visibility"
 import type { Product } from "@/lib/data/products"
 
 export const dynamic = "force-dynamic"
@@ -25,6 +26,7 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id, vendor_stores(id,name,slug)")
     .eq("id", id)
+    .eq("is_active", true)
     .maybeSingle()
 
   if (error || !data) return null
@@ -35,7 +37,7 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     : data.image_url ? [data.image_url] : ["/placeholder.svg"]
   const stockCount = typeof data.stock === "number" ? data.stock : 0
 
-  return {
+  const product = {
     id:           data.id,
     name:         data.name,
     slug:         data.id,
@@ -53,6 +55,10 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     featured:     false,
     createdAt:    data.created_at,
   }
+
+  if (!isPubliclyVisibleProduct(product)) return null
+
+  return product
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
@@ -85,12 +91,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
   // 1. Try static mock data first (legacy IDs like "tz-001")
   const staticProduct = getProductById(id)
   if (staticProduct) {
+    if (!isPubliclyVisibleProduct(staticProduct)) notFound()
+
     const vendor   = getVendorById(staticProduct.vendorId)
     const category = getCategoryById(staticProduct.categoryId)
-    const vendorProducts  = getProductsByVendor(staticProduct.vendorId).filter((p) => p.id !== id).slice(0, 4)
+    const vendorProducts  = getProductsByVendor(staticProduct.vendorId)
+      .filter((p) => p.id !== id && isPubliclyVisibleProduct(p))
+      .slice(0, 4)
     const categoryProducts = vendorProducts.length < 4
       ? getProductsByCategory(staticProduct.categoryId)
-          .filter((p) => p.id !== id && !vendorProducts.find((vp) => vp.id === p.id))
+          .filter((p) => p.id !== id && isPubliclyVisibleProduct(p) && !vendorProducts.find((vp) => vp.id === p.id))
           .slice(0, 4 - vendorProducts.length)
       : []
     const related = [...vendorProducts, ...categoryProducts].slice(0, 4)
@@ -120,6 +130,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
     .eq("category", product.categoryId)
     .neq("id", id)
     .limit(4)

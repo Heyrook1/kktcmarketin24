@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { isPubliclyVisibleProduct } from "@/lib/product-visibility"
 import type { Product } from "@/lib/data/products"
 
 /** Map a vendor_products DB row to the Product shape */
@@ -120,7 +121,9 @@ async function fetchProducts(opts: {
   query = query.order(opts.orderBy ?? "created_at", { ascending: opts.ascending ?? false })
 
   const { data } = await query
-  return (data ?? []).map((p) => toProduct(p as Parameters<typeof toProduct>[0]))
+  return (data ?? [])
+    .map((p) => toProduct(p as Parameters<typeof toProduct>[0]))
+    .filter(isPubliclyVisibleProduct)
 }
 
 async function fetchProductsWithFallback(opts: {
