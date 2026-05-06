@@ -4,7 +4,7 @@ import { Zap, Truck, Gift, Tag, Star, Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const ITEMS = [
-  { icon: Zap,    color: "text-orange-500", text: "Flaş İndirim — Elektronikte -%30"       },
+  { icon: Zap,    color: "text-yellow-300", text: "Flaş İndirim — Elektronikte -%30"       },
   { icon: Truck,  color: "text-green-500",  text: "500 ₺ Üzeri Siparişlerde Ücretsiz Kargo" },
   { icon: Gift,   color: "text-pink-500",   text: "Yeni Üyelere Özel %10 Hediye Çeki"       },
   { icon: Tag,    color: "text-purple-500", text: "Kupon: KKTC10 ile %10 İndirim"           },

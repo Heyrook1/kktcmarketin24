@@ -45,7 +45,7 @@ const ROW2 = [
     badge:    "Kampanya",
     title:    "Ev & Bahçe",
     sub:      "Dekorasyon ve mobilya",
-    gradient: "from-amber-600/90 to-orange-500/80",
+    gradient: "from-cyan-700/90 to-teal-500/80",
     href:     "/urunler?category=home-garden",
     img:      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=450&h=220&fit=crop",
   },

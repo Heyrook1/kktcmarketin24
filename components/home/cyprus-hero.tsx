@@ -23,16 +23,16 @@ export function CyprusHero() {
   const SLIDES = useMemo(() => {
     return vendors.slice(0, 4).map((v, i) => {
       const gradients = [
-        "from-blue-700 via-blue-600 to-cyan-500",
-        "from-rose-600 via-pink-500 to-orange-400",
-        "from-green-700 via-emerald-600 to-teal-500",
-        "from-purple-700 via-violet-600 to-pink-500",
+        "from-blue-700 via-blue-600 to-sky-400",
+        "from-blue-800 via-indigo-600 to-blue-500",
+        "from-sky-700 via-blue-600 to-cyan-500",
+        "from-indigo-700 via-blue-600 to-sky-500",
       ]
       const badges = [
+        "bg-sky-400/20 text-sky-100 border-sky-400/30",
+        "bg-blue-400/20 text-blue-100 border-blue-400/30",
         "bg-cyan-400/20 text-cyan-100 border-cyan-400/30",
-        "bg-rose-400/20 text-rose-100 border-rose-400/30",
-        "bg-emerald-400/20 text-emerald-100 border-emerald-400/30",
-        "bg-purple-400/20 text-purple-100 border-purple-400/30",
+        "bg-indigo-400/20 text-indigo-100 border-indigo-400/30",
       ]
       return {
         tag: "Öne Çıkan Mağaza",
@@ -53,7 +53,7 @@ export function CyprusHero() {
     return vendors.slice(4, 6).map((v, i) => {
       const gradients = [
         "from-sky-600 to-indigo-600",
-        "from-amber-500 to-orange-600"
+        "from-blue-600 to-cyan-500"
       ]
       return {
         tag: "Popüler Satıcı",
