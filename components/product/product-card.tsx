@@ -29,7 +29,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
     setIsMounted(true)
   }, [])
 
-  const secondImg = product.images[1] ?? product.images[2] ?? null
+  const galleryImgs = product.images.slice(0, 3).filter(Boolean)
 
 
   const isInStock = typeof product.inStock === "boolean"
@@ -94,35 +94,43 @@ export function ProductCard({ product, className }: ProductCardProps) {
       className
     )}>
       {/* Image container */}
-      <div
-        className="relative block overflow-hidden bg-secondary/30"
-        onMouseEnter={() => { if (secondImg) setImgIndex(1) }}
-        onMouseLeave={() => setImgIndex(0)}
-      >
+      <div className="relative block overflow-hidden bg-secondary/30">
         <Link href={`/products/${product.id}`} className="block aspect-square overflow-hidden relative">
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            className={cn(
-              "object-cover transition-all duration-500",
-              secondImg ? (imgIndex === 0 ? "opacity-100 scale-100" : "opacity-0 scale-105") : "group-hover:scale-110"
-            )}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          />
-          {secondImg && (
+          {galleryImgs.map((src, i) => (
             <Image
-              src={secondImg}
-              alt={product.name}
+              key={i}
+              src={src}
+              alt={`${product.name} ${i + 1}`}
               fill
               className={cn(
                 "object-cover transition-all duration-500",
-                imgIndex === 1 ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                i === imgIndex ? "opacity-100 scale-100" : "opacity-0 scale-105"
               )}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              priority={i === 0}
             />
-          )}
+          ))}
         </Link>
+
+        {/* Image dot indicators — visible when multiple images exist */}
+        {galleryImgs.length > 1 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1">
+            {galleryImgs.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgIndex(i) }}
+                onMouseEnter={(e) => { e.preventDefault(); e.stopPropagation(); setImgIndex(i) }}
+                aria-label={`Resim ${i + 1}`}
+                className={cn(
+                  "rounded-full transition-all duration-300 border border-white/40",
+                  i === imgIndex
+                    ? "w-5 h-1.5 bg-white shadow"
+                    : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"
+                )}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Out of stock overlay */}
         {!isInStock && (
