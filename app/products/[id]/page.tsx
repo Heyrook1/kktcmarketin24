@@ -5,12 +5,72 @@ import {
   getProductById, products,
   getProductsByVendor, getProductsByCategory,
 } from "@/lib/data/products"
+import type { ProductSize, ProductColor, ProductVolume } from "@/lib/data/products"
 import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
 import { ProductGrid } from "@/components/product/product-grid"
 import { createClient } from "@/lib/supabase/server"
 import { normalizeCat } from "@/lib/normalize-product-category"
+import { TR_COLOR_HEX } from "@/lib/tag-taxonomy"
 import type { Product } from "@/lib/data/products"
+
+/**
+ * Parse size:/color:/volume: tags into variant arrays for DB products.
+ * Tag formats accepted:
+ *   size:M  |  size:M:5  (optional stock after second colon)
+ *   color:siyah  |  color:siyah:15
+ *   volume:50ml  |  volume:50ml:20:1299  (optional stock, then optional price)
+ */
+function parseVariantTags(tags: string[], totalStock: number): {
+  sizes?: ProductSize[]
+  colors?: ProductColor[]
+  volumes?: ProductVolume[]
+} {
+  const sizeTags:   string[] = []
+  const colorTags:  string[] = []
+  const volumeTags: string[] = []
+
+  for (const tag of tags) {
+    const low = tag.toLowerCase()
+    if (low.startsWith("size:"))   sizeTags.push(tag.slice(5))
+    else if (low.startsWith("color:"))  colorTags.push(tag.slice(6))
+    else if (low.startsWith("volume:")) volumeTags.push(tag.slice(7))
+  }
+
+  const stockPerVariant = (count: number) =>
+    count === 0 ? totalStock : Math.max(1, Math.floor(totalStock / count))
+
+  const sizes: ProductSize[] | undefined = sizeTags.length > 0
+    ? sizeTags.map((s) => {
+        const [size, stockStr] = s.split(":")
+        const stock = stockStr ? Number(stockStr) : stockPerVariant(sizeTags.length)
+        return { size: size.toUpperCase(), stock, available: stock > 0 }
+      })
+    : undefined
+
+  const colors: ProductColor[] | undefined = colorTags.length > 0
+    ? colorTags.map((c) => {
+        const [name, stockStr] = c.split(":")
+        const stock = stockStr ? Number(stockStr) : stockPerVariant(colorTags.length)
+        return { name: name.charAt(0).toUpperCase() + name.slice(1), hex: TR_COLOR_HEX[name.toLowerCase()] ?? "#9ca3af", stock }
+      })
+    : undefined
+
+  const volumes: ProductVolume[] | undefined = volumeTags.length > 0
+    ? volumeTags.map((v) => {
+        const [label, stockStr, priceStr] = v.split(":")
+        const stock = stockStr ? Number(stockStr) : stockPerVariant(volumeTags.length)
+        return {
+          label,
+          stock,
+          available: stock > 0,
+          price: priceStr ? Number(priceStr) : undefined,
+        }
+      })
+    : undefined
+
+  return { sizes, colors, volumes }
+}
 
 export const dynamic = "force-dynamic"
 
@@ -34,6 +94,9 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     ? dbImages
     : data.image_url ? [data.image_url] : ["/placeholder.svg"]
   const stockCount = typeof data.stock === "number" ? data.stock : 0
+  const tags = (data.tags as string[]) ?? []
+
+  const variants = parseVariantTags(tags, stockCount)
 
   return {
     id:           data.id,
@@ -49,9 +112,10 @@ async function getProductFromDB(id: string): Promise<Product | null> {
     reviewCount:  0,
     inStock:      stockCount > 0,
     stockCount,
-    tags:         (data.tags as string[]) ?? [],
+    tags,
     featured:     false,
     createdAt:    data.created_at,
+    ...variants,
   }
 }
 

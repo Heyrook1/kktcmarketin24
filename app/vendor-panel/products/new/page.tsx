@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import {
   ArrowLeft, Loader2, Save, Upload, X, Plus, ImagePlus,
-  Tag, ChevronDown,
+  Tag, ChevronDown, Ruler, Palette, Package,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,12 @@ const SPEC_FIELDS = [
 
 type SpecKey = typeof SPEC_FIELDS[number]["key"]
 
+interface VariantRow {
+  label: string
+  stock: string
+  price: string  // optional, for volumes
+}
+
 interface FormState {
   name: string
   description: string
@@ -43,6 +49,9 @@ interface FormState {
   is_active: boolean
   extraTags: string[]
   images: string[]
+  sizes:   VariantRow[]
+  colors:  VariantRow[]
+  volumes: VariantRow[]
 }
 
 const INITIAL: FormState = {
@@ -51,6 +60,7 @@ const INITIAL: FormState = {
   specs: { brand: "", model: "", color: "", storage: "", material: "", gender: "" },
   stock: "0", is_active: true,
   extraTags: [], images: [],
+  sizes: [], colors: [], volumes: [],
 }
 
 async function parseJsonResponse<T>(res: Response, context: string): Promise<T> {
@@ -190,6 +200,72 @@ function ImageUploader({
   )
 }
 
+// ── Variant row editor ────────────────────────────────────────────────────────
+function VariantEditor({
+  title, icon: Icon, placeholder, rows, showPrice,
+  onChange,
+}: {
+  title: string
+  icon: React.ElementType
+  placeholder: string
+  rows: VariantRow[]
+  showPrice?: boolean
+  onChange: (rows: VariantRow[]) => void
+}) {
+  const addRow = () => onChange([...rows, { label: "", stock: "", price: "" }])
+  const removeRow = (i: number) => onChange(rows.filter((_, idx) => idx !== i))
+  const updateRow = (i: number, field: keyof VariantRow, val: string) =>
+    onChange(rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r))
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          {title}
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={addRow} className="h-7 gap-1 text-xs px-2">
+          <Plus className="h-3 w-3" /> Ekle
+        </Button>
+      </div>
+      {rows.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          Henüz {title.toLowerCase()} eklenmedi — &quot;Ekle&quot; ile başlayın.
+        </p>
+      )}
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              placeholder={placeholder}
+              value={row.label}
+              onChange={(e) => updateRow(i, "label", e.target.value)}
+              className="h-8 text-sm flex-1"
+            />
+            <Input
+              type="number" min="0" placeholder="Stok"
+              value={row.stock}
+              onChange={(e) => updateRow(i, "stock", e.target.value)}
+              className="h-8 text-sm w-20"
+            />
+            {showPrice && (
+              <Input
+                type="number" min="0" placeholder="Fiyat ₺"
+                value={row.price}
+                onChange={(e) => updateRow(i, "price", e.target.value)}
+                className="h-8 text-sm w-28"
+              />
+            )}
+            <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground hover:text-destructive">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Extra tag chip input ──────────────────────────────────────────────────────
 function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
   const [input, setInput] = useState("")
@@ -247,12 +323,28 @@ export default function VendorProductNewPage() {
   const selectedCategory = categories.find((c) => c.id === form.category_id)
   const subcategories = selectedCategory?.subcategories ?? []
 
-  // Build final tags: specs + subcategory + extra tags
+  // Build final tags: specs + variants + subcategory + extra tags
   function buildTags(): string[] {
     const tags: string[] = []
     for (const { key } of SPEC_FIELDS) {
       const v = form.specs[key].trim()
       if (v) tags.push(`${key}:${v.toLowerCase()}`)
+    }
+    for (const row of form.sizes) {
+      if (!row.label.trim()) continue
+      const base = `size:${row.label.trim().toUpperCase()}`
+      tags.push(row.stock ? `${base}:${row.stock}` : base)
+    }
+    for (const row of form.colors) {
+      if (!row.label.trim()) continue
+      const base = `color:${row.label.trim().toLowerCase()}`
+      tags.push(row.stock ? `${base}:${row.stock}` : base)
+    }
+    for (const row of form.volumes) {
+      if (!row.label.trim()) continue
+      const base = `volume:${row.label.trim()}`
+      const withStock = row.stock ? `${base}:${row.stock}` : base
+      tags.push(row.price ? `${withStock}:${row.price}` : withStock)
     }
     if (form.subcategory) tags.push(`sub:${form.subcategory}`)
     tags.push(...form.extraTags)
@@ -474,6 +566,41 @@ export default function VendorProductNewPage() {
                 />
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* ── Variants ────────────────────────────────────────────────────── */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Varyantlar (Beden / Renk / Hacim)</CardTitle>
+            <CardDescription className="text-xs">
+              Ürününüzün birden fazla seçeneği varsa buraya ekleyin. Stok ve fiyat alanları isteğe bağlıdır.
+              Renk için Türkçe isim girin (siyah, beyaz, mavi…).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <VariantEditor
+              title="Bedenler"
+              icon={Ruler}
+              placeholder="örn. S, M, L, XL, 38, 42…"
+              rows={form.sizes}
+              onChange={(rows) => set("sizes", rows)}
+            />
+            <VariantEditor
+              title="Renkler"
+              icon={Palette}
+              placeholder="örn. siyah, beyaz, kırmızı…"
+              rows={form.colors}
+              onChange={(rows) => set("colors", rows)}
+            />
+            <VariantEditor
+              title="Hacim / Kapasite"
+              icon={Package}
+              placeholder="örn. 30ml, 50ml, 128GB…"
+              rows={form.volumes}
+              showPrice
+              onChange={(rows) => set("volumes", rows)}
+            />
           </CardContent>
         </Card>
 

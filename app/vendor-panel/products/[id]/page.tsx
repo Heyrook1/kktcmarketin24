@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import {
   ArrowLeft, Loader2, Save, Upload, X, Plus, ImagePlus,
-  Tag, Trash2
+  Tag, Trash2, Ruler, Palette, Package,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,8 @@ const SPEC_FIELDS = [
 
 type SpecKey = typeof SPEC_FIELDS[number]["key"]
 
+interface VariantRow { label: string; stock: string; price: string }
+
 interface FormState {
   name: string
   description: string
@@ -42,6 +44,9 @@ interface FormState {
   is_active: boolean
   extraTags: string[]
   images: string[]
+  sizes:   VariantRow[]
+  colors:  VariantRow[]
+  volumes: VariantRow[]
 }
 
 const INITIAL: FormState = {
@@ -50,6 +55,7 @@ const INITIAL: FormState = {
   specs: { brand: "", model: "", color: "", storage: "", material: "", gender: "" },
   stock: "0", is_active: true,
   extraTags: [], images: [],
+  sizes: [], colors: [], volumes: [],
 }
 
 async function parseJsonResponse<T>(res: Response, context: string): Promise<T> {
@@ -154,6 +160,47 @@ function ImageUploader({
   )
 }
 
+function VariantEditor({
+  title, icon: Icon, placeholder, rows, showPrice, onChange,
+}: {
+  title: string; icon: React.ElementType; placeholder: string
+  rows: VariantRow[]; showPrice?: boolean; onChange: (rows: VariantRow[]) => void
+}) {
+  const addRow = () => onChange([...rows, { label: "", stock: "", price: "" }])
+  const removeRow = (i: number) => onChange(rows.filter((_, idx) => idx !== i))
+  const updateRow = (i: number, field: keyof VariantRow, val: string) =>
+    onChange(rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r))
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          <Icon className="h-4 w-4 text-muted-foreground" />{title}
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={addRow} className="h-7 gap-1 text-xs px-2">
+          <Plus className="h-3 w-3" /> Ekle
+        </Button>
+      </div>
+      {rows.length === 0 && (
+        <p className="text-xs text-muted-foreground">Henüz {title.toLowerCase()} eklenmedi.</p>
+      )}
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input placeholder={placeholder} value={row.label} onChange={(e) => updateRow(i, "label", e.target.value)} className="h-8 text-sm flex-1" />
+            <Input type="number" min="0" placeholder="Stok" value={row.stock} onChange={(e) => updateRow(i, "stock", e.target.value)} className="h-8 text-sm w-20" />
+            {showPrice && (
+              <Input type="number" min="0" placeholder="Fiyat ₺" value={row.price} onChange={(e) => updateRow(i, "price", e.target.value)} className="h-8 text-sm w-28" />
+            )}
+            <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground hover:text-destructive">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
   const [input, setInput] = useState("")
   const add = () => {
@@ -226,10 +273,23 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
         const specsObj: Record<string, string> = { brand: "", model: "", color: "", storage: "", material: "", gender: "" }
         const extraTags: string[] = []
 
+        const sizes:   VariantRow[] = []
+        const colors:  VariantRow[] = []
+        const volumes: VariantRow[] = []
+
         if(p.tags && Array.isArray(p.tags)) {
             p.tags.forEach((tag: string) => {
                 if (tag.startsWith("sub:")) {
                     subcat = tag.substring(4)
+                } else if (tag.toLowerCase().startsWith("size:")) {
+                    const parts = tag.slice(5).split(":")
+                    sizes.push({ label: parts[0] ?? "", stock: parts[1] ?? "", price: "" })
+                } else if (tag.toLowerCase().startsWith("color:")) {
+                    const parts = tag.slice(6).split(":")
+                    colors.push({ label: parts[0] ?? "", stock: parts[1] ?? "", price: "" })
+                } else if (tag.toLowerCase().startsWith("volume:")) {
+                    const parts = tag.slice(7).split(":")
+                    volumes.push({ label: parts[0] ?? "", stock: parts[1] ?? "", price: parts[2] ?? "" })
                 } else if(tag.includes(":")) {
                     const [k, v] = tag.split(":")
                     if(k in specsObj) {
@@ -253,8 +313,9 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
           specs: specsObj as Record<SpecKey, string>,
           stock: p.stock != null ? String(p.stock) : "0",
           is_active: p.is_active ?? true,
-          extraTags: extraTags,
+          extraTags,
           images: p.images ?? (p.image_url ? [p.image_url] : []),
+          sizes, colors, volumes,
         })
       } catch (err: any) {
         setError(err.message)
@@ -274,6 +335,22 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
     for (const { key } of SPEC_FIELDS) {
       const v = form.specs[key].trim()
       if (v) tags.push(`${key}:${v.toLowerCase()}`)
+    }
+    for (const row of form.sizes) {
+      if (!row.label.trim()) continue
+      const base = `size:${row.label.trim().toUpperCase()}`
+      tags.push(row.stock ? `${base}:${row.stock}` : base)
+    }
+    for (const row of form.colors) {
+      if (!row.label.trim()) continue
+      const base = `color:${row.label.trim().toLowerCase()}`
+      tags.push(row.stock ? `${base}:${row.stock}` : base)
+    }
+    for (const row of form.volumes) {
+      if (!row.label.trim()) continue
+      const base = `volume:${row.label.trim()}`
+      const withStock = row.stock ? `${base}:${row.stock}` : base
+      tags.push(row.price ? `${withStock}:${row.price}` : withStock)
     }
     if (form.subcategory) tags.push(`sub:${form.subcategory}`)
     tags.push(...form.extraTags)
@@ -428,6 +505,20 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
             {SPEC_FIELDS.map(({ key, label, placeholder }) => (
               <div key={key} className="space-y-1.5"><Label htmlFor={`spec-${key}`}>{label}</Label><Input id={`spec-${key}`} placeholder={placeholder} value={form.specs[key]} onChange={(e) => setSpec(key, e.target.value)} /></div>
             ))}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Varyantlar (Beden / Renk / Hacim)</CardTitle>
+            <CardDescription className="text-xs">
+              Ürününüzün birden fazla seçeneği varsa ekleyin. Renk için Türkçe isim girin.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <VariantEditor title="Bedenler" icon={Ruler} placeholder="örn. S, M, L, XL…" rows={form.sizes} onChange={(r) => set("sizes", r)} />
+            <VariantEditor title="Renkler" icon={Palette} placeholder="örn. siyah, beyaz…" rows={form.colors} onChange={(r) => set("colors", r)} />
+            <VariantEditor title="Hacim / Kapasite" icon={Package} placeholder="örn. 30ml, 50ml, 128GB…" rows={form.volumes} showPrice onChange={(r) => set("volumes", r)} />
           </CardContent>
         </Card>
 
