@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { parseSearchIntent } from "@/lib/smart-search"
+import { hasHiddenProductTag } from "@/lib/product-visibility"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "edge"
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
       { count: "exact" }
     )
     .eq("is_active", true)
+    .gt("stock", 0)
 
   // ── Full-text search via search_vector (tsvector) ─────────────────────────
   if (q.length >= 2) {
@@ -102,7 +104,9 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Normalise to Product shape ────────────────────────────────────────────
-  const products = (data ?? []).map((p) => {
+  const products = (data ?? [])
+    .filter((p) => !hasHiddenProductTag((p.tags as string[]) ?? []))
+    .map((p) => {
     const store = Array.isArray(p.vendor_stores)
       ? (p.vendor_stores as any)[0]
       : (p.vendor_stores as { id: string; name: string; slug: string } | null)

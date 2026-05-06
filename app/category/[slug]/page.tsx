@@ -7,6 +7,7 @@ import { ProductGrid } from "@/components/product/product-grid"
 import { getCategoryBySlug, categories } from "@/lib/data/categories"
 import { createClient } from "@/lib/supabase/server"
 import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
+import { hasHiddenProductTag, isPubliclyVisibleProduct } from "@/lib/product-visibility"
 import type { Product } from "@/lib/data/products"
 
 export const dynamic = "force-dynamic"
@@ -52,17 +53,23 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     )
     .eq("is_active", true)
     .eq("category", category.id)
+    .gt("stock", 0)
+    .not("tags", "ov", "{demo,test,sample,placeholder}")
     .order("created_at", { ascending: false })
     .limit(200)
 
   if (error) console.error("[category/page] DB error:", error.message)
 
-  let products: Product[] = (rawRows ?? []).map((p) =>
-    mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
-  )
+  let products: Product[] = (rawRows ?? [])
+    .map((p) => mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0]))
+    .filter((product) => isPubliclyVisibleProduct(product))
 
   if (sub) {
-    products = products.filter((p) => p.tags?.includes(sub))
+    if (hasHiddenProductTag([sub])) {
+      products = []
+    } else {
+      products = products.filter((p) => p.tags?.includes(sub))
+    }
   }
 
   switch (sort) {

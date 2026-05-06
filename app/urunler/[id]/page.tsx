@@ -6,6 +6,7 @@ import { ProductGrid } from "@/components/product/product-grid"
 import { normalizeCat } from "@/lib/normalize-product-category"
 import { getVendorById } from "@/lib/data/vendors"
 import { getCategoryById } from "@/lib/data/categories"
+import { hasHiddenProductTag, isPubliclyVisibleProduct } from "@/lib/product-visibility"
 import type { Product } from "@/lib/data/products"
 
 interface Props {
@@ -21,6 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .from("vendor_products")
     .select("name, description, image_url")
     .eq("id", id)
+    .eq("is_active", true)
+    .gt("stock", 0)
     .single()
   if (!data) return { title: "Ürün Bulunamadı | Marketin24" }
   return {
@@ -148,12 +151,13 @@ export default async function UrunlerDetailPage({ params }: Props) {
 
   if (error || !raw) notFound()
 
-  // Increment view count (fire-and-forget)
-  supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
-
   const storeRaw = Array.isArray(raw.vendor_stores) ? raw.vendor_stores[0] : raw.vendor_stores
 
   const product = toProduct(raw as Parameters<typeof toProduct>[0])
+  if (!isPubliclyVisibleProduct(product)) notFound()
+
+  // Increment view count (fire-and-forget)
+  supabase.rpc("increment_product_views", { product_id: id }).then(() => {})
 
   // Try to get vendor from static data first (has more detail); fall back to DB row
   const vendor = getVendorById(raw.store_id) ?? (storeRaw ? {
@@ -176,13 +180,14 @@ export default async function UrunlerDetailPage({ params }: Props) {
     .from("vendor_products")
     .select("id, name, description, price, compare_price, category, image_url, images, tags, stock, created_at, store_id")
     .eq("is_active", true)
+    .gt("stock", 0)
     .eq("category", raw.category)
     .neq("id", id)
     .limit(4)
 
   const related: Product[] = (relatedRaw ?? []).map((r) =>
     toProduct(r as Parameters<typeof toProduct>[0])
-  )
+  ).filter((p) => !hasHiddenProductTag(p.tags))
 
   return (
     <div className="container mx-auto px-4 py-8">

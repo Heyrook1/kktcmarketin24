@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { ProductsContent, ProductsContentSkeleton } from "@/app/products/products-content"
 import { categories } from "@/lib/data/categories"
 import { mapVendorProductRowToListProduct } from "@/lib/map-vendor-product-list"
+import { isPubliclyVisibleProduct } from "@/lib/product-visibility"
 
 /** Always read fresh product rows from Supabase (new listings show without waiting on ISR). */
 export const dynamic = "force-dynamic"
@@ -29,6 +30,8 @@ export default async function UrunlerPage() {
           "id, name, description, price, compare_price, category, image_url, images, tags, is_active, stock, created_at, store_id, vendor_stores(id, name, slug)"
         )
         .eq("is_active", true)
+        .gt("stock", 0)
+        .not("tags", "ov", "{demo,test,sample,placeholder}")
         .order("created_at", { ascending: false })
         .limit(200),
       supabase
@@ -39,9 +42,9 @@ export default async function UrunlerPage() {
 
   if (prodErr) console.error("[urunler/page] DB error:", prodErr.message)
 
-  const initialProducts = (rawProducts ?? []).map((p) =>
-    mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
-  )
+  const initialProducts = (rawProducts ?? [])
+    .map((p) => mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0]))
+    .filter(isPubliclyVisibleProduct)
 
   const usedCatIds = [...new Set(
     initialProducts.map((p) => p.categoryId).filter(Boolean),
