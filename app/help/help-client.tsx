@@ -27,7 +27,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: "Hangi ödeme yöntemleri kabul ediliyor?",
-        a: "Kredi kartı, banka kartı ve kapıda nakit ödeme seçeneklerimiz mevcuttur. Kapıda ödeme yalnızca kayıtlı hesap sahiplerine sunulmakta olup sipariş öncesi SMS ile kimlik doğrulaması zorunludur.",
+        a: "Şu anda ödeme yöntemi olarak kapıda nakit ödeme kabul edilmektedir. Siparişiniz SMS ile doğrulandıktan sonra satıcı tarafından onaylanır ve ödeme teslimat sırasında alınır.",
       },
       {
         q: "Sipariş SMS doğrulaması neden gerekiyor?",
@@ -39,7 +39,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: "Birden fazla satıcıdan ürün alabilir miyim?",
-        a: "Evet. Farklı satıcılardan ürünleri tek sepette toplayabilir, tek ödemeyle alışverişi tamamlayabilirsiniz. Her satıcının ürünleri ayrı kargolarla teslim edilir.",
+        a: "Evet. Farklı satıcılardan ürünleri sepetinize ekleyebilirsiniz. Teslimat ve onay süreçleri satıcı bazında takip edilir.",
       },
     ],
   },
@@ -153,7 +153,7 @@ const POLICY_ITEMS = [
     title: "Alıcı Güvencesi",
     points: [
       "SMS OTP ile doğrulanmamış sipariş satıcıya iletilmez.",
-      "Ödeme, teslimat onaylanana kadar korunur.",
+      "Sipariş, SMS doğrulaması tamamlanmadan satıcıya aktarılmaz.",
       "Anlaşmazlık durumunda Marketin24 arabuluculuk yapar.",
       "30 gün içinde çözülemeyen talepler iade ile sonuçlandırılır.",
     ],
@@ -204,7 +204,7 @@ function AccordionItem({ q, a, open, onToggle }: {
       <div
         className={cn(
           "overflow-hidden transition-all duration-200",
-          open ? "max-h-96 pb-4" : "max-h-0"
+          open ? "max-h-none pb-4" : "max-h-0"
         )}
       >
         <p className="text-sm text-muted-foreground leading-relaxed">{a}</p>
@@ -219,6 +219,7 @@ function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -253,13 +254,24 @@ function ContactForm() {
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
+    setSubmitError("")
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          setSubmitError("Mesajınız gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.")
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Bağlantı hatası nedeniyle mesajınız gönderilemedi. Lütfen tekrar deneyin.")
+      }
     })
   }
 
@@ -338,6 +350,11 @@ function ContactForm() {
             : <><MessageSquare className="h-4 w-4" />Mesaj Gönder</>
           }
         </Button>
+        {submitError && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {submitError}
+          </p>
+        )}
         <p className="text-center text-xs text-muted-foreground">
           Bu form Cloudflare Turnstile ile korunmaktadır.
         </p>
