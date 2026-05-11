@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import {
   ArrowLeft, Loader2, Save, Upload, X, Plus, ImagePlus,
-  Tag, Trash2, Ruler, Palette, Package,
+  Tag, Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { categories } from "@/lib/data/categories"
+import { SmartVariantEditor, variantsToTags, tagsToVariants, type VariantSet } from "@/components/vendor/smart-variant-editor"
 
 const SPEC_FIELDS = [
   { key: "brand",    label: "Marka",         placeholder: "örn. Samsung, Apple, Nike…" },
@@ -29,8 +30,6 @@ const SPEC_FIELDS = [
 ] as const
 
 type SpecKey = typeof SPEC_FIELDS[number]["key"]
-
-interface VariantRow { label: string; stock: string; price: string }
 
 interface FormState {
   name: string
@@ -44,9 +43,7 @@ interface FormState {
   is_active: boolean
   extraTags: string[]
   images: string[]
-  sizes:   VariantRow[]
-  colors:  VariantRow[]
-  volumes: VariantRow[]
+  variants: VariantSet
 }
 
 const INITIAL: FormState = {
@@ -55,7 +52,7 @@ const INITIAL: FormState = {
   specs: { brand: "", model: "", color: "", storage: "", material: "", gender: "" },
   stock: "0", is_active: true,
   extraTags: [], images: [],
-  sizes: [], colors: [], volumes: [],
+  variants: { sizes: [], colors: [], volumes: [] },
 }
 
 async function parseJsonResponse<T>(res: Response, context: string): Promise<T> {
@@ -160,47 +157,6 @@ function ImageUploader({
   )
 }
 
-function VariantEditor({
-  title, icon: Icon, placeholder, rows, showPrice, onChange,
-}: {
-  title: string; icon: React.ElementType; placeholder: string
-  rows: VariantRow[]; showPrice?: boolean; onChange: (rows: VariantRow[]) => void
-}) {
-  const addRow = () => onChange([...rows, { label: "", stock: "", price: "" }])
-  const removeRow = (i: number) => onChange(rows.filter((_, idx) => idx !== i))
-  const updateRow = (i: number, field: keyof VariantRow, val: string) =>
-    onChange(rows.map((r, idx) => idx === i ? { ...r, [field]: val } : r))
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm font-medium">
-          <Icon className="h-4 w-4 text-muted-foreground" />{title}
-        </div>
-        <Button type="button" size="sm" variant="outline" onClick={addRow} className="h-7 gap-1 text-xs px-2">
-          <Plus className="h-3 w-3" /> Ekle
-        </Button>
-      </div>
-      {rows.length === 0 && (
-        <p className="text-xs text-muted-foreground">Henüz {title.toLowerCase()} eklenmedi.</p>
-      )}
-      <div className="space-y-2">
-        {rows.map((row, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input placeholder={placeholder} value={row.label} onChange={(e) => updateRow(i, "label", e.target.value)} className="h-8 text-sm flex-1" />
-            <Input type="number" min="0" placeholder="Stok" value={row.stock} onChange={(e) => updateRow(i, "stock", e.target.value)} className="h-8 text-sm w-20" />
-            {showPrice && (
-              <Input type="number" min="0" placeholder="Fiyat ₺" value={row.price} onChange={(e) => updateRow(i, "price", e.target.value)} className="h-8 text-sm w-28" />
-            )}
-            <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground hover:text-destructive">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
   const [input, setInput] = useState("")
   const add = () => {
@@ -252,73 +208,53 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
     async function loadData() {
       try {
         const res = await fetch(`/api/vendor/products/${id}`, { credentials: "include", cache: "no-store" })
-        const json = await parseJsonResponse<{ product?: any; error?: string }>(res, "Ürün yüklenemedi")
+        const json = await parseJsonResponse<{ product?: Record<string, unknown>; error?: string }>(res, "Ürün yüklenemedi")
         if (!res.ok) throw new Error(json.error ?? "Ürün yüklenemedi")
-        
-        const p = json.product
-        
-        // Find category logic
-        let categoryId = ""
-        let subcat = ""
-        // Categories have ids. p.category stored the name/slug. Let's try to infer if possible, 
-        // fallback to setting both to generic strings but ideally we find the exact category
-        // In the original form, category_id is selected, but submitted is category: form.category_id... Wait.
-        // In POST, submit is category_id ... Wait, POST uses category = category_id or category text.
-        
+
+        const p = json.product as Record<string, unknown>
+
         const matchedMain = categories.find(c => c.id === p.category || c.name === p.category)
-        if (matchedMain) {
-          categoryId = matchedMain.id
-        }
+        const categoryId = matchedMain?.id ?? (p.category as string) ?? ""
 
         const specsObj: Record<string, string> = { brand: "", model: "", color: "", storage: "", material: "", gender: "" }
         const extraTags: string[] = []
+        let subcat = ""
+        const variantTags: string[] = []
 
-        const sizes:   VariantRow[] = []
-        const colors:  VariantRow[] = []
-        const volumes: VariantRow[] = []
-
-        if(p.tags && Array.isArray(p.tags)) {
-            p.tags.forEach((tag: string) => {
-                if (tag.startsWith("sub:")) {
-                    subcat = tag.substring(4)
-                } else if (tag.toLowerCase().startsWith("size:")) {
-                    const parts = tag.slice(5).split(":")
-                    sizes.push({ label: parts[0] ?? "", stock: parts[1] ?? "", price: "" })
-                } else if (tag.toLowerCase().startsWith("color:")) {
-                    const parts = tag.slice(6).split(":")
-                    colors.push({ label: parts[0] ?? "", stock: parts[1] ?? "", price: "" })
-                } else if (tag.toLowerCase().startsWith("volume:")) {
-                    const parts = tag.slice(7).split(":")
-                    volumes.push({ label: parts[0] ?? "", stock: parts[1] ?? "", price: parts[2] ?? "" })
-                } else if(tag.includes(":")) {
-                    const [k, v] = tag.split(":")
-                    if(k in specsObj) {
-                        specsObj[k] = v
-                    } else {
-                        extraTags.push(tag)
-                    }
-                } else {
-                    extraTags.push(tag)
-                }
-            })
+        if (Array.isArray(p.tags)) {
+          for (const tag of p.tags as string[]) {
+            if (tag.startsWith("sub:")) {
+              subcat = tag.slice(4)
+            } else if (/^(size|color|volume):/i.test(tag)) {
+              variantTags.push(tag)
+            } else if (tag.includes(":")) {
+              const colonIdx = tag.indexOf(":")
+              const k = tag.slice(0, colonIdx)
+              const v = tag.slice(colonIdx + 1)
+              if (k in specsObj) specsObj[k] = v
+              else extraTags.push(tag)
+            } else {
+              extraTags.push(tag)
+            }
+          }
         }
 
         setForm({
-          name: p.name ?? "",
-          description: p.description ?? "",
-          price: p.price != null ? String(p.price) : "",
+          name:         (p.name as string) ?? "",
+          description:  (p.description as string) ?? "",
+          price:        p.price != null ? String(p.price) : "",
           compare_price: p.compare_price != null ? String(p.compare_price) : "",
-          category_id: categoryId || p.category || "",
-          subcategory: subcat,
-          specs: specsObj as Record<SpecKey, string>,
-          stock: p.stock != null ? String(p.stock) : "0",
-          is_active: p.is_active ?? true,
+          category_id:  categoryId,
+          subcategory:  subcat,
+          specs:        specsObj as Record<SpecKey, string>,
+          stock:        p.stock != null ? String(p.stock) : "0",
+          is_active:    (p.is_active as boolean) ?? true,
           extraTags,
-          images: p.images ?? (p.image_url ? [p.image_url] : []),
-          sizes, colors, volumes,
+          images:       (p.images as string[]) ?? (p.image_url ? [p.image_url as string] : []),
+          variants:     tagsToVariants(variantTags),
         })
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Ürün yüklenemedi.")
       } finally {
         setLoading(false)
       }
@@ -326,7 +262,6 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
     loadData()
   }, [id])
 
-  // Derive subcategories from selected main category
   const selectedCategory = categories.find((c) => c.id === form.category_id || c.name === form.category_id)
   const subcategories = selectedCategory?.subcategories ?? []
 
@@ -336,22 +271,7 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
       const v = form.specs[key].trim()
       if (v) tags.push(`${key}:${v.toLowerCase()}`)
     }
-    for (const row of form.sizes) {
-      if (!row.label.trim()) continue
-      const base = `size:${row.label.trim().toUpperCase()}`
-      tags.push(row.stock ? `${base}:${row.stock}` : base)
-    }
-    for (const row of form.colors) {
-      if (!row.label.trim()) continue
-      const base = `color:${row.label.trim().toLowerCase()}`
-      tags.push(row.stock ? `${base}:${row.stock}` : base)
-    }
-    for (const row of form.volumes) {
-      if (!row.label.trim()) continue
-      const base = `volume:${row.label.trim()}`
-      const withStock = row.stock ? `${base}:${row.stock}` : base
-      tags.push(row.price ? `${withStock}:${row.price}` : withStock)
-    }
+    tags.push(...variantsToTags(form.variants))
     if (form.subcategory) tags.push(`sub:${form.subcategory}`)
     tags.push(...form.extraTags)
     return [...new Set(tags)]
@@ -372,16 +292,16 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name:            form.name.trim(),
-            description:     form.description.trim(),
-            price:           Number(form.price),
-            compare_price:   form.compare_price ? Number(form.compare_price) : null,
-            category:        form.category_id,
-            stock:           Number(form.stock),
-            is_active:       form.is_active,
+            name:          form.name.trim(),
+            description:   form.description.trim(),
+            price:         Number(form.price),
+            compare_price: form.compare_price ? Number(form.compare_price) : null,
+            category:      form.category_id,
+            stock:         Number(form.stock),
+            is_active:     form.is_active,
             tags,
-            image_url:       form.images[0] ?? null,
-            images:          form.images,
+            image_url:     form.images[0] ?? null,
+            images:        form.images,
           }),
           credentials: "include",
         })
@@ -422,14 +342,12 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
         </Button>
         <div>
           <h1 className="text-xl font-bold">Ürünü Düzenle</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Ürün detaylarını güncelleyin
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">Ürün detaylarını güncelleyin</p>
         </div>
         <div className="flex-1" />
         <Button disabled={deleting || pending} onClick={handleDelete} variant="destructive" size="sm" className="gap-2">
-            {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            Sil
+          {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          Sil
         </Button>
       </div>
 
@@ -448,7 +366,12 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ImageUploader images={form.images} onAdd={(url) => set("images", [...form.images, url])} onRemove={(url) => set("images", form.images.filter((u) => u !== url))} uploading={pending} />
+            <ImageUploader
+              images={form.images}
+              onAdd={(url) => set("images", [...form.images, url])}
+              onRemove={(url) => set("images", form.images.filter((u) => u !== url))}
+              uploading={pending}
+            />
           </CardContent>
         </Card>
 
@@ -474,11 +397,17 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
         </Card>
 
         <Card className="shadow-sm">
-          <CardHeader className="pb-3"><CardTitle className="text-base">Kategori & Alt Kategori</CardTitle></CardHeader>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Kategori & Alt Kategori</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>Ana Kategori *</Label>
-              <Select value={form.category_id} onValueChange={(v) => { set("category_id", v); set("subcategory", "") }}>
+              <Select value={form.category_id} onValueChange={(v) => {
+                set("category_id", v)
+                set("subcategory", "")
+                set("variants", { sizes: [], colors: [], volumes: [] })
+              }}>
                 <SelectTrigger><SelectValue placeholder="Kategori seçin" /></SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -503,22 +432,28 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
           <CardHeader className="pb-3"><CardTitle className="text-base">Ürün Özellikleri</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {SPEC_FIELDS.map(({ key, label, placeholder }) => (
-              <div key={key} className="space-y-1.5"><Label htmlFor={`spec-${key}`}>{label}</Label><Input id={`spec-${key}`} placeholder={placeholder} value={form.specs[key]} onChange={(e) => setSpec(key, e.target.value)} /></div>
+              <div key={key} className="space-y-1.5">
+                <Label htmlFor={`spec-${key}`}>{label}</Label>
+                <Input id={`spec-${key}`} placeholder={placeholder} value={form.specs[key]} onChange={(e) => setSpec(key, e.target.value)} />
+              </div>
             ))}
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Varyantlar (Beden / Renk / Hacim)</CardTitle>
+            <CardTitle className="text-base">Varyantlar</CardTitle>
             <CardDescription className="text-xs">
-              Ürününüzün birden fazla seçeneği varsa ekleyin. Renk için Türkçe isim girin.
+              Kategori seçimine göre uygun varyant türleri otomatik görünür.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <VariantEditor title="Bedenler" icon={Ruler} placeholder="örn. S, M, L, XL…" rows={form.sizes} onChange={(r) => set("sizes", r)} />
-            <VariantEditor title="Renkler" icon={Palette} placeholder="örn. siyah, beyaz…" rows={form.colors} onChange={(r) => set("colors", r)} />
-            <VariantEditor title="Hacim / Kapasite" icon={Package} placeholder="örn. 30ml, 50ml, 128GB…" rows={form.volumes} showPrice onChange={(r) => set("volumes", r)} />
+          <CardContent>
+            <SmartVariantEditor
+              categoryId={form.category_id}
+              basePrice={Number(form.price) || 0}
+              variants={form.variants}
+              onChange={(v) => set("variants", v)}
+            />
           </CardContent>
         </Card>
 
@@ -538,7 +473,10 @@ export default function VendorProductEditPage({ params }: { params: Promise<{ id
 
         <Card className="shadow-sm">
           <CardContent className="pt-5 flex items-center justify-between">
-            <div><p className="text-sm font-medium">Ürünü Yayınla</p></div>
+            <div>
+              <p className="text-sm font-medium">Ürünü Yayınla</p>
+              <p className="text-xs text-muted-foreground">Kapalıysa ürün müşterilere görünmez</p>
+            </div>
             <Switch checked={form.is_active} onCheckedChange={(v) => set("is_active", v)} />
           </CardContent>
         </Card>
