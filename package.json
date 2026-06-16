@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:qa": "node ./scripts/qa-smoke.mjs"
+    "test:qa": "node ./scripts/qa-smoke.mjs",
+    "orchestrator:build": "tsc -p tsconfig.orchestrator.json",
+    "orchestrator:start": "tsc -p tsconfig.orchestrator.json && node ./dist-orchestrator/orchestrator.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
