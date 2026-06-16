@@ -23,5 +23,6 @@ yarn-error.log*
 .vercel
 
 # typescript
+.orchestrator/
 *.tsbuildinfo
 next-env.d.ts

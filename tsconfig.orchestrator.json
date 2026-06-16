@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": ".orchestrator",
+    "rootDir": "scripts",
+    "target": "ES2022",
+    "tsBuildInfoFile": ".orchestrator.tsbuildinfo"
+  },
+  "include": [
+    "scripts/orchestrator.ts",
+    "scripts/agents/**/*.ts"
+  ]
+}
