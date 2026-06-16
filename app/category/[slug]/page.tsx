@@ -55,7 +55,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     .order("created_at", { ascending: false })
     .limit(200)
 
-  if (error) console.error("[category/page] DB error:", error.message)
+  const loadError = error ? "Kategori ürünleri yüklenemedi. Lütfen tekrar deneyin." : null
 
   let products: Product[] = (rawRows ?? []).map((p) =>
     mapVendorProductRowToListProduct(p as Parameters<typeof mapVendorProductRowToListProduct>[0])
@@ -148,9 +148,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       <div className="container mx-auto px-4 py-6">
         <p className="text-sm text-muted-foreground mb-6">{products.length} ürün bulundu</p>
 
-        <ProductGrid products={products} />
+        {loadError && (
+          <div className="mb-6 rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+            {loadError}
+          </div>
+        )}
 
-        {products.length === 0 && (
+        {!loadError && <ProductGrid products={products} />}
+
+        {!loadError && products.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Bu kategoride henüz ürün bulunmuyor.</p>
             <Link href="/urunler" className="text-primary hover:underline mt-2 inline-block">

@@ -219,6 +219,7 @@ function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
   const [turnstileError, setTurnstileError] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -233,6 +234,7 @@ function ContactForm() {
   function set(field: keyof typeof form, value: string) {
     setForm(f => ({ ...f, [field]: value }))
     setErrors(e => ({ ...e, [field]: undefined }))
+    setSubmitError("")
   }
 
   function validate(): boolean {
@@ -254,12 +256,25 @@ function ContactForm() {
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+        const data = await response.json().catch(() => null) as { error?: string } | null
+
+        if (!response.ok) {
+          setSubmitError(data?.error ?? "Mesajınız gönderilemedi. Lütfen tekrar deneyin.")
+          window.turnstile?.reset(formId)
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Mesajınız gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.")
+        window.turnstile?.reset(formId)
+      }
     })
   }
 
@@ -338,6 +353,11 @@ function ContactForm() {
             : <><MessageSquare className="h-4 w-4" />Mesaj Gönder</>
           }
         </Button>
+        {submitError && (
+          <p className="rounded-lg bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+            {submitError}
+          </p>
+        )}
         <p className="text-center text-xs text-muted-foreground">
           Bu form Cloudflare Turnstile ile korunmaktadır.
         </p>
