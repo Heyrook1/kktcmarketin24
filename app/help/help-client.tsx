@@ -4,13 +4,19 @@ import { useState, useTransition, useRef, useId } from "react"
 import Script from "next/script"
 import Link from "next/link"
 import {
-  ChevronDown, Mail, Phone, MapPin, MessageSquare,
+  Mail, Phone, MapPin, MessageSquare,
   Package, RotateCcw, Truck, ShieldCheck, CreditCard,
-  HelpCircle, CheckCircle2, Loader2, Clock,
+  HelpCircle, CheckCircle2, Loader2, Clock, ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { cn } from "@/lib/utils"
 
 // ─── FAQ data ────────────────────────────────────────────────────────────────
@@ -183,41 +189,10 @@ declare global {
 
 // ─── Accordion item ────────────────────────────────────────────────────────────
 
-function AccordionItem({ q, a, open, onToggle }: {
-  q: string; a: string; open: boolean; onToggle: () => void
-}) {
-  return (
-    <div className="border-b last:border-b-0">
-      <button
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-start justify-between gap-4 py-4 text-left text-sm font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded"
-      >
-        <span className="leading-relaxed">{q}</span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground mt-0.5 transition-transform duration-200",
-            open && "rotate-180"
-          )}
-        />
-      </button>
-      <div
-        className={cn(
-          "overflow-hidden transition-all duration-200",
-          open ? "max-h-96 pb-4" : "max-h-0"
-        )}
-      >
-        <p className="text-sm text-muted-foreground leading-relaxed">{a}</p>
-      </div>
-    </div>
-  )
-}
-
-// ─── Contact form ─────────────────────────────────────────────────────────────
-
 function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
+  const [submitError, setSubmitError] = useState("")
   const [turnstileError, setTurnstileError] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -253,13 +228,24 @@ function ContactForm() {
     const token = getToken()
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
+    setSubmitError("")
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+
+        if (!response.ok) {
+          setSubmitError("Mesajınız gönderilemedi. Lütfen biraz sonra tekrar deneyin.")
+          return
+        }
+
+        setSubmitted(true)
+      } catch {
+        setSubmitError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.")
+      }
     })
   }
 
@@ -332,6 +318,12 @@ function ContactForm() {
           )}
         </div>
 
+        {submitError && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {submitError}
+          </p>
+        )}
+
         <Button type="submit" disabled={isPending} className="w-full gap-2 rounded-xl h-11 font-semibold">
           {isPending
             ? <><Loader2 className="h-4 w-4 animate-spin" />Gönderiliyor...</>
@@ -363,12 +355,8 @@ function FieldWrap({ label, id, required, error, children }: {
 // ─── Main page component ──────────────────────────────────────────────────────
 
 export function HelpPageClient() {
-  const [openItem, setOpenItem] = useState<string | null>(null)
+  const [openItem, setOpenItem] = useState<string | undefined>()
   const [activeSection, setActiveSection] = useState("orders")
-
-  function toggleItem(id: string) {
-    setOpenItem(prev => prev === id ? null : id)
-  }
 
   const activeData = FAQ_SECTIONS.find(s => s.id === activeSection)
 
@@ -417,7 +405,7 @@ export function HelpPageClient() {
           {/* Category tabs */}
           <div className="flex flex-wrap gap-2 justify-center mb-6">
             {FAQ_SECTIONS.map(({ id, icon: Icon, title }) => (
-              <button key={id} onClick={() => { setActiveSection(id); setOpenItem(null) }}
+              <button key={id} onClick={() => { setActiveSection(id); setOpenItem(undefined) }}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors",
                   activeSection === id
@@ -432,18 +420,22 @@ export function HelpPageClient() {
           </div>
 
           {/* Accordion */}
-          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-            <div className="px-6">
-              {activeData?.items.map((item, i) => (
+          <div className="overflow-hidden rounded-2xl border bg-card px-6 shadow-sm">
+            <Accordion type="single" collapsible value={openItem} onValueChange={setOpenItem}>
+              {activeData?.items.map((item, index) => (
                 <AccordionItem
-                  key={i}
-                  q={item.q}
-                  a={item.a}
-                  open={openItem === `${activeSection}-${i}`}
-                  onToggle={() => toggleItem(`${activeSection}-${i}`)}
-                />
+                  key={item.q}
+                  value={`${activeSection}-${index}`}
+                >
+                  <AccordionTrigger className="hover:text-primary hover:no-underline">
+                    <span className="leading-relaxed">{item.q}</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </div>
         </section>
 
@@ -554,7 +546,7 @@ export function HelpPageClient() {
                 <Link href="/seller-application"
                   className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-1">
                   Başvuru Formu
-                  <ChevronDown className="h-3 w-3 -rotate-90" />
+                  <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             </aside>
