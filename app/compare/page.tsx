@@ -23,7 +23,6 @@ interface Platform {
     multiVendor: boolean
     localDelivery: boolean
     securePayment: boolean
-    mobileApp: boolean
     loyaltyProgram: boolean
     customerSupport: string
     returnPolicy: string
@@ -53,7 +52,6 @@ const platforms: Platform[] = [
       multiVendor: true,
       localDelivery: true,
       securePayment: true,
-      mobileApp: true,
       loyaltyProgram: true,
       customerSupport: "7/24 Canlı Destek",
       returnPolicy: "14 Gün İade",
@@ -90,7 +88,6 @@ const platforms: Platform[] = [
       multiVendor: false,
       localDelivery: true,
       securePayment: true,
-      mobileApp: false,
       loyaltyProgram: false,
       customerSupport: "Mesai Saatleri",
       returnPolicy: "7-14 Gün",
@@ -125,7 +122,6 @@ const platforms: Platform[] = [
       multiVendor: false,
       localDelivery: true,
       securePayment: false,
-      mobileApp: true,
       loyaltyProgram: false,
       customerSupport: "DM ile",
       returnPolicy: "Satıcıya Bağlı",
@@ -161,7 +157,6 @@ const platforms: Platform[] = [
       multiVendor: true,
       localDelivery: false,
       securePayment: true,
-      mobileApp: true,
       loyaltyProgram: true,
       customerSupport: "Online Destek",
       returnPolicy: "14-30 Gün",
@@ -194,7 +189,6 @@ const comparisonFeatures = [
   { key: "multiVendor", label: "Çoklu Satıcı", description: "Birden fazla satıcıdan ürün" },
   { key: "localDelivery", label: "KKTC Teslimatı", description: "Yerel adrese hızlı teslimat" },
   { key: "securePayment", label: "Güvenli Ödeme", description: "SSL şifreli güvenli ödeme" },
-  { key: "mobileApp", label: "Mobil Uygulama", description: "iOS ve Android uygulaması" },
   { key: "loyaltyProgram", label: "Sadakat Programı", description: "Puan ve indirim sistemi" },
 ]
 

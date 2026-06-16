@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:qa": "node ./scripts/qa-smoke.mjs"
+    "test:qa": "node ./scripts/qa-smoke.mjs",
+    "qa:scan": "node ./scripts/qa-automation.cjs tamTarama",
+    "qa:quality": "node ./scripts/qa-automation.cjs kaliteKontrol"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
