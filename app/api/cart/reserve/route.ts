@@ -8,14 +8,29 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { reserveStock } from "@/lib/stock-reservation"
+import { z } from "zod"
+
+const ReserveStockSchema = z.object({
+  cartId: z.string().trim().min(1, "cartId zorunludur."),
+  productId: z.string().uuid("Geçersiz ürün kimliği."),
+  quantity: z.coerce.number().int().min(1, "Miktar en az 1 olmalıdır.").max(99, "Miktar 99'u geçemez."),
+})
 
 export async function POST(req: NextRequest) {
   try {
-    const { cartId, productId, quantity } = await req.json()
-
-    if (!cartId || !productId || !quantity || quantity < 1) {
-      return NextResponse.json({ error: "Geçersiz istek parametreleri." }, { status: 400 })
+    let raw: unknown
+    try {
+      raw = await req.json()
+    } catch {
+      return NextResponse.json({ error: "Geçersiz JSON gövdesi." }, { status: 400 })
     }
+
+    const parsed = ReserveStockSchema.safeParse(raw)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Geçersiz istek parametreleri."
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
+    const { cartId, productId, quantity } = parsed.data
 
     const supabase = await createClient()
 

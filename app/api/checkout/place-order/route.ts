@@ -195,9 +195,6 @@ async function ensureOrderNumberOnRow(
     if (upErr && isOrderNumberColumnMissing(upErr)) {
       return lastCandidate
     }
-    if (upErr) {
-      console.warn("[place-order] ensureOrderNumberOnRow update failed:", upErr.message)
-    }
     candidate = await generateUniqueOrderNumber(admin, items)
   }
   return lastCandidate
@@ -413,7 +410,6 @@ export async function POST(req: NextRequest) {
           .eq("id", order.id)
         if (!upErr) break
         if (isUniqueViolation(upErr)) continue
-        console.warn("[place-order] order_number update skipped:", upErr.message)
         break
       }
       break
@@ -518,7 +514,6 @@ export async function POST(req: NextRequest) {
       }
       let voErr = (await admin.from("vendor_orders").insert(voFull)).error
       if (voErr) {
-        console.warn("[place-order] vendor_orders full insert failed, retrying minimal row:", voErr.message)
         voErr = (
           await admin.from("vendor_orders").insert({
             store_id:       storeId,

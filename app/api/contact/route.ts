@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Redis } from '@upstash/redis'
+import { redisKeys } from '@/lib/redis-keys'
+import { z } from 'zod'
 
 export const runtime = 'edge'
 
@@ -9,6 +11,13 @@ const RATE_LIMIT = 3
 const WINDOW_SEC = 3600
 
 const redis = Redis.fromEnv()
+const ContactSchema = z.object({
+  fullName: z.string().max(255).optional(),
+  email: z.string().email().max(255).optional().or(z.literal('')),
+  subject: z.string().max(255).optional(),
+  message: z.string().max(2000).optional(),
+  turnstileToken: z.string().optional(),
+})
 
 function adminClient() {
   return createClient(
@@ -32,7 +41,7 @@ async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
 }
 
 async function checkRateLimit(ip: string): Promise<boolean> {
-  const key = `rl:contact:${ip}`
+  const key = redisKeys.rateLimit('contact', ip, 'submit')
   const now = Date.now()
   const windowStart = now - WINDOW_SEC * 1000
   const pipeline = redis.pipeline()
@@ -53,20 +62,19 @@ export async function POST(req: NextRequest) {
     '0.0.0.0'
   const userAgent = req.headers.get('user-agent') ?? ''
 
-  let body: Record<string, unknown>
-  try { body = await req.json() } catch { return NextResponse.json(GENERIC_OK) }
-
-  const { fullName, email, subject, message, turnstileToken } = body as {
-    fullName?: string; email?: string; subject?: string; message?: string; turnstileToken?: string
+  let body: z.infer<typeof ContactSchema>
+  try {
+    const parsed = ContactSchema.safeParse(await req.json())
+    if (!parsed.success) return NextResponse.json(GENERIC_OK)
+    body = parsed.data
+  } catch {
+    return NextResponse.json(GENERIC_OK)
   }
 
-  const [allowed, turnstileOk] = await Promise.all([
-    checkRateLimit(ip),
-    (async () => {
-      const allowed = await checkRateLimit(ip)
-      return allowed ? verifyTurnstile(turnstileToken ?? '', ip) : false
-    })(),
-  ])
+  const { fullName, email, subject, message, turnstileToken } = body
+
+  const allowed = await checkRateLimit(ip)
+  const turnstileOk = allowed ? await verifyTurnstile(turnstileToken ?? '', ip) : false
 
   const admin = adminClient()
   await admin.from('form_submissions').insert({

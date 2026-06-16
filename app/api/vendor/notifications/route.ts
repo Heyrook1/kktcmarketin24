@@ -3,7 +3,7 @@
  *
  * Vendor notification polling endpoint.
  *
- * Reads up to `limit` messages from the Redis list `vendor:notify:{storeId}`
+ * Reads up to `limit` messages from the Redis list keyed by redisKeys.vendorNotify(storeId)
  * and returns them in chronological order (oldest first).
  *
  * The vendor dashboard polls this endpoint every 30s to surface new
@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { redis } from '@/lib/redis'
+import { redisKeys } from '@/lib/redis-keys'
 import { createClient as serviceClient } from '@supabase/supabase-js'
 
 export async function GET(req: NextRequest) {
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Read and trim the Redis notification list
-  const notifyKey = `vendor:notify:${storeId}`
+  const notifyKey = redisKeys.vendorNotify(storeId)
   const raw = await redis.lrange<string>(notifyKey, 0, limit - 1)
 
   // Parse — oldest messages are at the end of the list (lpush prepends)

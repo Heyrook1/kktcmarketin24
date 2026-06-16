@@ -98,7 +98,7 @@ async function sweepVendorOrdersCancelled(a: ReturnType<typeof admin>, orderId: 
 
   const u1 = await a.from("vendor_orders").update(upd).eq("order_id", orderId).in("status", ["pending", "confirmed"])
   if (u1.error && !isMissingColumnErr(u1.error, "order_id")) {
-    console.warn("[cancel] sweep order_id:", u1.error.message)
+    console.error("[cancel] sweep order_id:", u1.error.message)
   }
 
   const { data: subs } = await a.from("order_vendor_sub_orders").select("id").eq("order_id", orderId)
@@ -106,7 +106,7 @@ async function sweepVendorOrdersCancelled(a: ReturnType<typeof admin>, orderId: 
   if (subIds.length > 0) {
     const u2 = await a.from("vendor_orders").update(upd).in("sub_order_id", subIds).in("status", ["pending", "confirmed"])
     if (u2.error && !isMissingColumnErr(u2.error, "sub_order_id")) {
-      console.warn("[cancel] sweep sub_order_id:", u2.error.message)
+      console.error("[cancel] sweep sub_order_id:", u2.error.message)
     }
   }
 
@@ -135,7 +135,7 @@ async function sweepVendorOrdersCancelled(a: ReturnType<typeof admin>, orderId: 
       if (Number.isNaN(rowTime) || Math.abs(rowTime - parentTime) > 1000 * 60 * 60 * 24) continue
     }
     const { error } = await a.from("vendor_orders").update(upd).eq("id", row.id)
-    if (error) console.warn("[cancel] sweep loose id", row.id, error.message)
+    if (error) console.error("[cancel] sweep loose id", row.id, error.message)
   }
 }
 

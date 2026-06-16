@@ -4,41 +4,35 @@ import { runCheckoutSaga } from '@/lib/checkout/saga'
 import type { SagaInput } from '@/lib/checkout/types'
 import { checkCheckoutGate } from '@/lib/reliability'
 import { redis } from '@/lib/redis'
+import { redisKeys } from '@/lib/redis-keys'
 import type { ServerCartPayload } from '@/app/api/cart/server/route'
+import { z } from 'zod'
 
-interface ConfirmBody {
-  // Line items, prices, and cartId are NOT accepted from the client.
-  // They are loaded server-side from Redis keyed to the authenticated user session.
-  customerName: string
-  customerEmail: string
-  customerPhone?: string
-  deliveryAddress: {
-    fullName: string
-    phone: string
-    line1: string
-    city: string
-    district: string
-  }
-  couponCode?: string
-}
+const ConfirmSchema = z.object({
+  customerName: z.string().trim().min(2, 'Ad Soyad en az 2 karakter olmalıdır.'),
+  customerEmail: z.string().trim().email('Geçerli bir e-posta giriniz.'),
+  customerPhone: z.string().trim().optional(),
+  deliveryAddress: z.object({
+    fullName: z.string().trim().min(2, 'Ad Soyad en az 2 karakter olmalıdır.'),
+    phone: z.string().trim().min(7, 'Geçerli bir telefon numarası giriniz.'),
+    line1: z.string().trim().min(5, 'Adres en az 5 karakter olmalıdır.'),
+    city: z.string().trim().min(1, 'Şehir zorunludur.'),
+    district: z.string().trim().optional().default(''),
+  }),
+  couponCode: z.string().trim().max(32).optional(),
+})
 
-function cartKey(userId: string) {
-  return `cart:session:${userId}`
-}
+type ConfirmBody = z.infer<typeof ConfirmSchema>
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as ConfirmBody
-
-    // Validate required delivery fields — no items[], no prices
-    if (
-      !body.customerName ||
-      !body.customerEmail ||
-      !body.deliveryAddress?.line1 ||
-      !body.deliveryAddress?.city
-    ) {
-      return NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 })
+    const raw = await req.json().catch(() => null)
+    const parsed = ConfirmSchema.safeParse(raw)
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((issue) => issue.message)
+      return NextResponse.json({ error: messages[0] ?? 'Geçersiz istek gövdesi.', details: messages }, { status: 400 })
     }
+    const body: ConfirmBody = parsed.data
 
     // Auth — guest checkout not allowed
     const supabase = await createClient()
@@ -60,9 +54,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Load cart from Redis — server is the single source of truth ───────
-    // Key: cart:session:{userId}  (set by POST /api/cart/server)
+    // Key: cart:{userId}:session  (set by POST /api/cart/server)
     // Contains only productId + quantity — prices are NEVER stored here.
-    const serverCart = await redis.get<ServerCartPayload>(cartKey(user.id))
+    const serverCart = await redis.get<ServerCartPayload>(redisKeys.cartSession(user.id))
 
     if (!serverCart || !Array.isArray(serverCart.items) || serverCart.items.length === 0) {
       return NextResponse.json(
@@ -104,7 +98,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Clear the Redis cart now that the Saga has committed
-    await redis.del(cartKey(user.id))
+    await redis.del(redisKeys.cartSession(user.id))
 
     return NextResponse.json({
       ok: true,

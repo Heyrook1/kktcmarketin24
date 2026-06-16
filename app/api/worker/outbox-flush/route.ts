@@ -7,7 +7,7 @@
  *  - Uses the service-role key to read/update outbox_events (RLS bypassed).
  *  - Claims up to BATCH_SIZE events atomically with a status='processing' update.
  *  - For each event, pushes a notification message into a Redis list keyed by
- *    storeId: `vendor:notify:{storeId}`. Vendor dashboards can subscribe to
+ *    storeId: `vendor:{storeId}:notify`. Vendor dashboards can subscribe to
  *    these via SSE or polling (/api/vendor/notifications).
  *  - On success: marks event as published.
  *  - On failure: increments attempts, marks as failed (retried next poll cycle).
@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { redis } from '@/lib/redis'
+import { redisKeys } from '@/lib/redis-keys'
 
 const BATCH_SIZE = 20
 const MAX_ATTEMPTS = 5
@@ -81,9 +82,9 @@ export async function GET(req: NextRequest) {
         continue
       }
 
-      // Push to Redis list: `vendor:notify:{storeId}`
+      // Push to Redis list: `vendor:{storeId}:notify`
       // Each item is a JSON string; vendor polling endpoint reads and trims this list.
-      const notifyKey = `vendor:notify:${storeId}`
+      const notifyKey = redisKeys.vendorNotify(storeId)
       const message = JSON.stringify({
         id: event.id,
         eventType: event.event_type,
