@@ -32,6 +32,7 @@ interface SearchResponse {
 }
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "popular"
+type SearchPageItem = number | "…"
 
 const SORT_LABELS: Record<SortOption, string> = {
   newest:     "En Yeni",
@@ -154,11 +155,19 @@ export function SearchPageClient() {
           }),
         }).catch(() => {/* non-critical */})
       }
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        setError(err.message ?? "Arama sırasında bir hata oluştu.")
-        setResults(null)
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return
       }
+
+      if (err instanceof Error) {
+        setError(err.message)
+        setResults(null)
+        return
+      }
+
+      setError("Arama sırasında bir hata oluştu.")
+      setResults(null)
     } finally {
       setLoading(false)
     }
@@ -217,14 +226,18 @@ export function SearchPageClient() {
   const showEmpty = !loading && !error && results !== null && results.products.length === 0
 
   // ── Pagination helper ──────────────────────────────────────────────────────
-  function buildPageItems(current: number, total: number) {
+  function buildPageItems(current: number, total: number): SearchPageItem[] {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-    const pages: (number | "…")[] = [1]
+    const pages: SearchPageItem[] = [1]
     if (current > 3)        pages.push("…")
     for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p)
     if (current < total - 2) pages.push("…")
     pages.push(total)
     return pages
+  }
+
+  function getPageHref(page: number) {
+    return buildUrl({ page })
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -403,7 +416,7 @@ export function SearchPageClient() {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      href="#"
+                      href={getPageHref(Math.max(1, urlPage - 1))}
                       onClick={(e) => { e.preventDefault(); if (urlPage > 1) handlePage(urlPage - 1) }}
                       className={cn(urlPage <= 1 && "pointer-events-none opacity-40")}
                     />
@@ -417,9 +430,9 @@ export function SearchPageClient() {
                     ) : (
                       <PaginationItem key={item}>
                         <PaginationLink
-                          href="#"
+                          href={getPageHref(item)}
                           isActive={item === urlPage}
-                          onClick={(e) => { e.preventDefault(); handlePage(item as number) }}
+                          onClick={(e) => { e.preventDefault(); handlePage(item) }}
                         >
                           {item}
                         </PaginationLink>
@@ -429,7 +442,7 @@ export function SearchPageClient() {
 
                   <PaginationItem>
                     <PaginationNext
-                      href="#"
+                      href={getPageHref(Math.min(results.totalPages, urlPage + 1))}
                       onClick={(e) => { e.preventDefault(); if (urlPage < results.totalPages) handlePage(urlPage + 1) }}
                       className={cn(urlPage >= results.totalPages && "pointer-events-none opacity-40")}
                     />

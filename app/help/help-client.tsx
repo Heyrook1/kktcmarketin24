@@ -6,7 +6,7 @@ import Link from "next/link"
 import {
   ChevronDown, Mail, Phone, MapPin, MessageSquare,
   Package, RotateCcw, Truck, ShieldCheck, CreditCard,
-  HelpCircle, CheckCircle2, Loader2, Clock,
+  HelpCircle, CheckCircle2, Loader2, Clock, AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -218,6 +218,7 @@ function AccordionItem({ q, a, open, onToggle }: {
 function ContactForm() {
   const [form, setForm] = useState({ fullName: "", email: "", subject: "", message: "" })
   const [errors, setErrors] = useState<Partial<typeof form>>({})
+  const [submitError, setSubmitError] = useState("")
   const [turnstileError, setTurnstileError] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -233,6 +234,7 @@ function ContactForm() {
   function set(field: keyof typeof form, value: string) {
     setForm(f => ({ ...f, [field]: value }))
     setErrors(e => ({ ...e, [field]: undefined }))
+    setSubmitError("")
   }
 
   function validate(): boolean {
@@ -254,12 +256,20 @@ function ContactForm() {
     if (!token) { setTurnstileError(true); return }
     setTurnstileError(false)
     startTransition(async () => {
-      await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken: token }),
-      })
-      setSubmitted(true)
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, turnstileToken: token }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(data.error ?? "Mesajınız gönderilemedi. Lütfen tekrar deneyin.")
+        }
+        setSubmitted(true)
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Mesajınız gönderilemedi. Lütfen tekrar deneyin.")
+      }
     })
   }
 
@@ -331,6 +341,13 @@ function ContactForm() {
             <p className="text-xs text-destructive mt-1">Güvenlik doğrulaması tamamlanmadı. Lütfen kutucuğu doldurun.</p>
           )}
         </div>
+
+        {submitError && (
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>{submitError}</p>
+          </div>
+        )}
 
         <Button type="submit" disabled={isPending} className="w-full gap-2 rounded-xl h-11 font-semibold">
           {isPending
