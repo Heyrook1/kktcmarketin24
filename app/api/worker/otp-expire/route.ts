@@ -12,21 +12,24 @@ import { expireStaleOrders } from '@/lib/otp'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+function isAuthorizedWorkerRequest(request: Request) {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    return false
+  }
+
+  return request.headers.get('authorization') === `Bearer ${cronSecret}`
+}
+
 export async function GET(request: Request) {
-  // Verify this is coming from Vercel Cron (or internal)
-  const authHeader = request.headers.get('authorization')
-  if (
-    process.env.NODE_ENV === 'production' &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (!isAuthorizedWorkerRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const result = await expireStaleOrders()
     return NextResponse.json({ ok: true, ...result })
-  } catch (err) {
-    console.error('[otp-expire worker]', err)
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+  } catch {
+    return NextResponse.json({ ok: false, error: 'Worker failed' }, { status: 500 })
   }
 }

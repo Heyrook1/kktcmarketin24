@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Redis } from '@upstash/redis'
+import { z } from 'zod'
 
 // Edge runtime — runs at the CDN edge for IP-accurate rate limiting
 export const runtime = 'edge'
@@ -10,6 +11,17 @@ const RATE_LIMIT = 3       // max submissions per window
 const WINDOW_SEC = 3600    // 1 hour
 
 const redis = Redis.fromEnv()
+
+const sellerApplicationSchema = z.object({
+  fullName: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  storeName: z.string().optional(),
+  category: z.string().optional(),
+  city: z.string().optional(),
+  description: z.string().optional(),
+  turnstileToken: z.string().optional(),
+})
 
 function adminClient() {
   return createClient(
@@ -48,7 +60,7 @@ async function verifyTurnstile(token: string, ip: string): Promise<{ ok: boolean
 
 // ── Rate limiter (Redis sliding window) ────────────────────────────────────
 async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining: number }> {
-  const key = `rl:contact:${ip}`
+  const key = `seller-application:${ip}:rate-limit`
   const now = Date.now()
   const windowStart = now - WINDOW_SEC * 1000
 
@@ -68,62 +80,68 @@ async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining
 
 // ── Route handler ───────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const ip =
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-real-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    '0.0.0.0'
-
-  const userAgent = req.headers.get('user-agent') ?? ''
-
-  let body: Record<string, unknown>
   try {
-    body = await req.json()
+    const ip =
+      req.headers.get('cf-connecting-ip') ??
+      req.headers.get('x-real-ip') ??
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      '0.0.0.0'
+
+    const userAgent = req.headers.get('user-agent') ?? ''
+
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      // Return generic OK — never reveal why a submission failed
+      return NextResponse.json(GENERIC_OK)
+    }
+
+    const parsed = sellerApplicationSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(GENERIC_OK)
+    }
+
+    const {
+      fullName, email, phone, storeName, category, city, description,
+      turnstileToken,
+    } = parsed.data
+
+    // ── 1. Rate limit check ─────────────────────────────────────────────────
+    const { allowed } = await checkRateLimit(ip)
+
+    // ── 2. Turnstile check (run in parallel with rate limit for speed) ──────
+    const turnstileOk = allowed
+      ? (await verifyTurnstile(turnstileToken ?? '', ip)).ok
+      : false
+
+    // ── 3. Queue to DB regardless of outcome (with flags) ──────────────────
+    // We log EVERYTHING — valid, rate-limited, bot — to detect patterns.
+    const admin = adminClient()
+    await admin.from('form_submissions').insert({
+      form_type:    'seller_application',
+      status:       !allowed ? 'spam' : !turnstileOk ? 'spam' : 'pending',
+      full_name:    String(fullName ?? '').slice(0, 255),
+      email:        String(email ?? '').slice(0, 255),
+      phone:        String(phone ?? '').slice(0, 50),
+      store_name:   String(storeName ?? '').slice(0, 255),
+      category:     String(category ?? '').slice(0, 100),
+      city:         String(city ?? '').slice(0, 100),
+      description:  String(description ?? '').slice(0, 500),
+      payload: {
+        rate_limited: !allowed,
+        turnstile_ok: turnstileOk,
+      },
+      ip_address:   ip,
+      user_agent:   userAgent.slice(0, 512),
+      turnstile_ok: turnstileOk,
+    })
+
+    // ── 4. Always return identical generic success response ─────────────────
+    // Never reveal rate-limit state, bot detection, or validation errors —
+    // this prevents enumeration and timing-based probing.
+    return NextResponse.json(GENERIC_OK)
   } catch {
-    // Return generic OK — never reveal why a submission failed
     return NextResponse.json(GENERIC_OK)
   }
-
-  const {
-    fullName, email, phone, storeName, category, city, description,
-    turnstileToken,
-  } = body as {
-    fullName?: string; email?: string; phone?: string; storeName?: string;
-    category?: string; city?: string; description?: string; turnstileToken?: string
-  }
-
-  // ── 1. Rate limit check ─────────────────────────────────────────────────
-  const { allowed } = await checkRateLimit(ip)
-
-  // ── 2. Turnstile check (run in parallel with rate limit for speed) ──────
-  const turnstileOk = allowed
-    ? (await verifyTurnstile(turnstileToken ?? '', ip)).ok
-    : false
-
-  // ── 3. Queue to DB regardless of outcome (with flags) ──────────────────
-  // We log EVERYTHING — valid, rate-limited, bot — to detect patterns.
-  const admin = adminClient()
-  await admin.from('form_submissions').insert({
-    form_type:    'seller_application',
-    status:       !allowed ? 'spam' : !turnstileOk ? 'spam' : 'pending',
-    full_name:    String(fullName ?? '').slice(0, 255),
-    email:        String(email ?? '').slice(0, 255),
-    phone:        String(phone ?? '').slice(0, 50),
-    store_name:   String(storeName ?? '').slice(0, 255),
-    category:     String(category ?? '').slice(0, 100),
-    city:         String(city ?? '').slice(0, 100),
-    description:  String(description ?? '').slice(0, 500),
-    payload: {
-      rate_limited: !allowed,
-      turnstile_ok: turnstileOk,
-    },
-    ip_address:   ip,
-    user_agent:   userAgent.slice(0, 512),
-    turnstile_ok: turnstileOk,
-  })
-
-  // ── 4. Always return identical generic success response ─────────────────
-  // Never reveal rate-limit state, bot detection, or validation errors —
-  // this prevents enumeration and timing-based probing.
-  return NextResponse.json(GENERIC_OK)
 }

@@ -7,7 +7,7 @@
  *  - Uses the service-role key to read/update outbox_events (RLS bypassed).
  *  - Claims up to BATCH_SIZE events atomically with a status='processing' update.
  *  - For each event, pushes a notification message into a Redis list keyed by
- *    storeId: `vendor:notify:{storeId}`. Vendor dashboards can subscribe to
+ *    storeId: `vendor:{storeId}:notify`. Vendor dashboards can subscribe to
  *    these via SSE or polling (/api/vendor/notifications).
  *  - On success: marks event as published.
  *  - On failure: increments attempts, marks as failed (retried next poll cycle).
@@ -34,109 +34,112 @@ function serviceClient() {
 }
 
 export async function GET(req: NextRequest) {
-  // Optional: protect with a shared secret in production
-  const authHeader = req.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const supabase = serviceClient()
-
-  // Claim a batch of pending events
-  const { data: events, error: fetchErr } = await supabase
-    .from('outbox_events')
-    .select('id, aggregate_type, aggregate_id, event_type, payload, attempts')
-    .eq('status', 'pending')
-    .lt('attempts', MAX_ATTEMPTS)
-    .lte('scheduled_at', new Date().toISOString())
-    .order('scheduled_at', { ascending: true })
-    .limit(BATCH_SIZE)
-
-  if (fetchErr || !events || events.length === 0) {
-    return NextResponse.json({ processed: 0 })
-  }
-
-  const eventIds = events.map((e) => e.id)
-
-  // Mark as processing (prevents duplicate delivery if worker runs concurrently)
-  await supabase
-    .from('outbox_events')
-    .update({ status: 'processing' })
-    .in('id', eventIds)
-
-  const published: string[] = []
-  const failed: { id: string; reason: string }[] = []
-
-  for (const event of events) {
-    try {
-      const payload = event.payload as Record<string, unknown>
-
-      // Derive the target storeId from payload
-      const storeId = (payload.storeId as string) ?? (payload.store_id as string)
-
-      if (!storeId) {
-        // Event doesn't target a specific store — mark published and skip
-        published.push(event.id)
-        continue
-      }
-
-      // Push to Redis list: `vendor:notify:{storeId}`
-      // Each item is a JSON string; vendor polling endpoint reads and trims this list.
-      const notifyKey = `vendor:notify:${storeId}`
-      const message = JSON.stringify({
-        id: event.id,
-        eventType: event.event_type,
-        aggregateType: event.aggregate_type,
-        aggregateId: event.aggregate_id,
-        payload,
-        ts: new Date().toISOString(),
-      })
-
-      await redis.lpush(notifyKey, message)
-      // Keep at most 200 messages per vendor, expire key after 7 days
-      await redis.ltrim(notifyKey, 0, 199)
-      await redis.expire(notifyKey, NOTIFY_TTL)
-
-      published.push(event.id)
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err)
-      failed.push({ id: event.id, reason })
+  try {
+    const authHeader = req.headers.get('authorization')
+    const cronSecret = process.env.CRON_SECRET
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-  }
 
-  // Update statuses
-  if (published.length > 0) {
+    const supabase = serviceClient()
+
+    // Claim a batch of pending events
+    const { data: events, error: fetchErr } = await supabase
+      .from('outbox_events')
+      .select('id, aggregate_type, aggregate_id, event_type, payload, attempts')
+      .eq('status', 'pending')
+      .lt('attempts', MAX_ATTEMPTS)
+      .lte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at', { ascending: true })
+      .limit(BATCH_SIZE)
+
+    if (fetchErr || !events || events.length === 0) {
+      return NextResponse.json({ processed: 0 })
+    }
+
+    const eventIds = events.map((e) => e.id)
+
+    // Mark as processing (prevents duplicate delivery if worker runs concurrently)
     await supabase
       .from('outbox_events')
-      .update({ status: 'published', published_at: new Date().toISOString() })
-      .in('id', published)
-  }
+      .update({ status: 'processing' })
+      .in('id', eventIds)
 
-  if (failed.length > 0) {
-    for (const { id, reason } of failed) {
-      await supabase
-        .from('outbox_events')
-        .update({
-          status: 'failed',
-          last_error: reason,
+    const published: string[] = []
+    const failed: { id: string; reason: string }[] = []
+
+    for (const event of events) {
+      try {
+        const payload = event.payload as Record<string, unknown>
+
+        // Derive the target storeId from payload
+        const storeId = (payload.storeId as string) ?? (payload.store_id as string)
+
+        if (!storeId) {
+          // Event doesn't target a specific store — mark published and skip
+          published.push(event.id)
+          continue
+        }
+
+        // Push to Redis list: `vendor:{storeId}:notify`
+        // Each item is a JSON string; vendor polling endpoint reads and trims this list.
+        const notifyKey = `vendor:${storeId}:notify`
+        const message = JSON.stringify({
+          id: event.id,
+          eventType: event.event_type,
+          aggregateType: event.aggregate_type,
+          aggregateId: event.aggregate_id,
+          payload,
+          ts: new Date().toISOString(),
         })
-        .eq('id', id)
 
-      // Increment attempts counter
-      const event = events.find((e) => e.id === id)
-      if (event) {
-        await supabase
-          .from('outbox_events')
-          .update({ attempts: (event.attempts ?? 0) + 1 })
-          .eq('id', id)
+        await redis.lpush(notifyKey, message)
+        // Keep at most 200 messages per vendor, expire key after 7 days
+        await redis.ltrim(notifyKey, 0, 199)
+        await redis.expire(notifyKey, NOTIFY_TTL)
+
+        published.push(event.id)
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err)
+        failed.push({ id: event.id, reason })
       }
     }
-  }
 
-  return NextResponse.json({
-    processed: events.length,
-    published: published.length,
-    failed: failed.length,
-  })
+    // Update statuses
+    if (published.length > 0) {
+      await supabase
+        .from('outbox_events')
+        .update({ status: 'published', published_at: new Date().toISOString() })
+        .in('id', published)
+    }
+
+    if (failed.length > 0) {
+      for (const { id, reason } of failed) {
+        await supabase
+          .from('outbox_events')
+          .update({
+            status: 'failed',
+            last_error: reason,
+          })
+          .eq('id', id)
+
+        // Increment attempts counter
+        const event = events.find((e) => e.id === id)
+        if (event) {
+          await supabase
+            .from('outbox_events')
+            .update({ attempts: (event.attempts ?? 0) + 1 })
+            .eq('id', id)
+        }
+      }
+    }
+
+    return NextResponse.json({
+      processed: events.length,
+      published: published.length,
+      failed: failed.length,
+    })
+  } catch {
+    return NextResponse.json({ error: 'Worker failed' }, { status: 500 })
+  }
 }
