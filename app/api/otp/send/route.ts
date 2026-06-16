@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { createOtp } from '@/lib/otp'
+import { z } from 'zod'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,67 +22,82 @@ function sb() {
   )
 }
 
+const sendOtpSchema = z.object({
+  orderId: z.string().uuid('Geçerli bir orderId gerekli.'),
+})
+
 export async function POST(request: Request) {
-  // Auth — must be signed in
-  const supabaseUser = await createServerClient()
-  const { data: { user } } = await supabaseUser.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Giriş yapmanız gerekiyor.' }, { status: 401 })
-  }
+  try {
+    // Auth — must be signed in
+    const supabaseUser = await createServerClient()
+    const { data: { user } } = await supabaseUser.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Giriş yapmanız gerekiyor.' }, { status: 401 })
+    }
 
-  const body = await request.json()
-  const { orderId } = body as { orderId: string }
-  if (!orderId) {
-    return NextResponse.json({ error: 'orderId gerekli.' }, { status: 400 })
-  }
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Geçersiz istek gövdesi.' }, { status: 400 })
+    }
 
-  const admin = sb()
+    const parsed = sendOtpSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 })
+    }
 
-  // Verify order belongs to this user and is in awaiting_otp state
-  const { data: order } = await admin
-    .from('orders')
-    .select('id, saga_status, customer_id')
-    .eq('id', orderId)
-    .eq('customer_id', user.id)
-    .maybeSingle()
+    const { orderId } = parsed.data
+    const admin = sb()
 
-  if (!order) {
-    return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 })
-  }
-  if (order.saga_status !== 'awaiting_otp') {
-    return NextResponse.json({ error: 'Bu sipariş OTP doğrulaması gerektirmiyor.' }, { status: 409 })
-  }
+    // Verify order belongs to this user and is in awaiting_otp state
+    const { data: order } = await admin
+      .from('orders')
+      .select('id, saga_status, customer_id')
+      .eq('id', orderId)
+      .eq('customer_id', user.id)
+      .maybeSingle()
 
-  // Get phone from profile
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('phone, flagged_at')
-    .eq('id', user.id)
-    .maybeSingle()
+    if (!order) {
+      return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 })
+    }
+    if (order.saga_status !== 'awaiting_otp') {
+      return NextResponse.json({ error: 'Bu sipariş OTP doğrulaması gerektirmiyor.' }, { status: 409 })
+    }
 
-  if (profile?.flagged_at) {
+    // Get phone from profile
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('phone, flagged_at')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profile?.flagged_at) {
+      return NextResponse.json({
+        error: 'Hesabınız inceleme için işaretlenmiştir. Destek ekibiyle iletişime geçin.',
+        flagged: true,
+      }, { status: 403 })
+    }
+
+    const phone = profile?.phone ?? user.phone ?? user.user_metadata?.phone
+    if (!phone) {
+      return NextResponse.json({
+        error: 'Profilinizde telefon numarası kayıtlı değil. Lütfen hesap ayarlarınızı güncelleyin.',
+      }, { status: 422 })
+    }
+
+    const result = await createOtp(orderId, phone, user.id)
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 429 })
+    }
+
     return NextResponse.json({
-      error: 'Hesabınız inceleme için işaretlenmiştir. Destek ekibiyle iletişime geçin.',
-      flagged: true,
-    }, { status: 403 })
+      ok: true,
+      phone: phone.replace(/(\+?\d{2,3})\d+(\d{2})/, '$1*****$2'),
+      // devCode only present in development — strip before production
+      ...(result.devCode ? { devCode: result.devCode } : {}),
+    })
+  } catch {
+    return NextResponse.json({ error: 'OTP gönderilemedi.' }, { status: 500 })
   }
-
-  const phone = profile?.phone ?? user.phone ?? user.user_metadata?.phone
-  if (!phone) {
-    return NextResponse.json({
-      error: 'Profilinizde telefon numarası kayıtlı değil. Lütfen hesap ayarlarınızı güncelleyin.',
-    }, { status: 422 })
-  }
-
-  const result = await createOtp(orderId, phone, user.id)
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 429 })
-  }
-
-  return NextResponse.json({
-    ok: true,
-    phone: phone.replace(/(\+?\d{2,3})\d+(\d{2})/, '$1*****$2'),
-    // devCode only present in development — strip before production
-    ...(result.devCode ? { devCode: result.devCode } : {}),
-  })
 }

@@ -169,47 +169,55 @@ export async function expireStaleOrders(): Promise<{ cancelled: string[] }> {
 
   const { data: stale } = await supabase
     .from('orders')
-    .select('id, customer_id, cart_id, payment_method')
+    .select('id, customer_id, cart_id')
     .eq('saga_status', 'awaiting_otp')
     .lt('created_at', cutoff)
 
   if (!stale?.length) return { cancelled: [] }
 
-  const cancelled: string[] = []
+  const orderIds = stale.map((order) => order.id)
+  const { data: subOrders } = await supabase
+    .from('order_vendor_sub_orders')
+    .select('id')
+    .in('order_id', orderIds)
 
-  for (const order of stale) {
-    // Restore stock for each sub-order
-    const { data: subOrders } = await supabase
-      .from('order_vendor_sub_orders')
-      .select('id')
-      .eq('order_id', order.id)
+  const subOrderIds = subOrders?.map((subOrder) => subOrder.id) ?? []
 
-    if (subOrders?.length) {
-      const subIds = subOrders.map((s) => s.id)
+  if (subOrderIds.length > 0) {
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('product_id, quantity')
+      .in('sub_order_id', subOrderIds)
 
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('product_id, quantity')
-        .in('sub_order_id', subIds)
-
-      if (items?.length) {
-        for (const item of items) {
-          await supabase.rpc('restore_stock', {
-            p_product_id: item.product_id,
-            p_quantity: item.quantity,
-          })
-        }
-      }
-
-      await supabase.from('order_vendor_sub_orders')
-        .update({ step_status: 'cancelled' })
-        .in('id', subIds)
+    const restoreQuantitiesByProduct = new Map<string, number>()
+    for (const item of items ?? []) {
+      restoreQuantitiesByProduct.set(
+        item.product_id,
+        (restoreQuantitiesByProduct.get(item.product_id) ?? 0) + Number(item.quantity)
+      )
     }
 
-    await supabase.from('orders')
-      .update({ saga_status: 'failed' })
-      .eq('id', order.id)
+    await Promise.all(
+      [...restoreQuantitiesByProduct.entries()].map(([productId, quantity]) =>
+        supabase.rpc('restore_stock', {
+          p_product_id: productId,
+          p_quantity: quantity,
+        })
+      )
+    )
 
+    await supabase
+      .from('order_vendor_sub_orders')
+      .update({ step_status: 'cancelled' })
+      .in('id', subOrderIds)
+  }
+
+  await supabase
+    .from('orders')
+    .update({ saga_status: 'failed' })
+    .in('id', orderIds)
+
+  for (const order of stale) {
     // Release Redis soft-hold for ALL payment methods — on COD especially
     // the hold must be freed so other customers can purchase the same item.
     if (order.cart_id) {
@@ -218,11 +226,9 @@ export async function expireStaleOrders(): Promise<{ cancelled: string[] }> {
 
     // Increment no-show counter on profile
     await recordNoShow(order.customer_id, order.id)
-
-    cancelled.push(order.id)
   }
 
-  return { cancelled }
+  return { cancelled: orderIds }
 }
 
 // ── No-show tracking ──────────────────────────────────────────────────────────

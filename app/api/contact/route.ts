@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { Redis } from '@upstash/redis'
+import { z } from 'zod'
+import { redis } from '@/lib/redis'
 
 export const runtime = 'edge'
 
@@ -8,7 +9,13 @@ const GENERIC_OK = { ok: true, message: 'Mesajınız alındı. En kısa sürede 
 const RATE_LIMIT = 3
 const WINDOW_SEC = 3600
 
-const redis = Redis.fromEnv()
+const contactSchema = z.object({
+  fullName: z.string().optional(),
+  email: z.string().optional(),
+  subject: z.string().optional(),
+  message: z.string().optional(),
+  turnstileToken: z.string().optional(),
+})
 
 function adminClient() {
   return createClient(
@@ -32,7 +39,7 @@ async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
 }
 
 async function checkRateLimit(ip: string): Promise<boolean> {
-  const key = `rl:contact:${ip}`
+  const key = `contact:${ip}:rate-limit`
   const now = Date.now()
   const windowStart = now - WINDOW_SEC * 1000
   const pipeline = redis.pipeline()
@@ -46,44 +53,48 @@ async function checkRateLimit(ip: string): Promise<boolean> {
 }
 
 export async function POST(req: NextRequest) {
-  const ip =
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-real-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    '0.0.0.0'
-  const userAgent = req.headers.get('user-agent') ?? ''
+  try {
+    const ip =
+      req.headers.get('cf-connecting-ip') ??
+      req.headers.get('x-real-ip') ??
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      '0.0.0.0'
+    const userAgent = req.headers.get('user-agent') ?? ''
 
-  let body: Record<string, unknown>
-  try { body = await req.json() } catch { return NextResponse.json(GENERIC_OK) }
+    let body: unknown
+    try { body = await req.json() } catch { return NextResponse.json(GENERIC_OK) }
 
-  const { fullName, email, subject, message, turnstileToken } = body as {
-    fullName?: string; email?: string; subject?: string; message?: string; turnstileToken?: string
-  }
+    const parsed = contactSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(GENERIC_OK)
+    }
 
-  const [allowed, turnstileOk] = await Promise.all([
-    checkRateLimit(ip),
-    (async () => {
-      const allowed = await checkRateLimit(ip)
-      return allowed ? verifyTurnstile(turnstileToken ?? '', ip) : false
-    })(),
-  ])
+    const { fullName, email, subject, message, turnstileToken } = parsed.data
 
-  const admin = adminClient()
-  await admin.from('form_submissions').insert({
-    form_type:   'contact',
-    status:      !allowed ? 'spam' : !turnstileOk ? 'spam' : 'pending',
-    full_name:   String(fullName ?? '').slice(0, 255),
-    email:       String(email ?? '').slice(0, 255),
-    description: String(message ?? '').slice(0, 2000),
-    payload: {
-      subject:      String(subject ?? '').slice(0, 255),
-      rate_limited: !allowed,
+    const allowed = await checkRateLimit(ip)
+    const turnstileOk = allowed
+      ? await verifyTurnstile(turnstileToken ?? '', ip)
+      : false
+
+    const admin = adminClient()
+    await admin.from('form_submissions').insert({
+      form_type:   'contact',
+      status:      !allowed ? 'spam' : !turnstileOk ? 'spam' : 'pending',
+      full_name:   String(fullName ?? '').slice(0, 255),
+      email:       String(email ?? '').slice(0, 255),
+      description: String(message ?? '').slice(0, 2000),
+      payload: {
+        subject:      String(subject ?? '').slice(0, 255),
+        rate_limited: !allowed,
+        turnstile_ok: turnstileOk,
+      },
+      ip_address:  ip,
+      user_agent:  userAgent.slice(0, 512),
       turnstile_ok: turnstileOk,
-    },
-    ip_address:  ip,
-    user_agent:  userAgent.slice(0, 512),
-    turnstile_ok: turnstileOk,
-  })
+    })
 
-  return NextResponse.json(GENERIC_OK)
+    return NextResponse.json(GENERIC_OK)
+  } catch {
+    return NextResponse.json(GENERIC_OK)
+  }
 }
